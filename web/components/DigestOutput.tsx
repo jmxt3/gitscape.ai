@@ -108,13 +108,13 @@ const DigestOutputComponent: React.FC<DigestOutputProps> = ({ digest, isLoading,
   return (
     <div className="flex flex-col h-full w-full">
       <h3 className="text-lg font-medium text-violet-400 mb-3">Generated Code Digest</h3>
-      <textarea
-        readOnly
-        value={digest}
-        className="h-[500px] p-3 font-mono text-sm border border-slate-700 rounded-md bg-slate-900/95 text-slate-300 focus:ring-violet-500 focus:border-violet-500 placeholder-slate-500 flex-grow"
-        placeholder="Generated code digest will appear here..."
+      <div
+        className="h-[500px] overflow-auto p-3 font-mono text-sm border border-slate-700 rounded-md bg-slate-900/95 text-slate-300 flex-grow"
         aria-label="Generated code digest"
-      />
+        role="region"
+      >
+        <pre className="whitespace-pre-wrap break-words select-all m-0">{digest}</pre>
+      </div>
       <div className="mt-4 flex justify-end space-x-3">
         <button
           onClick={handleDownload}
