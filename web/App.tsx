@@ -418,14 +418,21 @@ const App: React.FC = () => {
   ]);
 
 
-  const diagramData: RawDiagramNode | null = useMemo(() => {
-    if (processedRepoName && filesToRenderInDiagram.length > 0) {
-      return transformGithubTreeToD3Hierarchy(
-        filesToRenderInDiagram,
-        processedRepoName
-      );
+  // Defer the expensive tree transform to a separate browser task.
+  // Using useEffect + setTimeout means this NEVER runs during a user-click
+  // event — it always runs in its own task after the browser is idle.
+  const [diagramData, setDiagramData] = useState<RawDiagramNode | null>(null);
+  useEffect(() => {
+    if (!processedRepoName || filesToRenderInDiagram.length === 0) {
+      setDiagramData(null);
+      return;
     }
-    return null;
+    const id = setTimeout(() => {
+      setDiagramData(
+        transformGithubTreeToD3Hierarchy(filesToRenderInDiagram, processedRepoName)
+      );
+    }, 0);
+    return () => clearTimeout(id);
   }, [filesToRenderInDiagram, processedRepoName]);
 
   useEffect(() => {
