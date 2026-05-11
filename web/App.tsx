@@ -165,63 +165,81 @@ const App: React.FC = () => {
       newManifestJson?: SkillManifest | null,
       newPrimaryLanguages?: string[],
     ) => {
+      // Show digest immediately — don't keep user waiting for the tree fetch.
       setDigest(markdownDigest);
-      const branchToUse = defaultBranchFromFetch;
-      setProgressMessage("Preparing for visualization...");
+      setCurrentDefaultBranch(defaultBranchFromFetch);
+      setProgressMessage("Digest ready!");
       setProgressPercent(100);
+      setIsLoading(false);
 
-      let diagramFiles: GithubFile[] = [];
-      let finalAnalyzedCountForStateAndCache = digestFilesCount;
+      const branchToUse = defaultBranchFromFetch;
 
+      // Fetch the file tree in the background so it never blocks the main thread.
+      // We defer with setTimeout so React can paint the digest result first.
       if (branchToUse && githubService) {
-        try {
-          diagramFiles = await githubService.getRepoFileTree(
-            owner,
-            repo,
-            branchToUse
-          );
-          setFilesToRenderInDiagram(diagramFiles);
-          const blobFiles = diagramFiles.filter((file) => file.type === "blob");
-          finalAnalyzedCountForStateAndCache = blobFiles.length;
-          setProgressMessage("Digest and visualization data ready!");
-          setIsLoading(false);
-        } catch (diagramErr: any) {
-          console.error(
-            `Error fetching repository structure for diagram:`,
-            diagramErr
-          );
-        }
+        setTimeout(async () => {
+          let diagramFiles: GithubFile[] = [];
+          let finalAnalyzedCount = digestFilesCount;
+          try {
+            diagramFiles = await githubService.getRepoFileTree(
+              owner,
+              repo,
+              branchToUse
+            );
+            setFilesToRenderInDiagram(diagramFiles);
+            const blobFiles = diagramFiles.filter((file) => file.type === "blob");
+            finalAnalyzedCount = blobFiles.length;
+          } catch (diagramErr: any) {
+            console.error(
+              "Error fetching repository structure for diagram:",
+              diagramErr
+            );
+          }
+
+          // Defer the localStorage write to avoid blocking the main thread.
+          // JSON.stringify on a large digest is synchronous and can freeze the UI.
+          const repoDataToCache: CachedRepoOutput = {
+            digest: markdownDigest,
+            processedRepoName: `${owner}/${repo}`,
+            repoNameForFilename: repo,
+            defaultBranch: branchToUse,
+            filesAnalyzedCount: finalAnalyzedCount,
+            filesToRenderInDiagram: diagramFiles,
+            timestamp: Date.now(),
+            skill_md: newSkillMd,
+            manifest_json: newManifestJson ?? undefined,
+            primary_languages: newPrimaryLanguages,
+          };
+          const cacheKey = `${CACHED_OUTPUT_PREFIX}${repoUrlRef.current}`;
+          setTimeout(() => {
+            try {
+              storeInLocalStorage(cacheKey, JSON.stringify(repoDataToCache));
+            } catch (e) {
+              // quota exceeded or serialization error — non-fatal
+            }
+          }, 0);
+        }, 0);
       } else {
-        setProgressMessage(
-          "Digest ready but visualization data unavailable (missing branch info)."
-        );
+        // No branch info — still cache what we have.
+        const repoDataToCache: CachedRepoOutput = {
+          digest: markdownDigest,
+          processedRepoName: `${owner}/${repo}`,
+          repoNameForFilename: repo,
+          defaultBranch: branchToUse,
+          filesAnalyzedCount: digestFilesCount,
+          filesToRenderInDiagram: [],
+          timestamp: Date.now(),
+          skill_md: newSkillMd,
+          manifest_json: newManifestJson ?? undefined,
+          primary_languages: newPrimaryLanguages,
+        };
+        const cacheKey = `${CACHED_OUTPUT_PREFIX}${repoUrlRef.current}`;
+        setTimeout(() => {
+          try {
+            storeInLocalStorage(cacheKey, JSON.stringify(repoDataToCache));
+          } catch (e) {}
+        }, 0);
       }
-
-      setCurrentDefaultBranch(branchToUse);
-
-      const repoDataToCache: CachedRepoOutput = {
-        digest: markdownDigest,
-        processedRepoName: `${owner}/${repo}`,
-        repoNameForFilename: repo,
-        defaultBranch: branchToUse,
-        filesAnalyzedCount: finalAnalyzedCountForStateAndCache,
-        filesToRenderInDiagram: diagramFiles,
-        timestamp: Date.now(),
-        skill_md: newSkillMd,
-        manifest_json: newManifestJson ?? undefined,
-        primary_languages: newPrimaryLanguages,
-      };
-
-      // Defer the localStorage write to avoid blocking the main thread.
-      // JSON.stringify on a large digest is synchronous and can freeze the UI.
-      const cacheKey = `${CACHED_OUTPUT_PREFIX}${repoUrlRef.current}`;
-      setTimeout(() => {
-        try {
-          storeInLocalStorage(cacheKey, JSON.stringify(repoDataToCache));
-        } catch (e) {
-          // quota exceeded or serialization error — non-fatal
-        }
-      }, 0);
     },
     // Only stable references — state setters and the github service.
     // repoUrl is read via repoUrlRef.current so it doesn't need to be here.
