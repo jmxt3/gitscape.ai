@@ -86,10 +86,10 @@ export const RepoInput: React.FC<RepoInputProps> = ({ repoUrl, setRepoUrl, onGen
           {isLoading ? (
             <>
               <LoadingSpinner className="mr-2 h-5 w-5 text-white" />
-              Generating...
+              Analyzing repo...
             </>
           ) : (
-            'Generate Digest'
+            'Generate Skill'
           )}
         </button>
       </div>

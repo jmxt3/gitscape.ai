@@ -434,11 +434,25 @@ const App: React.FC = () => {
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [retryAfterSeconds, setRetryAfterSeconds] = useState<number | null>(null);
   const [progressMessage, setProgressMessage] = useState<string>("");
   const [progressPercent, setProgressPercent] = useState<number>(0);
   const [progressVisible, setProgressVisible] = useState<boolean>(false);
   const [progressFading, setProgressFading] = useState<boolean>(false);
   const progressTickerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Countdown timer for rate-limit cooldown
+  useEffect(() => {
+    if (retryAfterSeconds === null || retryAfterSeconds <= 0) return;
+    const id = setInterval(() => {
+      setRetryAfterSeconds(prev => {
+        if (prev === null || prev <= 1) { clearInterval(id); return null; }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  }, [retryAfterSeconds]);
+
 
   const [githubToken, setGithubToken] = useState<string | null>(null);
   const [showTokenModal, setShowTokenModal] = useState<boolean>(false);
@@ -739,13 +753,8 @@ const App: React.FC = () => {
       setProgressMessage(pick(PROCESSING_MESSAGES));
       // Ticker is already running from init — no need to restart it here
 
-      const apiHost = "api.gitscape.ai";
-      let apiScheme: string;
-      if (apiHost === "api.gitscape.ai") {
-        apiScheme = "https";
-      } else {
-        apiScheme = window.location.protocol === "https:" ? "https" : "http";
-      }
+      const apiHost: string = __API_HOST__;
+      const apiScheme = apiHost.startsWith("localhost") || apiHost.startsWith("127.") ? "http" : "https";
 
       const apiUrl = new URL(`${apiScheme}://${apiHost}/converter`);
       apiUrl.searchParams.append("repo_url", encodeURIComponent(repoUrl));
@@ -763,7 +772,16 @@ const App: React.FC = () => {
 
         if (!response.ok) {
           let errorDetail = `We couldn't fetch the repository (HTTP ${response.status}).`;
-          if (response.status === 503) {
+          if (response.status === 429) {
+            try {
+              const errData = await response.json();
+              const secs = errData.retry_after_seconds ?? 60;
+              setRetryAfterSeconds(secs);
+              errorDetail = `Rate limit reached. You can generate again in ${secs} seconds.`;
+            } catch (_) {
+              errorDetail = "Rate limit reached. Please wait a moment and try again.";
+            }
+          } else if (response.status === 503) {
             errorDetail =
               "This repository is too large to process (the server ran out of memory). " +
               "Try a smaller repository or add a GitHub token to enable sparse cloning of private repos.";
@@ -1064,10 +1082,18 @@ const App: React.FC = () => {
               </p>
             )}
             {error && !isLoading && (
-              <p className="mt-3 text-sm text-red-400 bg-red-900/20 border border-red-700/50 p-3 rounded-md text-center">
-                <span className="font-semibold">Error:</span> {error}
-              </p>
+              retryAfterSeconds !== null ? (
+                <div className="mt-3 flex items-center gap-3 text-sm bg-amber-900/20 border border-amber-700/50 p-3 rounded-md">
+                  <span className="text-2xl font-bold tabular-nums text-amber-300 min-w-[2.5rem] text-center">{retryAfterSeconds}s</span>
+                  <p className="text-amber-300">⏱ Rate limit reached — you can generate again in <span className="font-semibold">{retryAfterSeconds} seconds</span>.</p>
+                </div>
+              ) : (
+                <p className="mt-3 text-sm text-red-400 bg-red-900/20 border border-red-700/50 p-3 rounded-md text-center">
+                  <span className="font-semibold">Error:</span> {error}
+                </p>
+              )
             )}
+
           </section>
 
           {showOutputArea && (

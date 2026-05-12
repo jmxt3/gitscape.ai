@@ -23,9 +23,14 @@ app.add_middleware(SlowAPIMiddleware)
 # Custom handler for RateLimitExceeded
 @app.exception_handler(RateLimitExceeded)
 def rate_limit_handler(request, exc):
+    retry_after = getattr(exc, 'retry_after', 60)
     return JSONResponse(
         status_code=429,
-        content={"detail": "Rate limit exceeded. Please try again later."}
+        headers={"Retry-After": str(retry_after)},
+        content={
+            "detail": f"Rate limit reached. Try again in {retry_after} seconds.",
+            "retry_after_seconds": int(retry_after),
+        },
     )
 
 # add middleware which calculates time of the request processing

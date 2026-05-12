@@ -13,7 +13,9 @@ interface SkillExportProps {
   digest: string;
 }
 
-const API_HOST = "api.gitscape.ai";
+declare const __API_HOST__: string;
+const API_HOST: string = __API_HOST__;
+
 
 
 export const SkillExport: React.FC<SkillExportProps> = ({
@@ -21,7 +23,7 @@ export const SkillExport: React.FC<SkillExportProps> = ({
   manifestJson,
   repoUrl,
   repoNameForFilename,
-  githubToken,
+  githubToken: _githubToken,
   digest,
 }) => {
   const [isDownloading, setIsDownloading] = useState(false);
@@ -55,19 +57,32 @@ export const SkillExport: React.FC<SkillExportProps> = ({
   // ─── Handlers ───────────────────────────────────────────────────────────────
 
   const handleDownloadZip = useCallback(async () => {
-    if (!repoUrl) return;
+    if (!repoUrl || !digest) return;
     setIsDownloading(true);
     setDownloadError(null);
     try {
-      const apiUrl = new URL(`https://${API_HOST}/skill-zip`);
-      apiUrl.searchParams.append("repo_url", encodeURIComponent(repoUrl));
-      if (githubToken) apiUrl.searchParams.append("github_token", encodeURIComponent(githubToken));
-      const response = await fetch(apiUrl.toString());
+      // Parse owner/repo from the GitHub URL
+      const urlParts = repoUrl.replace(/\.git$/, "").split("/").filter(Boolean);
+      const owner = urlParts[urlParts.length - 2] ?? "";
+      const repo = urlParts[urlParts.length - 1] ?? (repoNameForFilename ?? "repo");
+
+      const response = await fetch(`https://${API_HOST}/skill-zip`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          repo_url: repoUrl,
+          owner,
+          repo,
+          digest_md: digest,
+          languages: manifestJson?.metadata?.primary_languages ?? [],
+          files_analyzed: manifestJson?.metadata?.files_analyzed ?? 0,
+        }),
+      });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const blob = await response.blob();
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
-      link.download = `${repoNameForFilename ?? "repo"}-skill.zip`;
+      link.download = `${repo}-skill.zip`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -77,7 +92,8 @@ export const SkillExport: React.FC<SkillExportProps> = ({
     } finally {
       setIsDownloading(false);
     }
-  }, [repoUrl, repoNameForFilename, githubToken]);
+  }, [repoUrl, repoNameForFilename, digest, manifestJson]);
+
 
   const handleCopy = useCallback(async () => {
     try {

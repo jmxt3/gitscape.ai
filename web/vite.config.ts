@@ -9,7 +9,8 @@ export default defineConfig(({ mode }) => {
     return {
       define: {
         'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-        'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
+        'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
+        '__API_HOST__': JSON.stringify(env.VITE_API_HOST || 'api.gitscape.ai'),
       },
       resolve: {
         alias: {
@@ -31,6 +32,17 @@ export default defineConfig(({ mode }) => {
       },
       optimizeDeps: {
         exclude: ['@mlc-ai/web-llm'],
+      },
+      server: {
+        proxy: {
+          // In dev, forward /local-api/* to the local FastAPI instance.
+          // Usage: set VITE_API_HOST=localhost:8080 in .env.local
+          '/local-api': {
+            target: `http://${env.VITE_API_HOST || 'localhost:8080'}`,
+            changeOrigin: true,
+            rewrite: (path) => path.replace(/^\/local-api/, ''),
+          },
+        },
       },
     };
 });

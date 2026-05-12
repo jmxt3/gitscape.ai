@@ -23,6 +23,8 @@ from fastapi import (
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from starlette.websockets import WebSocketState
+from pydantic import BaseModel
+from typing import List
 
 from app.config import settings, origins
 import app.converter as converter
@@ -109,46 +111,43 @@ def get_digest(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/skill-zip")
-@limiter.limit("5/minute")
+class SkillZipRequest(BaseModel):
+    repo_url: str
+    owner: str
+    repo: str
+    digest_md: str
+    languages: List[str] = []
+    files_analyzed: int = 0
+
+
+@router.post("/skill-zip")
 def get_skill_zip(
     request: Request,
-    repo_url: str = Query(..., description="Git repository URL to package as a skill"),
-    github_token: str = Query(
-        None,
-        description="GitHub Personal Access Token for private repos",
-    ),
+    body: SkillZipRequest,
 ):
     """
-    Clone a Git repository and return a downloadable ZIP skill package containing:
-      - SKILL.md   : Canonical Agent Skills instructions (agentskills.io)
-      - DIGEST.md  : Full code digest knowledge base
-      - manifest.json : Machine-readable metadata for ADK / OpenAI Agents
+    Build and return a downloadable ZIP skill package from a pre-computed digest.
+    No repository cloning is performed — the digest is supplied by the client
+    from the already-completed /converter response, making this endpoint fast (~50ms).
+
+    ZIP contains:
+      - SKILL.md       : Canonical Agent Skills instructions (agentskills.io)
+      - DIGEST.md      : Full code digest knowledge base
+      - manifest.json  : Machine-readable metadata for ADK / OpenAI Agents
     """
     try:
-        repo_url = urllib.parse.unquote(repo_url)
-        with tempfile.TemporaryDirectory() as tmpdir:
-            clone_path = os.path.join(tmpdir, "repo")
-            converter.clone_repository(repo_url, clone_path, github_token=github_token)
-            digest_str, metadata = converter.generate_markdown_digest(
-                repo_url, clone_path, return_metadata=True
-            )
-
-        owner = metadata["owner"]
-        repo = metadata["repo"]
-        languages = metadata["primary_languages"]
-        files_analyzed = metadata["files_analyzed"]
+        repo_url = urllib.parse.unquote(body.repo_url)
 
         zip_buffer = build_skill_zip(
-            owner=owner,
-            repo=repo,
+            owner=body.owner,
+            repo=body.repo,
             repo_url=repo_url,
-            digest_md=digest_str,
-            languages=languages,
-            files_analyzed=files_analyzed,
+            digest_md=body.digest_md,
+            languages=body.languages,
+            files_analyzed=body.files_analyzed,
         )
 
-        filename = f"{repo}-skill.zip"
+        filename = f"{body.repo}-skill.zip"
         return StreamingResponse(
             zip_buffer,
             media_type="application/zip",
