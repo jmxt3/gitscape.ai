@@ -244,11 +244,130 @@ const FuseParticles: React.FC<FuseParticlesProps> = ({ progressPercent }) => {
 };
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ─── ConfettiBurst ────────────────────────────────────────────────────────────
+// Full-screen canvas confetti explosion. Mount to trigger, unmount to clean up.
+const CONFETTI_COLORS = [
+  // Violet brand palette
+  "#7c3aed", "#a78bfa", "#6d28d9", "#c4b5fd", "#ede9fe",
+  // Complementary accents
+  "#f59e0b", "#fcd34d", "#ffffff", "#f472b6", "#34d399", "#67e8f9",
+];
+
+interface ConfettiPiece {
+  x: number; y: number;
+  vx: number; vy: number;
+  angle: number; spin: number;
+  w: number; h: number;
+  color: string;
+  opacity: number;
+  wobble: number; wobbleSpeed: number;
+}
+
+const ConfettiBurst: React.FC = () => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    canvas.width  = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const COUNT = 320;
+    const pieces: ConfettiPiece[] = [];
+
+    // Launch from slightly above center-top so burst feels central
+    const ox = canvas.width / 2;
+    const oy = canvas.height * 0.35;
+
+    for (let i = 0; i < COUNT; i++) {
+      // Random angle covering full 360°, biased upward for a "pop" feel
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 6 + Math.random() * 18;
+      pieces.push({
+        x: ox + (Math.random() - 0.5) * 40,
+        y: oy + (Math.random() - 0.5) * 20,
+        vx: Math.cos(angle) * speed * (0.5 + Math.random() * 0.8),
+        vy: Math.sin(angle) * speed - 4, // slight upward kick
+        angle: Math.random() * Math.PI * 2,
+        spin: (Math.random() - 0.5) * 0.35,
+        w: 6 + Math.random() * 10,
+        h: 4 + Math.random() * 6,
+        color: CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)],
+        opacity: 1,
+        wobble: Math.random() * Math.PI * 2,
+        wobbleSpeed: 0.05 + Math.random() * 0.1,
+      });
+    }
+
+    const DURATION = 3600; // ms
+    const start = performance.now();
+    let raf = 0;
+
+    const tick = (now: number) => {
+      const elapsed = now - start;
+      const progress = Math.min(elapsed / DURATION, 1);
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      for (const p of pieces) {
+        // Physics
+        p.wobble += p.wobbleSpeed;
+        p.vx += Math.sin(p.wobble) * 0.15; // side-to-side drift
+        p.vy += 0.4;                        // gravity
+        p.vx *= 0.99;                       // air drag
+        p.vy *= 0.99;
+        p.x += p.vx;
+        p.y += p.vy;
+        p.angle += p.spin;
+        // Fade out in the last 40% of the animation
+        p.opacity = progress < 0.6 ? 1 : 1 - (progress - 0.6) / 0.4;
+
+        // Draw as a spinning rectangle
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.angle);
+        ctx.globalAlpha = Math.max(0, p.opacity);
+        ctx.fillStyle = p.color;
+        ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+        ctx.restore();
+      }
+
+      if (progress < 1) {
+        raf = requestAnimationFrame(tick);
+      } else {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
+    };
+
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      style={{
+        position: "fixed",
+        inset: 0,
+        width: "100vw",
+        height: "100vh",
+        pointerEvents: "none",
+        zIndex: 9999,
+      }}
+    />
+  );
+};
+// ─────────────────────────────────────────────────────────────────────────────
+
 const App: React.FC = () => {
   const [repoUrl, setRepoUrl] = useState<string>(() =>
     getFromLocalStorage(REPO_URL_LOCAL_STORAGE_KEY, "")
   );
   const [digest, setDigest] = useState<string>("");
+  const [showConfetti, setShowConfetti] = useState<boolean>(false);
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -377,6 +496,9 @@ const App: React.FC = () => {
       if (progressTickerRef.current) clearInterval(progressTickerRef.current);
       setProgressPercent(100);
       setIsLoading(false);
+      // Fire confetti on completion!
+      setShowConfetti(true);
+      setTimeout(() => setShowConfetti(false), 3800);
       // Fade out the bar after a brief moment instead of vanishing abruptly
       setTimeout(() => setProgressFading(true), 600);
       setTimeout(() => { setProgressVisible(false); setProgressFading(false); setProgressPercent(0); }, 1300);
@@ -710,6 +832,7 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-200 flex flex-col">
+      {showConfetti && <ConfettiBurst />}
       <Header
         onToggleTokenModal={() => setShowTokenModal(true)}
         hasToken={!!githubToken}
@@ -838,7 +961,7 @@ const App: React.FC = () => {
                 <div
                   className="absolute inset-0 rounded-full"
                   style={{
-                    background: "linear-gradient(90deg, #1a0a00 0%, #2d1a0a 50%, #1a0a00 100%)",
+                    background: "linear-gradient(90deg, #0d0a1a 0%, #1a1030 50%, #0d0a1a 100%)",
                     boxShadow: "inset 0 1px 3px rgba(0,0,0,0.8)",
                   }}
                 />
@@ -847,8 +970,8 @@ const App: React.FC = () => {
                   className="absolute inset-y-0 left-0 rounded-full"
                   style={{
                     width: `${progressPercent}%`,
-                    background: "linear-gradient(90deg, #7f1d1d 0%, #b45309 40%, #ea580c 75%, #f97316 90%, #fed7aa 98%)",
-                    boxShadow: "0 0 6px 1px rgba(234,88,12,0.4)",
+                    background: "linear-gradient(90deg, #3b0764 0%, #6d28d9 40%, #7c3aed 70%, #a78bfa 90%, #ede9fe 98%)",
+                    boxShadow: "0 0 8px 2px rgba(124,58,237,0.5)",
                     transition: "width 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
                   }}
                 />
