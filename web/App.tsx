@@ -350,14 +350,20 @@ const App: React.FC = () => {
 
         if (!response.ok) {
           let errorDetail = `We couldn't fetch the repository (HTTP ${response.status}).`;
-          try {
-            const errorData = await response.json();
-            if (errorData.detail) {
-              errorDetail = typeof errorData.detail === 'string' ? errorData.detail : JSON.stringify(errorData.detail);
-            } else if (errorData.message) {
-              errorDetail = errorData.message;
-            }
-          } catch (e) {}
+          if (response.status === 503) {
+            errorDetail =
+              "This repository is too large to process (the server ran out of memory). " +
+              "Try a smaller repository or add a GitHub token to enable sparse cloning of private repos.";
+          } else {
+            try {
+              const errorData = await response.json();
+              if (errorData.detail) {
+                errorDetail = typeof errorData.detail === 'string' ? errorData.detail : JSON.stringify(errorData.detail);
+              } else if (errorData.message) {
+                errorDetail = errorData.message;
+              }
+            } catch (e) {}
+          }
           throw new Error(errorDetail);
         }
 
@@ -501,8 +507,11 @@ const App: React.FC = () => {
           </svg>
           <div className="text-center w-full flex flex-col items-center mt-12">
             <h1 className="text-4xl sm:text-5xl sm:pt-12 lg:pt-5 md:text-6xl lg:text-7xl font-bold tracking-tighter w-full inline-block relative">
-              Turn Repos into Skills. Give Your Agents the Knowledge to Act.
+              Turn Repos into Skills.
             </h1>
+            <p className="mt-3 text-lg sm:text-xl md:text-2xl text-slate-400 font-medium tracking-tight max-w-2xl">
+              Give Your Agents the Knowledge to Act.
+            </p>
           </div>
           <svg
             className="w-16 lg:w-20 h-auto lg:absolute flex-shrink-0 right-0 bottom-0 md:block hidden translate-y-10 md:translate-y-20 lg:translate-y-4 lg:translate-x-full -translate-x-10"
@@ -526,7 +535,7 @@ const App: React.FC = () => {
           </svg>
         </div>
 
-        <div className="m-12 grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-4xl mx-auto px-4">
+        <div className="m-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-4xl mx-auto px-4">
           <div className="bg-slate-800/60 backdrop-blur-md p-6 rounded-xl shadow-xl border border-slate-700/80 hover:border-slate-600 transition-all duration-300 ease-in-out transform hover:-translate-y-1 hover:shadow-2xl">
             <div className="flex items-center mb-4">
               <div className="p-2 bg-violet-500/20 rounded-full mr-3 shrink-0">
@@ -583,6 +592,33 @@ const App: React.FC = () => {
             </p>
           </div>
 
+          <div className="bg-slate-800/60 backdrop-blur-md p-6 rounded-xl shadow-xl border border-slate-700/80 hover:border-amber-500/50 transition-all duration-300 ease-in-out transform hover:-translate-y-1 hover:shadow-2xl">
+            <div className="flex items-center mb-4">
+              <div className="p-2 bg-amber-500/20 rounded-full mr-3 shrink-0">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.5}
+                  stroke="currentColor"
+                  className="w-6 h-6 text-amber-400"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456Z"
+                  />
+                </svg>
+              </div>
+              <h3 className="text-xl font-semibold text-amber-400">
+                Skill Export
+              </h3>
+            </div>
+            <p className="text-sm text-slate-300 leading-relaxed">
+              Instantly generate a ready-to-use agent skill from any repo — a
+              structured SKILL.md your AI agents can load and act on.
+            </p>
+          </div>
 
         </div>
       </div>

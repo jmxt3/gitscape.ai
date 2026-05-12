@@ -32,19 +32,6 @@ export const Header: React.FC<HeaderProps> = ({ onToggleTokenModal, hasToken }) 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
         {/* Logo */}
         <div className="flex items-center gap-2.5">
-          {/* Icon mark */}
-          <div
-            className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-            style={{
-              background: 'linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)',
-              boxShadow: '0 0 16px rgba(124,58,237,0.4)',
-            }}
-          >
-            <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-4.5 h-4.5">
-              <path d="M4 10 L8 6 L12 10 L8 14 Z" fill="white" opacity="0.9"/>
-              <path d="M10 4 L16 10 L10 16" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none" opacity="0.6"/>
-            </svg>
-          </div>
           <div className="flex items-baseline gap-1">
             <span className="text-xl font-bold tracking-tight text-slate-100">
               GitScape

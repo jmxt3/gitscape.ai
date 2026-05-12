@@ -23,9 +23,10 @@ from app.skill_builder import detect_primary_languages
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-MAX_FILE_SIZE = 15 * 1024 * 1024  # 15 MB per file
-MAX_DIRECTORY_DEPTH = 30  # Maximum depth of directory traversal
-MAX_TOTAL_SIZE_BYTES = 800 * 1024 * 1024  # 800 MB total repo size
+MAX_FILE_SIZE = 500 * 1024       # 500 KB per file — keeps individual reads fast
+MAX_DIRECTORY_DEPTH = 30         # Maximum depth of directory traversal
+MAX_TOTAL_SIZE_BYTES = 150 * 1024 * 1024  # 150 MB total repo size (RAM-backed /tmp on Cloud Run)
+MAX_DIGEST_BYTES = 10 * 1024 * 1024       # 10 MB response cap (Cloud Run HTTP limit)
 CHUNK_SIZE = 1024 * 1024  # 1 MB
 
 # Ensure IGNORED_FILES is defined only once and at the top-level scope
@@ -384,6 +385,18 @@ def generate_markdown_digest(
             content = f"[Could not read file: {e}]"
         digest.append(content)
     digest_str = "\n".join(digest)
+
+    # Guard against responses that exceed Cloud Run's HTTP body limit (~32 MB).
+    # Truncate with a clear notice rather than returning a 503 or OOM-killing the instance.
+    if len(digest_str.encode("utf-8")) > MAX_DIGEST_BYTES:
+        truncation_notice = (
+            "\n\n[DIGEST TRUNCATED: repository output exceeded the 10 MB response limit. "
+            "Consider analysing a specific sub-path or a smaller repository.]"
+        )
+        # Binary-safe truncation — decode back to str afterwards.
+        digest_bytes = digest_str.encode("utf-8")
+        digest_str = digest_bytes[:MAX_DIGEST_BYTES].decode("utf-8", errors="ignore") + truncation_notice
+
     if return_metadata:
         languages = detect_primary_languages(text_files)
         metadata = {

@@ -2,7 +2,6 @@ import React, { useState, useCallback } from "react";
 import { SkillManifest } from "../types";
 import type { ProgressReport } from "../services/webllm";
 
-// Inline check — no import needed, just reads navigator.gpu
 const webGPUSupported = typeof navigator !== "undefined" && "gpu" in navigator;
 
 interface SkillExportProps {
@@ -15,7 +14,6 @@ interface SkillExportProps {
 }
 
 const API_HOST = "api.gitscape.ai";
-type ActivePane = "skill" | "manifest" | "framework";
 type Framework = "adk" | "agno";
 
 export const SkillExport: React.FC<SkillExportProps> = ({
@@ -28,21 +26,25 @@ export const SkillExport: React.FC<SkillExportProps> = ({
 }) => {
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
-  const [activePane, setActivePane] = useState<ActivePane>("skill");
   const [copyState, setCopyState] = useState<"idle" | "copied">("idle");
+  const [copyCmdState, setCopyCmdState] = useState<"idle" | "copied">("idle");
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [advancedPane, setAdvancedPane] = useState<"manifest" | "adk" | "agno">("manifest");
 
   // WebLLM state
   const [skillMdOverride, setSkillMdOverride] = useState<string>("");
+  const [prevDescription, setPrevDescription] = useState<string>("");
+  const [newDescription, setNewDescription] = useState<string>("");
   const [llmLoading, setLlmLoading] = useState(false);
   const [llmProgress, setLlmProgress] = useState<ProgressReport | null>(null);
   const [llmError, setLlmError] = useState<string | null>(null);
-  const webGPUOk = webGPUSupported;
+  const [descHighlight, setDescHighlight] = useState(false);
 
   // Framework export state
-  const [selectedFramework, setSelectedFramework] = useState<Framework>("adk");
   const [frameworkCode, setFrameworkCode] = useState<string>("");
   const [frameworkLoading, setFrameworkLoading] = useState(false);
   const [frameworkError, setFrameworkError] = useState<string | null>(null);
+  const [loadedFramework, setLoadedFramework] = useState<Framework | null>(null);
 
   const displaySkillMd = skillMdOverride || skillMd;
   const manifestStr = manifestJson ? JSON.stringify(manifestJson, null, 2) : "{}";
@@ -51,6 +53,10 @@ export const SkillExport: React.FC<SkillExportProps> = ({
   const generatedAt = manifestJson?.metadata?.generated_at
     ? new Date(manifestJson.metadata.generated_at).toLocaleString()
     : "—";
+
+  const installCmd = repoUrl
+    ? `npx skills add ${repoUrl}`
+    : "npx skills add <repo-url>";
 
   // ─── Handlers ───────────────────────────────────────────────────────────────
 
@@ -80,52 +86,69 @@ export const SkillExport: React.FC<SkillExportProps> = ({
   }, [repoUrl, repoNameForFilename, githubToken]);
 
   const handleCopy = useCallback(async () => {
-    let text = "";
-    if (activePane === "skill") text = displaySkillMd;
-    else if (activePane === "manifest") text = manifestStr;
-    else text = frameworkCode;
     try {
-      await navigator.clipboard.writeText(text);
+      await navigator.clipboard.writeText(displaySkillMd);
       setCopyState("copied");
       setTimeout(() => setCopyState("idle"), 2000);
     } catch (_) {}
-  }, [activePane, displaySkillMd, manifestStr, frameworkCode]);
+  }, [displaySkillMd]);
+
+  const handleCopyCmd = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(installCmd);
+      setCopyCmdState("copied");
+      setTimeout(() => setCopyCmdState("idle"), 2000);
+    } catch (_) {}
+  }, [installCmd]);
 
   const handleGenerateDescription = useCallback(async () => {
-    if (!webGPUOk) return;
+    if (!webGPUSupported) return;
     setLlmLoading(true);
     setLlmError(null);
     setLlmProgress(null);
+    setPrevDescription("");
+    setNewDescription("");
     try {
-      // Dynamic import — only fetches @mlc-ai/web-llm when user clicks the button
       const { generateSkillDescription } = await import("../services/webllm");
       const languages = manifestJson?.metadata?.primary_languages ?? [];
       const repoName = manifestJson?.display_name ?? repoNameForFilename ?? "this repo";
+
+      // Capture the old description before replacing
+      const oldDescMatch = displaySkillMd.match(/description: "(.*?)"/);
+      const oldDesc = oldDescMatch ? oldDescMatch[1] : "(none)";
+
       const description = await generateSkillDescription(
         repoName,
         languages,
         digest,
         (report) => setLlmProgress(report)
       );
-      // Patch the description field in the SKILL.md text
       const updated = displaySkillMd.replace(
         /description: ".*?"/s,
         `description: "${description.replace(/"/g, '\\"')}"`
       );
       setSkillMdOverride(updated);
+      setPrevDescription(oldDesc);
+      setNewDescription(description);
+
+      // Flash the description line in the preview
+      setDescHighlight(true);
+      setTimeout(() => setDescHighlight(false), 2500);
     } catch (err: any) {
       setLlmError(err.message ?? "AI generation failed.");
     } finally {
       setLlmLoading(false);
       setLlmProgress(null);
     }
-  }, [webGPUOk, manifestJson, repoNameForFilename, digest, displaySkillMd]);
+  }, [manifestJson, repoNameForFilename, digest, displaySkillMd]);
 
   const handleLoadFramework = useCallback(async (fw: Framework) => {
-    setSelectedFramework(fw);
+    setAdvancedPane(fw);
+    if (loadedFramework === fw && frameworkCode) return;
     setFrameworkLoading(true);
     setFrameworkError(null);
     setFrameworkCode("");
+    setLoadedFramework(null);
     try {
       const apiUrl = new URL(`https://${API_HOST}/export/${fw}`);
       apiUrl.searchParams.append("repo_url", encodeURIComponent(repoUrl));
@@ -133,217 +156,234 @@ export const SkillExport: React.FC<SkillExportProps> = ({
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const text = await response.text();
       setFrameworkCode(text);
+      setLoadedFramework(fw);
     } catch (err: any) {
       setFrameworkError(err.message ?? "Failed to load framework export.");
     } finally {
       setFrameworkLoading(false);
     }
-  }, [repoUrl]);
-
-  const handleFrameworkTabClick = (fw: Framework) => {
-    setActivePane("framework");
-    handleLoadFramework(fw);
-  };
+  }, [repoUrl, loadedFramework, frameworkCode]);
 
   const handleDownloadFramework = useCallback(() => {
-    if (!frameworkCode) return;
+    if (!frameworkCode || !loadedFramework) return;
     const blob = new Blob([frameworkCode], { type: "text/x-python" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.download = `${repoNameForFilename ?? "repo"}-${selectedFramework}-skill.py`;
+    link.download = `${repoNameForFilename ?? "repo"}-${loadedFramework}-skill.py`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(link.href);
-  }, [frameworkCode, repoNameForFilename, selectedFramework]);
+  }, [frameworkCode, repoNameForFilename, loadedFramework]);
+
+  const advancedContent = () => {
+    if (advancedPane === "manifest") return <JsonPreview content={manifestStr} />;
+    if (frameworkLoading) return (
+      <div className="flex items-center justify-center h-48 gap-3 text-slate-400">
+        <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
+        <span className="text-sm">Generating {advancedPane.toUpperCase()} export…</span>
+      </div>
+    );
+    if (frameworkError) return <div className="p-4 text-xs text-red-400">{frameworkError}</div>;
+    if (frameworkCode) return <PythonPreview content={frameworkCode} />;
+    return <div className="flex items-center justify-center h-48 text-slate-500 text-sm">Click a framework button to generate.</div>;
+  };
 
   // ─── Render ─────────────────────────────────────────────────────────────────
 
   return (
     <div className="flex flex-col gap-4 h-full">
-      {/* Header row */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        {/* Metadata pills */}
-        <div className="flex flex-wrap items-center gap-2 text-xs">
-          <span className="flex items-center gap-1.5 bg-amber-500/10 text-amber-300 border border-amber-500/30 px-2.5 py-1 rounded-full font-mono">
-            {generatedAt}
-          </span>
-          <span className="flex items-center gap-1.5 bg-violet-500/10 text-violet-300 border border-violet-500/30 px-2.5 py-1 rounded-full">
-            {filesAnalyzed} files
-          </span>
-          {languageList !== "—" && (
-            <span className="flex items-center gap-1.5 bg-blue-500/10 text-blue-300 border border-blue-500/30 px-2.5 py-1 rounded-full">
-              {languageList}
-            </span>
-          )}
-          <span className="flex items-center gap-1.5 bg-green-500/10 text-green-300 border border-green-500/30 px-2.5 py-1 rounded-full font-mono text-[10px] tracking-wide">
-            agentskills.io v1.0
-          </span>
-        </div>
 
-        {/* Action buttons */}
-        <div className="flex items-center gap-2 shrink-0">
+      {/* Install banner */}
+      <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 flex flex-col gap-3">
+        <div className="flex items-start gap-3">
+          <div className="mt-0.5 p-1.5 rounded-lg bg-amber-500/15">
+            <svg className="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-4M9 3l6 6M9 3v6h6" />
+            </svg>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-slate-200 mb-0.5">Install this skill</p>
+            <p className="text-xs text-slate-400">Run one command — works with Cursor, Claude Code, Copilot &amp; more.</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 bg-slate-950/70 border border-slate-700 rounded-lg px-3 py-2.5">
+          <span className="text-slate-500 text-xs font-mono select-none">$</span>
+          <code className="flex-1 text-xs font-mono text-amber-300 truncate select-all">{installCmd}</code>
           <button
-            onClick={handleCopy}
-            id="skill-copy-btn"
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 border border-slate-600 hover:border-slate-500 transition-all duration-150"
+            id="skill-copy-install-cmd-btn"
+            onClick={handleCopyCmd}
+            className="shrink-0 flex items-center gap-1 px-2 py-1 text-[11px] font-medium rounded-md bg-slate-700 hover:bg-slate-600 text-slate-300 border border-slate-600 transition-all duration-150"
           >
-            {copyState === "copied" ? (
-              <><svg className="w-3.5 h-3.5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg><span className="text-green-400">Copied</span></>
+            {copyCmdState === "copied" ? (
+              <><svg className="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg><span className="text-green-400">Copied</span></>
             ) : (
-              <><svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>Copy</>
-            )}
-          </button>
-          {activePane === "framework" && frameworkCode && (
-            <button
-              id="skill-download-py-btn"
-              onClick={handleDownloadFramework}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 hover:bg-blue-500 text-white transition-all duration-150 shadow-md"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-              Download .py
-            </button>
-          )}
-          <button
-            id="skill-download-zip-btn"
-            onClick={handleDownloadZip}
-            disabled={isDownloading}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-amber-500 hover:bg-amber-400 disabled:bg-amber-500/50 text-black transition-all duration-150 shadow-md hover:shadow-amber-500/25 disabled:cursor-not-allowed"
-          >
-            {isDownloading ? (
-              <><svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>Packaging…</>
-            ) : (
-              <><svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>Download .zip</>
+              <><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>Copy</>
             )}
           </button>
         </div>
+      </div>
+
+      {/* Metadata pills */}
+      <div className="flex flex-wrap items-center gap-2 text-xs">
+        <span className="flex items-center gap-1.5 bg-amber-500/10 text-amber-300 border border-amber-500/30 px-2.5 py-1 rounded-full font-mono">{generatedAt}</span>
+        <span className="flex items-center gap-1.5 bg-violet-500/10 text-violet-300 border border-violet-500/30 px-2.5 py-1 rounded-full">{filesAnalyzed} files</span>
+        {languageList !== "—" && (
+          <span className="flex items-center gap-1.5 bg-blue-500/10 text-blue-300 border border-blue-500/30 px-2.5 py-1 rounded-full">{languageList}</span>
+        )}
+        <span className="flex items-center gap-1.5 bg-green-500/10 text-green-300 border border-green-500/30 px-2.5 py-1 rounded-full font-mono text-[10px] tracking-wide">agentskills.io v1.0</span>
+      </div>
+
+      {/* Action buttons */}
+      <div className="flex items-center gap-2">
+        <button
+          onClick={handleCopy}
+          id="skill-copy-btn"
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 border border-slate-600 hover:border-slate-500 transition-all duration-150"
+        >
+          {copyState === "copied" ? (
+            <><svg className="w-3.5 h-3.5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg><span className="text-green-400">Copied</span></>
+          ) : (
+            <><svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>Copy SKILL.md</>
+          )}
+        </button>
+        <button
+          id="skill-download-zip-btn"
+          onClick={handleDownloadZip}
+          disabled={isDownloading}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-amber-500 hover:bg-amber-400 disabled:bg-amber-500/50 text-black transition-all duration-150 shadow-md hover:shadow-amber-500/25 disabled:cursor-not-allowed"
+        >
+          {isDownloading ? (
+            <><svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>Packaging…</>
+          ) : (
+            <><svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>Download .zip</>
+          )}
+        </button>
+
+        {/* AI Description button */}
+        {webGPUSupported && (
+          <div className="relative group">
+            <button
+              id="skill-ai-description-btn"
+              onClick={handleGenerateDescription}
+              disabled={llmLoading}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 disabled:opacity-50 text-white transition-all duration-150 shadow-md disabled:cursor-not-allowed"
+            >
+              {llmLoading ? (
+                <><svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>Generating…</>
+              ) : (
+                <>✨ AI Description</>
+              )}
+            </button>
+            {/* Tooltip */}
+            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50">
+              <div className="bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-[11px] text-slate-300 leading-relaxed shadow-xl">
+                <p className="font-semibold text-violet-300 mb-0.5">✨ AI-generated description</p>
+                Rewrites the <code className="text-amber-300 bg-slate-900/60 px-0.5 rounded">description:</code> field in your SKILL.md using an on-device language model — no data leaves your browser.
+                <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-600" />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {downloadError && (
         <p className="text-xs text-red-400 bg-red-900/20 border border-red-700/40 px-3 py-2 rounded-lg">{downloadError}</p>
       )}
+      {llmLoading && llmProgress && (
+        <div className="flex flex-col gap-1">
+          <div className="h-1.5 bg-slate-700 rounded-full overflow-hidden w-48">
+            <div className="h-full bg-gradient-to-r from-violet-500 to-purple-500 transition-all duration-300" style={{ width: `${Math.round((llmProgress.progress ?? 0) * 100)}%` }} />
+          </div>
+          <span className="text-[10px] text-slate-400 font-mono">{llmProgress.text}</span>
+        </div>
+      )}
+      {llmError && <p className="text-xs text-red-400 bg-red-900/20 border border-red-700/40 px-3 py-2 rounded-lg">{llmError}</p>}
 
-      {/* Pane toggle */}
-      <div className="flex flex-wrap gap-1 bg-slate-900/60 p-1 rounded-lg border border-slate-700 w-fit">
-        {(["skill", "manifest"] as ActivePane[]).map((pane) => (
-          <button
-            key={pane}
-            id={`skill-tab-${pane}`}
-            onClick={() => setActivePane(pane)}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all duration-150 ${
-              activePane === pane
-                ? pane === "skill"
-                  ? "bg-amber-500/20 text-amber-300 border border-amber-500/40"
-                  : "bg-blue-500/20 text-blue-300 border border-blue-500/40"
-                : "text-slate-400 hover:text-slate-200"
-            }`}
-          >
-            {pane === "skill" ? "SKILL.md" : "manifest.json"}
-          </button>
-        ))}
-
-        {/* Framework export buttons */}
-        <span className="flex items-center px-2 text-slate-600 text-xs">|</span>
-        <span className="flex items-center text-[10px] text-slate-500 pr-1 uppercase tracking-wider">Export:</span>
-        {(["adk", "agno"] as Framework[]).map((fw) => (
-          <button
-            key={fw}
-            id={`skill-tab-${fw}`}
-            onClick={() => handleFrameworkTabClick(fw)}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all duration-150 ${
-              activePane === "framework" && selectedFramework === fw
-                ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
-                : "text-slate-400 hover:text-slate-200"
-            }`}
-          >
-            {fw === "adk" ? "Google ADK" : "Agno"}
-          </button>
-        ))}
-      </div>
-
-      {/* WebLLM AI Description section — only on SKILL.md pane */}
-      {activePane === "skill" && (
-        <div className="flex flex-col gap-2">
-          {webGPUOk ? (
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center gap-3">
-                <button
-                  id="skill-ai-description-btn"
-                  onClick={handleGenerateDescription}
-                  disabled={llmLoading}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 disabled:opacity-50 text-white transition-all duration-150 shadow-md hover:shadow-violet-500/25 disabled:cursor-not-allowed"
-                >
-                  {llmLoading ? (
-                    <><svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>Generating…</>
-                  ) : (
-                    <><svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" /></svg>✨ AI Description (WebGPU)</>
-                  )}
-                </button>
-                <span className="text-[10px] text-slate-500">Qwen2 0.5B · runs in browser · no server cost</span>
-              </div>
-              {llmLoading && llmProgress && (
-                <div className="flex flex-col gap-1">
-                  <div className="h-1.5 bg-slate-700 rounded-full overflow-hidden w-48">
-                    <div
-                      className="h-full bg-gradient-to-r from-violet-500 to-purple-500 transition-all duration-300"
-                      style={{ width: `${Math.round((llmProgress.progress ?? 0) * 100)}%` }}
-                    />
-                  </div>
-                  <span className="text-[10px] text-slate-400 font-mono">{llmProgress.text}</span>
-                </div>
-              )}
-              {llmError && (
-                <p className="text-xs text-red-400 bg-red-900/20 border border-red-700/40 px-3 py-2 rounded-lg">{llmError}</p>
-              )}
-              {skillMdOverride && !llmLoading && (
-                <p className="text-xs text-emerald-400">✓ Description updated with AI-generated content</p>
-              )}
+      {/* AI Description result callout */}
+      {skillMdOverride && !llmLoading && newDescription && (
+        <div className="rounded-lg border border-violet-500/40 bg-violet-500/8 px-3 py-2.5 flex flex-col gap-1.5 animate-in fade-in slide-in-from-top-1 duration-300">
+          <p className="text-[11px] font-semibold text-violet-300 flex items-center gap-1.5">
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+            SKILL.md description updated by AI
+          </p>
+          {prevDescription && (
+            <div className="flex flex-col gap-1">
+              <p className="text-[10px] text-slate-500 font-mono line-through truncate">− {prevDescription}</p>
+              <p className="text-[10px] text-emerald-300 font-mono truncate">+ {newDescription}</p>
             </div>
-          ) : (
-            <p className="text-xs text-slate-500 bg-slate-800/60 border border-slate-700 px-3 py-2 rounded-lg">
-              ⚠️ WebGPU not available in this browser. Download the skill package and edit the{" "}
-              <code className="text-amber-400/80">description</code> field manually.
-            </p>
           )}
+          <p className="text-[10px] text-slate-500">The <code className="text-amber-300">description:</code> field below has been rewritten. Copy SKILL.md to save the change.</p>
         </div>
       )}
 
-      {/* Code pane */}
-      <div className="flex-1 relative rounded-xl overflow-hidden border border-slate-700 bg-slate-950 min-h-[400px]">
-        {/* File label bar */}
+      {/* SKILL.md pane */}
+      <div className="flex-1 relative rounded-xl overflow-hidden border border-slate-700 bg-slate-950 min-h-[360px]">
         <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-4 py-2 bg-slate-900/80 border-b border-slate-700/60 z-10 backdrop-blur-sm">
-          <span className="font-mono text-xs text-slate-400">
-            {activePane === "skill" && "SKILL.md"}
-            {activePane === "manifest" && "manifest.json"}
-            {activePane === "framework" && `${repoNameForFilename ?? "repo"}-${selectedFramework}-skill.py`}
-          </span>
+          <span className="font-mono text-xs text-slate-400">SKILL.md</span>
           <div className="flex gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-red-500/60" />
             <span className="w-2.5 h-2.5 rounded-full bg-amber-500/60" />
             <span className="w-2.5 h-2.5 rounded-full bg-green-500/60" />
           </div>
         </div>
-
         <div className="pt-10 h-full overflow-auto">
-          {activePane === "skill" && <MarkdownPreview content={displaySkillMd} />}
-          {activePane === "manifest" && <JsonPreview content={manifestStr} />}
-          {activePane === "framework" && (
-            frameworkLoading ? (
-              <div className="flex items-center justify-center h-full gap-3 text-slate-400">
-                <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
-                <span className="text-sm">Generating {selectedFramework.toUpperCase()} export…</span>
-              </div>
-            ) : frameworkError ? (
-              <div className="p-4 text-xs text-red-400">{frameworkError}</div>
-            ) : frameworkCode ? (
-              <PythonPreview content={frameworkCode} />
-            ) : (
-              <div className="flex items-center justify-center h-full text-slate-500 text-sm">
-                Select a framework above to generate the integration file.
-              </div>
-            )
-          )}
+          <MarkdownPreview content={displaySkillMd} highlightDescription={descHighlight} />
         </div>
+      </div>
+
+      {/* Advanced collapsible */}
+      <div className="rounded-xl border border-slate-700/60 overflow-hidden">
+        <button
+          id="skill-advanced-toggle"
+          onClick={() => setShowAdvanced((v) => !v)}
+          className="w-full flex items-center justify-between px-4 py-2.5 bg-slate-900/60 hover:bg-slate-800/60 transition-colors text-xs text-slate-400 hover:text-slate-300"
+        >
+          <span className="flex items-center gap-2">
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+            Advanced exports
+            <span className="text-[10px] text-slate-600">manifest.json · Google ADK · Agno</span>
+          </span>
+          <svg className={`w-3.5 h-3.5 transition-transform duration-200 ${showAdvanced ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+        </button>
+
+        {showAdvanced && (
+          <div className="border-t border-slate-700/60">
+            {/* Advanced sub-tabs */}
+            <div className="flex gap-1 bg-slate-900/40 px-3 pt-2 pb-0">
+              {(["manifest", "adk", "agno"] as const).map((p) => (
+                <button
+                  key={p}
+                  id={`skill-adv-tab-${p}`}
+                  onClick={() => {
+                    if (p === "adk" || p === "agno") handleLoadFramework(p);
+                    else setAdvancedPane("manifest");
+                  }}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-t-md transition-all duration-150 border-b-2 ${
+                    advancedPane === p
+                      ? "bg-slate-800 text-slate-200 border-amber-500/60"
+                      : "text-slate-500 hover:text-slate-300 border-transparent"
+                  }`}
+                >
+                  {p === "manifest" ? "manifest.json" : p === "adk" ? "Google ADK" : "Agno"}
+                </button>
+              ))}
+              {(advancedPane === "adk" || advancedPane === "agno") && frameworkCode && (
+                <button
+                  id="skill-download-py-btn"
+                  onClick={handleDownloadFramework}
+                  className="ml-auto mb-1 flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold rounded-lg bg-blue-600 hover:bg-blue-500 text-white transition-all duration-150"
+                >
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                  Download .py
+                </button>
+              )}
+            </div>
+            <div className="bg-slate-950 max-h-80 overflow-auto border-t border-slate-700/60">
+              {advancedContent()}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Footer */}
@@ -358,11 +398,44 @@ export const SkillExport: React.FC<SkillExportProps> = ({
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-const MarkdownPreview: React.FC<{ content: string }> = ({ content }) => (
-  <pre className="p-4 text-xs leading-relaxed font-mono text-slate-300 whitespace-pre-wrap break-words select-all">
-    {content || <span className="text-slate-600 italic">No SKILL.md content available.</span>}
-  </pre>
-);
+const MarkdownPreview: React.FC<{ content: string; highlightDescription?: boolean }> = ({ content, highlightDescription }) => {
+  if (!content) {
+    return (
+      <pre className="p-4 text-xs leading-relaxed font-mono text-slate-300 whitespace-pre-wrap break-words select-all">
+        <span className="text-slate-600 italic">No SKILL.md content available.</span>
+      </pre>
+    );
+  }
+
+  // Split on the description line so we can highlight it separately
+  const descMatch = content.match(/(description: ".*?")/);
+  if (!descMatch || !highlightDescription) {
+    return (
+      <pre className="p-4 text-xs leading-relaxed font-mono text-slate-300 whitespace-pre-wrap break-words select-all">
+        {content}
+      </pre>
+    );
+  }
+
+  const [before, ...afterParts] = content.split(descMatch[1]);
+  const after = afterParts.join(descMatch[1]);
+  return (
+    <pre className="p-4 text-xs leading-relaxed font-mono text-slate-300 whitespace-pre-wrap break-words select-all">
+      {before}
+      <span
+        style={{
+          background: 'rgba(139,92,246,0.25)',
+          outline: '1px solid rgba(139,92,246,0.5)',
+          borderRadius: '3px',
+          transition: 'background 2s ease, outline 2s ease',
+        }}
+      >
+        {descMatch[1]}
+      </span>
+      {after}
+    </pre>
+  );
+};
 
 const JsonPreview: React.FC<{ content: string }> = ({ content }) => (
   <pre
