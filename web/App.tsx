@@ -42,6 +42,208 @@ const storeInLocalStorage = (key: string, value: string | null) => {
   }
 };
 
+// ─── FuseParticles ────────────────────────────────────────────────────────────
+// Canvas particle emitter simulating a real burning match/fuse tip.
+// Two layers: large glowing embers + fine wire sparks with motion trails.
+interface FuseParticlesProps {
+  progressPercent: number;
+}
+
+interface Particle {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  life: number;    // 1 → 0
+  decay: number;
+  size: number;
+  hue: number;     // 0–60: deep red → yellow
+  type: "ember" | "spark"; // embers are big/slow, sparks are thin/fast
+}
+
+const FuseParticles: React.FC<FuseParticlesProps> = ({ progressPercent }) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const particlesRef = useRef<Particle[]>([]);
+  const animFrameRef = useRef<number>(0);
+  const prevPercentRef = useRef<number>(progressPercent);
+
+  // Smaller canvas — sparks still have room but effect is more compact
+  const CANVAS_W = 120;
+  const CANVAS_H = 80;
+  const OX = CANVAS_W / 2;
+  const OY = CANVAS_H / 2;
+
+  // Brand violet: hsl ~262°. Sparks range from deep purple → violet → lavender-white.
+  const spawn = (isMoving: boolean) => {
+    // ── Embers (glowing violet orbs) ─────────────────────────────────────
+    const emberCount = isMoving ? 10 : 4;
+    for (let i = 0; i < emberCount; i++) {
+      const angle = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 1.6;
+      const speed = isMoving ? 0.8 + Math.random() * 2.2 : 0.3 + Math.random() * 1.0;
+      particlesRef.current.push({
+        x: OX + (Math.random() - 0.5) * 5,
+        y: OY + (Math.random() - 0.5) * 3,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life: 1,
+        decay: isMoving ? 0.022 + Math.random() * 0.038 : 0.035 + Math.random() * 0.055,
+        size: isMoving ? 1.4 + Math.random() * 2.6 : 0.7 + Math.random() * 1.5,
+        // Mostly violet (262°), some blue-violet (240°) and magenta-purple (290°)
+        hue: 240 + Math.random() * 55,
+        type: "ember",
+      });
+    }
+
+    // ── Wire sparks (thin violet-white streaks) ───────────────────────────
+    const sparkCount = isMoving ? 8 : 2;
+    for (let i = 0; i < sparkCount; i++) {
+      const angle = (Math.random() - 0.5) * Math.PI * 2;
+      const speed = isMoving ? 2.2 + Math.random() * 4.5 : 0.8 + Math.random() * 2.0;
+      particlesRef.current.push({
+        x: OX + (Math.random() - 0.5) * 4,
+        y: OY + (Math.random() - 0.5) * 3,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 0.9,
+        life: 1,
+        decay: isMoving ? 0.045 + Math.random() * 0.065 : 0.08 + Math.random() * 0.10,
+        size: 0.5 + Math.random() * 1.1,
+        // Bright lavender-white (270–310°, high lightness) for the spark streaks
+        hue: 270 + Math.random() * 40,
+        type: "spark",
+      });
+    }
+  };
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    let lastTime = performance.now();
+
+    const tick = (now: number) => {
+      const dt = Math.min((now - lastTime) / 16.67, 3);
+      lastTime = now;
+
+      const isMoving = Math.abs(progressPercent - prevPercentRef.current) > 0.05;
+      prevPercentRef.current = progressPercent;
+
+      spawn(isMoving);
+
+      // ── Motion trail: fade existing pixels toward transparent (no black fill) ──
+      ctx.globalCompositeOperation = "destination-out";
+      ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
+      ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+      ctx.globalCompositeOperation = "source-over";
+
+      // ── Update physics ────────────────────────────────────────────────────
+      particlesRef.current = particlesRef.current.filter((p) => p.life > 0);
+      for (const p of particlesRef.current) {
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.vy += (p.type === "ember" ? 0.10 : 0.04) * dt;
+        if (p.type === "ember") { p.vx *= 0.97; p.vy *= 0.97; }
+        p.life -= p.decay * dt;
+      }
+
+      // ── Outer ambient violet glow ─────────────────────────────────────────
+      const outerGlow = ctx.createRadialGradient(OX, OY, 0, OX, OY, 24);
+      outerGlow.addColorStop(0, "rgba(139,92,246,0.20)");   // violet-500
+      outerGlow.addColorStop(0.5, "rgba(109,40,217,0.10)"); // violet-700
+      outerGlow.addColorStop(1, "transparent");
+      ctx.beginPath();
+      ctx.arc(OX, OY, 24, 0, Math.PI * 2);
+      ctx.fillStyle = outerGlow;
+      ctx.fill();
+
+      // ── Core flame glow (violet → purple → white-hot centre) ─────────────
+      const coreGlow = ctx.createRadialGradient(OX, OY, 0, OX, OY, 14);
+      coreGlow.addColorStop(0,   "rgba(255,255,255,1)");      // white-hot core
+      coreGlow.addColorStop(0.15, "rgba(216,180,254,0.95)");  // violet-200
+      coreGlow.addColorStop(0.4,  "rgba(139,92,246,0.80)");   // violet-500
+      coreGlow.addColorStop(0.75, "rgba(109,40,217,0.35)");   // violet-700
+      coreGlow.addColorStop(1,   "transparent");
+      ctx.beginPath();
+      ctx.arc(OX, OY, 14, 0, Math.PI * 2);
+      ctx.fillStyle = coreGlow;
+      ctx.fill();
+
+      // ── White-hot centre dot ──────────────────────────────────────────────
+      ctx.beginPath();
+      ctx.arc(OX, OY, 2.5, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(255,255,255,0.98)";
+      ctx.fill();
+
+      // ── Draw embers ───────────────────────────────────────────────────────
+      for (const p of particlesRef.current) {
+        if (p.type !== "ember") continue;
+        const alpha = Math.max(0, p.life);
+        const eg = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 2.2);
+        eg.addColorStop(0, `hsla(${p.hue}, 90%, 78%, ${alpha * 0.9})`);
+        eg.addColorStop(0.5, `hsla(${p.hue}, 85%, 58%, ${alpha * 0.45})`);
+        eg.addColorStop(1, "transparent");
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size * 2.2, 0, Math.PI * 2);
+        ctx.fillStyle = eg;
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size * alpha, 0, Math.PI * 2);
+        ctx.fillStyle = `hsla(${p.hue}, 90%, 72%, ${alpha})`;
+        ctx.fill();
+      }
+
+      // ── Draw wire sparks as streaks ───────────────────────────────────────
+      ctx.lineWidth = 1.0;
+      for (const p of particlesRef.current) {
+        if (p.type !== "spark") continue;
+        const alpha = Math.max(0, p.life);
+        const tailLen = Math.sqrt(p.vx * p.vx + p.vy * p.vy) * 2.2;
+        const nx = p.vx / (tailLen / 2.2 || 1);
+        const ny = p.vy / (tailLen / 2.2 || 1);
+        ctx.beginPath();
+        ctx.moveTo(p.x - nx * tailLen, p.y - ny * tailLen);
+        ctx.lineTo(p.x, p.y);
+        ctx.strokeStyle = `hsla(${p.hue}, 80%, 88%, ${alpha * 0.85})`;
+        ctx.shadowBlur = 3;
+        ctx.shadowColor = `hsl(${p.hue}, 80%, 75%)`;
+        ctx.stroke();
+      }
+      ctx.shadowBlur = 0;
+
+      animFrameRef.current = requestAnimationFrame(tick);
+    };
+
+    animFrameRef.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(animFrameRef.current);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [progressPercent]);
+
+  return (
+    <div
+      style={{
+        position: "absolute",
+        top: "50%",
+        transform: "translateY(-50%)",
+        left: `calc(${progressPercent}% - ${CANVAS_W / 2}px)`,
+        transition: "left 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
+        width: CANVAS_W,
+        height: CANVAS_H,
+        pointerEvents: "none",
+      }}
+    >
+      <canvas
+        ref={canvasRef}
+        width={CANVAS_W}
+        height={CANVAS_H}
+        style={{ display: "block" }}
+      />
+    </div>
+  );
+};
+// ─────────────────────────────────────────────────────────────────────────────
+
 const App: React.FC = () => {
   const [repoUrl, setRepoUrl] = useState<string>(() =>
     getFromLocalStorage(REPO_URL_LOCAL_STORAGE_KEY, "")
@@ -513,26 +715,7 @@ const App: React.FC = () => {
         hasToken={!!githubToken}
       />
       <div className="m-1">
-        <div className="relative w-full max-w-4xl mx-auto flex sm:flex-row flex-col justify-center items-start sm:items-center pt-8 sm:pt-0">
-          <svg
-            className="h-auto w-16 sm:w-20 md:w-24 flex-shrink-0 p-2 md:relative sm:absolute lg:absolute left-0 lg:-translate-x-full md:translate-x-10 sm:-translate-y-16 md:-translate-y-0 -translate-x-2 lg:-translate-y-10"
-            viewBox="0 0 91 98"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="m35.878 14.162 1.333-5.369 1.933 5.183c4.47 11.982 14.036 21.085 25.828 24.467l5.42 1.555-5.209 2.16c-11.332 4.697-19.806 14.826-22.888 27.237l-1.333 5.369-1.933-5.183C34.56 57.599 24.993 48.496 13.201 45.114l-5.42-1.555 5.21-2.16c11.331-4.697 19.805-14.826 22.887-27.237Z"
-              fill="#FE4A60"
-              stroke="#000"
-              strokeWidth="3.445"
-            ></path>
-            <path
-              d="M79.653 5.729c-2.436 5.323-9.515 15.25-18.341 12.374m9.197 16.336c2.6-5.851 10.008-16.834 18.842-13.956m-9.738-15.07c-.374 3.787 1.076 12.078 9.869 14.943M70.61 34.6c.503-4.21-.69-13.346-9.49-16.214M14.922 65.967c1.338 5.677 6.372 16.756 15.808 15.659M18.21 95.832c-1.392-6.226-6.54-18.404-15.984-17.305m12.85-12.892c-.41 3.771-3.576 11.588-12.968 12.681M18.025 96c.367-4.21 3.453-12.905 12.854-14"
-              stroke="#000"
-              strokeWidth="2.548"
-              strokeLinecap="round"
-            ></path>
-          </svg>
+        <div className="relative w-full max-w-4xl mx-auto flex justify-center items-center">
           <div className="text-center w-full flex flex-col items-center mt-12">
             <h1 className="text-4xl sm:text-5xl sm:pt-12 lg:pt-5 md:text-6xl lg:text-7xl font-bold tracking-tighter w-full inline-block relative">
               Turn Repos into Skills.
@@ -541,26 +724,6 @@ const App: React.FC = () => {
               Give Your Agents the Knowledge to Act.
             </p>
           </div>
-          <svg
-            className="w-16 lg:w-20 h-auto lg:absolute flex-shrink-0 right-0 bottom-0 md:block hidden translate-y-10 md:translate-y-20 lg:translate-y-4 lg:translate-x-full -translate-x-10"
-            viewBox="0 0 92 80"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="m35.213 16.953.595-5.261 2.644 4.587a35.056 35.056 0 0 0 26.432 17.33l5.261.594-4.587 2.644A35.056 35.056 0 0 0 48.23 63.28l-.595 5.26-2.644-4.587a35.056 35.056 0 0 0-26.432-17.328l-5.261-.595 4.587-2.644a35.056 35.056 0 0 0 17.329-26.433Z"
-              fill="#5CF1A4"
-              stroke="#000"
-              strokeWidth="2.868"
-              className=""
-            ></path>
-            <path
-              d="M75.062 40.108c1.07 5.255 1.072 16.52-7.472 19.54m7.422-19.682c1.836 2.965 7.643 8.14 16.187 5.121-8.544 3.02-8.207 15.23-6.971 20.957-1.97-3.343-8.044-9.274-16.588-6.254M12.054 28.012c1.34-5.22 6.126-15.4 14.554-14.369M12.035 28.162c-.274-3.487-2.93-10.719-11.358-11.75C9.104 17.443 14.013 6.262 15.414.542c.226 3.888 2.784 11.92 11.212 12.95"
-              stroke="#000"
-              strokeWidth="2.319"
-              strokeLinecap="round"
-            ></path>
-          </svg>
         </div>
 
         <div className="m-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-4xl mx-auto px-4">
@@ -689,34 +852,16 @@ const App: React.FC = () => {
                     transition: "width 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
                   }}
                 />
-                {/* Spark tip — bright glowing point at the burning edge */}
+                {/* Spark tip — canvas particle emitter at the burning edge */}
                 {progressPercent < 100 && (
-                  <div
-                    className="absolute top-1/2 -translate-y-1/2"
-                    style={{
-                      left: `calc(${progressPercent}% - 6px)`,
-                      transition: "left 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
-                    }}
-                  >
-                    {/* Outer glow */}
-                    <div
-                      style={{
-                        width: "18px",
-                        height: "18px",
-                        borderRadius: "50%",
-                        background: "radial-gradient(circle, rgba(255,255,200,0.9) 0%, rgba(255,165,0,0.6) 40%, transparent 70%)",
-                        animation: "fuseFlicker 0.12s ease-in-out infinite alternate",
-                        marginTop: "-4px",
-                      }}
-                    />
-                  </div>
+                  <FuseParticles progressPercent={progressPercent} />
                 )}
                 <style>{`
                   @keyframes fuseFlicker {
-                    0%   { transform: scale(1)   translateY(-50%); opacity: 1; }
-                    33%  { transform: scale(1.3) translateY(-48%); opacity: 0.9; }
-                    66%  { transform: scale(0.9) translateY(-52%); opacity: 1; }
-                    100% { transform: scale(1.2) translateY(-50%); opacity: 0.85; }
+                    0%   { transform: scale(1);   opacity: 1; }
+                    33%  { transform: scale(1.4); opacity: 0.9; }
+                    66%  { transform: scale(0.85); opacity: 1; }
+                    100% { transform: scale(1.3); opacity: 0.85; }
                   }
                 `}</style>
               </div>
