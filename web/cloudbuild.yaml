@@ -1,20 +1,11 @@
 substitutions:
   _IMAGE_TAG: latest  # overridden automatically by CI with $COMMIT_SHA
+  _API_HOST: api.gitscape.ai
 
 steps:
-  # ── Step 1: Install dependencies ─────────────────────────────────────────────
-  - name: 'node:20-alpine'
-    id: 'install'
-    entrypoint: 'npm'
-    args: ['ci']
-
-  # ── Step 2: Build the Vite app ────────────────────────────────────────────────
-  - name: 'node:20-alpine'
-    id: 'build'
-    entrypoint: 'npm'
-    args: ['run', 'build']
-
-  # ── Step 3: Build the Docker image (nginx serving the dist/) ─────────────────
+  # ── Step 1: Build the Docker image (nginx serving the dist/) ─────────────────
+  # The Dockerfile multi-stage handles npm install + vite build internally.
+  # VITE_API_HOST is passed as a build-arg so the production URL is baked in.
   - name: 'gcr.io/cloud-builders/docker'
     id: 'docker-build'
     args:
@@ -25,9 +16,11 @@ steps:
       - 'us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/gitscape-web:latest'
       - '--cache-from'
       - 'us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/gitscape-web:latest'
+      - '--build-arg'
+      - 'VITE_API_HOST=$_API_HOST'
       - '.'
 
-  # ── Step 4: Push both tags to Artifact Registry ───────────────────────────────
+  # ── Step 2: Push both tags to Artifact Registry ───────────────────────────────
   - name: 'gcr.io/cloud-builders/docker'
     id: 'push'
     args:
@@ -35,7 +28,7 @@ steps:
       - '--all-tags'
       - 'us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/gitscape-web'
 
-  # ── Step 5: Deploy to Cloud Run ───────────────────────────────────────────────
+  # ── Step 3: Deploy to Cloud Run ───────────────────────────────────────────────
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     id: 'deploy'
     entrypoint: gcloud

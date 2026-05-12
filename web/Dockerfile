@@ -1,12 +1,17 @@
 # Build stage
 FROM node:20-alpine AS builder
 WORKDIR /app
+
+# Accept VITE_API_HOST as a build argument so it gets baked into the JS bundle
+ARG VITE_API_HOST=api.gitscape.ai
+ENV VITE_API_HOST=$VITE_API_HOST
+
 COPY package.json package-lock.json ./
-RUN npm install
+RUN npm ci
 COPY . .
 RUN npm run build
 
-# Production stage
+# Production stage — serve the static bundle with nginx
 FROM nginx:alpine
 COPY --from=builder /app/dist /usr/share/nginx/html
 COPY --from=builder /app/nginx.conf /etc/nginx/conf.d/default.conf
