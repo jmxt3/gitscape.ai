@@ -938,10 +938,11 @@ const App: React.FC = () => {
   }, []);
 
   const showOutputArea =
-    (!isLoading &&
+    repoUrl.trim() !== "" &&
+    ((!isLoading &&
       (digest || (diagramData && filesToRenderInDiagram.length > 0)) &&
       !error) ||
-    (!isLoading && processedRepoName && digest);
+    (!isLoading && processedRepoName && digest));
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-200 flex flex-col">
