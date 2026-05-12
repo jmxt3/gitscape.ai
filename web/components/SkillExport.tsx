@@ -204,7 +204,13 @@ export const SkillExport: React.FC<SkillExportProps> = ({
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-slate-200 mb-0.5">Install this skill</p>
-            <p className="text-xs text-slate-400">Run one command — works with Cursor, Claude Code, Copilot &amp; more.</p>
+            <p className="text-xs text-slate-400">
+              Run one command — works with Cursor, Claude Code, Copilot &amp; more.
+            </p>
+            <p className="text-[10px] text-slate-500 mt-1">
+              ⚠️ Requires the SKILL.md to be committed to the repo first.{" "}
+              <span className="text-slate-400">Download the .zip below and push it to your repo to enable this command.</span>
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-2 bg-slate-950/70 border border-slate-700 rounded-lg px-3 py-2.5">

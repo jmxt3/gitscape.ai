@@ -52,6 +52,9 @@ const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [progressMessage, setProgressMessage] = useState<string>("");
   const [progressPercent, setProgressPercent] = useState<number>(0);
+  const [progressVisible, setProgressVisible] = useState<boolean>(false);
+  const [progressFading, setProgressFading] = useState<boolean>(false);
+  const progressTickerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const [githubToken, setGithubToken] = useState<string | null>(null);
   const [showTokenModal, setShowTokenModal] = useState<boolean>(false);
@@ -169,8 +172,12 @@ const App: React.FC = () => {
       setDigest(markdownDigest);
       setCurrentDefaultBranch(defaultBranchFromFetch);
       setProgressMessage("Digest ready!");
+      if (progressTickerRef.current) clearInterval(progressTickerRef.current);
       setProgressPercent(100);
       setIsLoading(false);
+      // Fade out the bar after a brief moment instead of vanishing abruptly
+      setTimeout(() => setProgressFading(true), 600);
+      setTimeout(() => { setProgressVisible(false); setProgressFading(false); setProgressPercent(0); }, 1300);
 
       const branchToUse = defaultBranchFromFetch;
 
@@ -267,6 +274,8 @@ const App: React.FC = () => {
     setDigest("");
     setProgressMessage("Initializing...");
     setProgressPercent(0);
+    setProgressVisible(true);
+    setProgressFading(false);
 
     setProcessedRepoName(undefined);
     setRepoNameForFilename(null);
@@ -325,6 +334,21 @@ const App: React.FC = () => {
     const initiateRequest = async () => {
       setProgressMessage("Connecting to server for processing...");
       setProgressPercent(10);
+
+      // Simulate progress during the long API call: slowly tick from 10% → 88%
+      if (progressTickerRef.current) clearInterval(progressTickerRef.current);
+      progressTickerRef.current = setInterval(() => {
+        setProgressPercent((prev) => {
+          if (prev >= 88) {
+            if (progressTickerRef.current) clearInterval(progressTickerRef.current);
+            return prev;
+          }
+          // Slow down as it approaches 88%: smaller increments near the end
+          const remaining = 88 - prev;
+          const step = Math.max(0.3, remaining * 0.035);
+          return Math.min(88, prev + step);
+        });
+      }, 800);
       
       const apiHost = "api.gitscape.ai";
       let apiScheme: string;
@@ -402,13 +426,15 @@ const App: React.FC = () => {
 
       } catch (err: any) {
         console.error("Error fetching digest:", err);
+        if (progressTickerRef.current) clearInterval(progressTickerRef.current);
         setError(
           err.message ||
           "We couldn't fetch the repository. Please add a GitHub Personal Access Token (PAT) and try again."
         );
         setProgressMessage("Error occurred during request.");
         setIsLoading(false);
-        setProgressPercent(0);
+        setProgressFading(true);
+        setTimeout(() => { setProgressVisible(false); setProgressFading(false); setProgressPercent(0); }, 700);
       }
     };
 
@@ -628,10 +654,14 @@ const App: React.FC = () => {
             id="digest-generator-input"
             className="bg-slate-800/80 backdrop-blur-sm p-6 rounded-lg shadow-xl border border-slate-700"
           >
-            {isLoading && progressPercent > 0 && (
+            {progressVisible && (
               <div
                 className="w-full mb-3 relative"
-                style={{ height: "10px" }}
+                style={{
+                  height: "10px",
+                  opacity: progressFading ? 0 : 1,
+                  transition: "opacity 0.7s ease-out",
+                }}
                 aria-live="polite"
                 role="progressbar"
                 aria-valuenow={progressPercent}
