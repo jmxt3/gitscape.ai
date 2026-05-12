@@ -58,7 +58,7 @@ const DiagramComponent: React.FC<DiagramProps> = ({
   defaultBranch,
   isInFullscreenModal = false,
   onOpenFullscreenModal,
-  showTitle = true,
+  showTitle = false,
 }) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
