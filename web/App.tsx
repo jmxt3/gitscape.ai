@@ -277,6 +277,20 @@ const App: React.FC = () => {
     setProgressVisible(true);
     setProgressFading(false);
 
+    // Start the fuse ticker immediately so the bar visibly burns from the start
+    if (progressTickerRef.current) clearInterval(progressTickerRef.current);
+    progressTickerRef.current = setInterval(() => {
+      setProgressPercent((prev) => {
+        if (prev >= 88) {
+          if (progressTickerRef.current) clearInterval(progressTickerRef.current);
+          return prev;
+        }
+        const remaining = 88 - prev;
+        const step = Math.max(0.3, remaining * 0.04);
+        return Math.min(88, prev + step);
+      });
+    }, 700);
+
     setProcessedRepoName(undefined);
     setRepoNameForFilename(null);
     setCurrentDefaultBranch(null);
@@ -313,7 +327,6 @@ const App: React.FC = () => {
     let defaultBranchForThisRequest: string | null = null;
     try {
       setProgressMessage("Fetching repository details...");
-      setProgressPercent(2);
       defaultBranchForThisRequest = await githubService.getDefaultBranch(
         owner,
         repo
@@ -322,33 +335,22 @@ const App: React.FC = () => {
       setProgressMessage("Repository details fetched. Connecting to server...");
     } catch (branchError: any) {
       console.error("Failed to fetch default branch:", branchError);
+      if (progressTickerRef.current) clearInterval(progressTickerRef.current);
+      const isRateLimit = branchError.message?.includes("403") || branchError.message?.includes("rate limit");
       setError(
-        `Failed to fetch repository details (branch): ${branchError.message}. Please ensure the repository is public or a valid GitHub token is provided for private repositories.`
+        isRateLimit
+          ? "GitHub API rate limit reached. Add a GitHub token (top-right) to get 5,000 requests/hour instead of 60."
+          : `Failed to fetch repository details: ${branchError.message}. Please ensure the repository is public or add a GitHub token.`
       );
       setIsLoading(false);
-      setProgressMessage("Error fetching branch.");
-      setProgressPercent(0);
+      setProgressFading(true);
+      setTimeout(() => { setProgressVisible(false); setProgressFading(false); setProgressPercent(0); }, 700);
       return;
     }
 
     const initiateRequest = async () => {
       setProgressMessage("Connecting to server for processing...");
-      setProgressPercent(10);
-
-      // Simulate progress during the long API call: slowly tick from 10% → 88%
-      if (progressTickerRef.current) clearInterval(progressTickerRef.current);
-      progressTickerRef.current = setInterval(() => {
-        setProgressPercent((prev) => {
-          if (prev >= 88) {
-            if (progressTickerRef.current) clearInterval(progressTickerRef.current);
-            return prev;
-          }
-          // Slow down as it approaches 88%: smaller increments near the end
-          const remaining = 88 - prev;
-          const step = Math.max(0.3, remaining * 0.035);
-          return Math.min(88, prev + step);
-        });
-      }, 800);
+      // Ticker is already running from init — no need to restart it here
       
       const apiHost = "api.gitscape.ai";
       let apiScheme: string;
