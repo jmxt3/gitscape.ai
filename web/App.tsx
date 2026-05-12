@@ -630,18 +630,63 @@ const App: React.FC = () => {
           >
             {isLoading && progressPercent > 0 && (
               <div
-                className="w-full bg-slate-600 rounded-full h-2.5 mb-3 overflow-hidden"
+                className="w-full mb-3 relative"
+                style={{ height: "10px" }}
                 aria-live="polite"
+                role="progressbar"
+                aria-valuenow={progressPercent}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-label="Generation progress"
               >
+                {/* Fuse track — dark charred rope texture */}
                 <div
-                  className="bg-violet-500 h-2.5 rounded-full transition-all duration-300 ease-linear"
-                  style={{ width: `${progressPercent}%` }}
-                  role="progressbar"
-                  aria-valuenow={progressPercent}
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                  aria-label="Generation progress"
-                ></div>
+                  className="absolute inset-0 rounded-full"
+                  style={{
+                    background: "linear-gradient(90deg, #1a0a00 0%, #2d1a0a 50%, #1a0a00 100%)",
+                    boxShadow: "inset 0 1px 3px rgba(0,0,0,0.8)",
+                  }}
+                />
+                {/* Burnt portion — glowing orange-to-red gradient */}
+                <div
+                  className="absolute inset-y-0 left-0 rounded-full"
+                  style={{
+                    width: `${progressPercent}%`,
+                    background: "linear-gradient(90deg, #7f1d1d 0%, #b45309 40%, #ea580c 75%, #f97316 90%, #fed7aa 98%)",
+                    boxShadow: "0 0 6px 1px rgba(234,88,12,0.4)",
+                    transition: "width 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
+                  }}
+                />
+                {/* Spark tip — bright glowing point at the burning edge */}
+                {progressPercent < 100 && (
+                  <div
+                    className="absolute top-1/2 -translate-y-1/2"
+                    style={{
+                      left: `calc(${progressPercent}% - 6px)`,
+                      transition: "left 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
+                    }}
+                  >
+                    {/* Outer glow */}
+                    <div
+                      style={{
+                        width: "18px",
+                        height: "18px",
+                        borderRadius: "50%",
+                        background: "radial-gradient(circle, rgba(255,255,200,0.9) 0%, rgba(255,165,0,0.6) 40%, transparent 70%)",
+                        animation: "fuseFlicker 0.12s ease-in-out infinite alternate",
+                        marginTop: "-4px",
+                      }}
+                    />
+                  </div>
+                )}
+                <style>{`
+                  @keyframes fuseFlicker {
+                    0%   { transform: scale(1)   translateY(-50%); opacity: 1; }
+                    33%  { transform: scale(1.3) translateY(-48%); opacity: 0.9; }
+                    66%  { transform: scale(0.9) translateY(-52%); opacity: 1; }
+                    100% { transform: scale(1.2) translateY(-50%); opacity: 0.85; }
+                  }
+                `}</style>
               </div>
             )}
             <RepoInput
