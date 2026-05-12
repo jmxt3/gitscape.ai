@@ -1,7 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <!--
+    Git Scape AI — single-page application.
+    Features: Code Digest, Code Visualization, Skill Export.
+    All functionality is served from the root URL.
+  -->
   <url>
     <loc>https://gitscape.ai/</loc>
+    <lastmod>2026-05-12</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>

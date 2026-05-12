@@ -1,3 +1,18 @@
 User-agent: *
 Allow: /
+Disallow: /api/
+
+# Allow major AI search crawlers for AI search visibility
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: GoogleOther
+Allow: /
+
 Sitemap: https://gitscape.ai/sitemap.xml

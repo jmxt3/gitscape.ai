@@ -79,6 +79,9 @@ const FuseParticles: React.FC<FuseParticlesProps> = ({ progressPercent, step }) 
   const particlesRef = useRef<Particle[]>([]);
   const animFrameRef = useRef<number>(0);
   const prevPercentRef = useRef<number>(progressPercent);
+  // Always reflects latest step without restarting the animation loop
+  const stepRef = useRef<1 | 2 | 3>(step);
+  useEffect(() => { stepRef.current = step; }, [step]);
 
   const CANVAS_W = 120;
   const CANVAS_H = 80;
@@ -86,8 +89,8 @@ const FuseParticles: React.FC<FuseParticlesProps> = ({ progressPercent, step }) 
   const OY = CANVAS_H / 2;
 
   const spawn = (isMoving: boolean) => {
-    const [eBase, eRange] = STEP_EMBER_HUE[step];
-    const [sBase, sRange] = STEP_SPARK_HUE[step];
+    const [eBase, eRange] = STEP_EMBER_HUE[stepRef.current];
+    const [sBase, sRange] = STEP_SPARK_HUE[stepRef.current];
 
     const emberCount = isMoving ? 10 : 4;
     for (let i = 0; i < emberCount; i++) {
@@ -157,22 +160,24 @@ const FuseParticles: React.FC<FuseParticlesProps> = ({ progressPercent, step }) 
         p.life -= p.decay * dt;
       }
 
-      // ── Outer ambient violet glow ─────────────────────────────────────────
+      // ── Outer ambient glow (step-aware color) ────────────────────────────
+      const [eBase] = STEP_EMBER_HUE[stepRef.current];
+      const glowHue = eBase + 15; // slightly shifted for glow warmth
       const outerGlow = ctx.createRadialGradient(OX, OY, 0, OX, OY, 24);
-      outerGlow.addColorStop(0, "rgba(139,92,246,0.20)");   // violet-500
-      outerGlow.addColorStop(0.5, "rgba(109,40,217,0.10)"); // violet-700
+      outerGlow.addColorStop(0, `hsla(${glowHue}, 85%, 65%, 0.20)`);
+      outerGlow.addColorStop(0.5, `hsla(${glowHue}, 80%, 45%, 0.10)`);
       outerGlow.addColorStop(1, "transparent");
       ctx.beginPath();
       ctx.arc(OX, OY, 24, 0, Math.PI * 2);
       ctx.fillStyle = outerGlow;
       ctx.fill();
 
-      // ── Core flame glow (violet → purple → white-hot centre) ─────────────
+      // ── Core flame glow (step-aware → white-hot centre) ──────────────────
       const coreGlow = ctx.createRadialGradient(OX, OY, 0, OX, OY, 14);
-      coreGlow.addColorStop(0, "rgba(255,255,255,1)");      // white-hot core
-      coreGlow.addColorStop(0.15, "rgba(216,180,254,0.95)");  // violet-200
-      coreGlow.addColorStop(0.4, "rgba(139,92,246,0.80)");   // violet-500
-      coreGlow.addColorStop(0.75, "rgba(109,40,217,0.35)");   // violet-700
+      coreGlow.addColorStop(0, "rgba(255,255,255,1)");                              // white-hot core
+      coreGlow.addColorStop(0.15, `hsla(${glowHue + 20}, 95%, 88%, 0.95)`);        // light tint
+      coreGlow.addColorStop(0.4, `hsla(${glowHue}, 90%, 60%, 0.80)`);              // step color
+      coreGlow.addColorStop(0.75, `hsla(${glowHue - 10}, 85%, 40%, 0.35)`);        // deeper shade
       coreGlow.addColorStop(1, "transparent");
       ctx.beginPath();
       ctx.arc(OX, OY, 14, 0, Math.PI * 2);

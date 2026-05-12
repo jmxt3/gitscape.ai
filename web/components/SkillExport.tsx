@@ -111,7 +111,7 @@ export const SkillExport: React.FC<SkillExportProps> = ({
 
 
 
-  const handleGenerateDescription = useCallback(async () => {
+  const handleGenerateSkill = useCallback(async () => {
     if (!webGPUSupported) return;
     setLlmLoading(true);
     setLlmError(null);
@@ -124,30 +124,36 @@ export const SkillExport: React.FC<SkillExportProps> = ({
       const languages = manifestJson?.metadata?.primary_languages ?? [];
       const repoName = manifestJson?.display_name ?? repoNameForFilename ?? "this repo";
 
-      // Capture the old description before replacing
+      // Capture the old description for the diff callout
       const oldDescMatch = displaySkillMd.match(/description: "(.*?)"/);
       const oldDesc = oldDescMatch ? oldDescMatch[1] : "(none)";
 
+      // Stream the new description
       const description = await generateSkillDescription(
         repoName,
         languages,
         digest,
         (report) => setLlmProgress(report),
-        // Live chunk callback — update the preview with each new token
         (partial) => setStreamingPartial(partial)
       );
 
-      // Generation done — clear streaming state and write final result
       setStreamingPartial(null);
-      const updated = displaySkillMd.replace(
+
+      // Replace description field AND also enrich the `when_to_use` / `usage` sections if present
+      let updated = displaySkillMd.replace(
         /description: ".*?"/s,
         `description: "${description.replace(/"/g, '\\"')}"`
       );
+      // If the skill has a `usage:` or `when_to_use:` field that's empty/placeholder, populate it
+      updated = updated.replace(
+        /when_to_use: ""/,
+        `when_to_use: "Use when working with, understanding, or modifying the ${repoName} codebase. Covers architecture, implementation patterns, and configuration."`
+      );
+
       setSkillMdOverride(updated);
       setPrevDescription(oldDesc);
       setNewDescription(description);
 
-      // Flash the description line in the preview
       setDescHighlight(true);
       setTimeout(() => setDescHighlight(false), 2500);
     } catch (err: any) {
@@ -183,7 +189,7 @@ export const SkillExport: React.FC<SkillExportProps> = ({
           id="skill-download-zip-btn"
           onClick={handleDownloadZip}
           disabled={isDownloading}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-violet-600 hover:bg-violet-500 disabled:bg-violet-600/50 text-white text-sm font-semibold transition-all duration-150 shadow-md hover:shadow-violet-500/20 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2 focus:ring-offset-slate-900 disabled:cursor-not-allowed"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 disabled:bg-amber-500/50 text-black text-sm font-semibold transition-all duration-150 shadow-md hover:shadow-amber-500/20 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 focus:ring-offset-slate-900 disabled:cursor-not-allowed"
         >
           {isDownloading ? (
             <><svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>Packaging…</>
@@ -208,12 +214,12 @@ export const SkillExport: React.FC<SkillExportProps> = ({
           )}
         </button>
 
-        {/* AI Description button — subtle, tertiary */}
+        {/* AI Skill button — subtle, tertiary */}
         {webGPUSupported && (
           <div className="relative group ml-auto">
             <button
               id="skill-ai-description-btn"
-              onClick={handleGenerateDescription}
+              onClick={handleGenerateSkill}
               disabled={llmLoading}
               className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg bg-slate-700/50 hover:bg-slate-700 border border-slate-600 text-slate-400 hover:text-slate-200 disabled:opacity-50 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2 focus:ring-offset-slate-900 disabled:cursor-not-allowed"
             >
@@ -224,15 +230,15 @@ export const SkillExport: React.FC<SkillExportProps> = ({
                 <>✨ AI Description</>
               )}
               {!llmLoading && (
-                <span className="ml-1 text-[9px] font-semibold tracking-wider uppercase bg-violet-500/20 text-violet-300 border border-violet-500/30 px-1.5 py-0.5 rounded">WebGPU</span>
+                <span className="ml-1 text-[9px] font-semibold tracking-wider uppercase bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1.5 py-0.5 rounded">WebGPU</span>
               )}
               </span>
             </button>
             {/* Tooltip */}
-            <div className="absolute bottom-full right-0 mb-2 w-60 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50">
+            <div className="absolute bottom-full right-0 mb-2 w-64 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50">
               <div className="bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-[11px] text-slate-300 leading-relaxed shadow-xl">
-                <p className="font-semibold text-slate-200 mb-0.5">AI-generated description</p>
-                Rewrites the <code className="text-slate-300 bg-slate-900/60 px-0.5 rounded">description:</code> field in your SKILL.md using an on-device language model — no data leaves your browser.
+                <p className="font-semibold text-slate-200 mb-0.5">AI-powered SKILL.md</p>
+                Regenerates the <code className="text-slate-300 bg-slate-900/60 px-0.5 rounded">description</code> and enriches other fields using an on-device model via WebGPU — no data leaves your browser.
                 <div className="absolute top-full right-4 border-4 border-transparent border-t-slate-600" />
               </div>
             </div>
@@ -252,19 +258,19 @@ export const SkillExport: React.FC<SkillExportProps> = ({
       {llmLoading && llmProgress && (
         <div className="flex flex-col gap-1">
           <div className="h-1.5 bg-slate-700 rounded-full overflow-hidden w-48">
-            <div className="h-full bg-gradient-to-r from-violet-500 to-purple-500 transition-all duration-300" style={{ width: `${Math.round((llmProgress.progress ?? 0) * 100)}%` }} />
+            <div className="h-full bg-gradient-to-r from-amber-500 to-yellow-400 transition-all duration-300" style={{ width: `${Math.round((llmProgress.progress ?? 0) * 100)}%` }} />
           </div>
           <span className="text-[10px] text-slate-400 font-mono">{llmProgress.text}</span>
         </div>
       )}
       {llmError && <p className="text-xs text-red-400 bg-red-900/20 border border-red-700/40 px-3 py-2 rounded-lg">{llmError}</p>}
 
-      {/* AI Description result callout */}
+      {/* AI result callout */}
       {skillMdOverride && !llmLoading && newDescription && (
-        <div className="rounded-lg border border-violet-500/40 bg-violet-500/8 px-3 py-2.5 flex flex-col gap-1.5 animate-in fade-in slide-in-from-top-1 duration-300">
-          <p className="text-[11px] font-semibold text-violet-300 flex items-center gap-1.5">
+        <div className="rounded-lg border border-amber-500/40 bg-amber-500/8 px-3 py-2.5 flex flex-col gap-1.5 animate-in fade-in slide-in-from-top-1 duration-300">
+          <p className="text-[11px] font-semibold text-amber-400 flex items-center gap-1.5">
             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-            SKILL.md description updated by AI
+            SKILL.md updated by AI
           </p>
           {prevDescription && (
             <div className="flex flex-col gap-1">
@@ -272,7 +278,7 @@ export const SkillExport: React.FC<SkillExportProps> = ({
               <p className="text-[10px] text-emerald-300 font-mono truncate">+ {newDescription}</p>
             </div>
           )}
-          <p className="text-[10px] text-slate-500">The <code className="text-amber-300">description:</code> field below has been rewritten. Copy SKILL.md to save the change.</p>
+          <p className="text-[10px] text-slate-500">Description and skill fields have been rewritten. Copy SKILL.md or Download .zip to save.</p>
         </div>
       )}
 
@@ -309,11 +315,18 @@ export const SkillExport: React.FC<SkillExportProps> = ({
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-/**
- * MarkdownPreview renders SKILL.md with optional:
- *  - streaming: live partial description being typed in (with blinking cursor)
- *  - highlightDescription: purple flash after generation completes
- */
+// SKILL.md section metadata — shown as inline annotations in the preview
+const SKILL_SECTION_META: Record<string, { color: string; hint: string }> = {
+  name:             { color: "#fbbf24", hint: "Skill identifier used by agent frameworks" },
+  description:      { color: "#fbbf24", hint: "What this skill does — the agent reads this to decide when to use it" },
+  usage:            { color: "#34d399", hint: "How to invoke this skill in your agent prompt" },
+  when_to_use:      { color: "#34d399", hint: "Conditions and tasks this skill is best suited for" },
+  directory_structure: { color: "#fbbf24", hint: "Repository layout — the agent uses this to navigate the codebase" },
+  key_files:        { color: "#fbbf24", hint: "Most important files — starting points for any task" },
+  architecture:     { color: "#60a5fa", hint: "High-level design patterns and component relationships" },
+  dependencies:     { color: "#60a5fa", hint: "External libraries and tools the repo relies on" },
+};
+
 const MarkdownPreview: React.FC<{
   content: string;
   highlightDescription?: boolean;
@@ -339,64 +352,60 @@ const MarkdownPreview: React.FC<{
     return (
       <pre className="p-4 text-xs leading-relaxed font-mono text-slate-300 whitespace-pre-wrap break-words select-all">
         {before}
-        <span
-          style={{
-            background: 'rgba(139,92,246,0.18)',
-            outline: '1px solid rgba(139,92,246,0.45)',
-            borderRadius: '3px',
-          }}
-        >
+        <span style={{ background: 'rgba(251,191,36,0.15)', outline: '1px solid rgba(251,191,36,0.40)', borderRadius: '3px' }}>
           {liveDesc}
-          {/* Blinking cursor */}
-          <span
-            style={{
-              display: 'inline-block',
-              width: '0.55em',
-              height: '1.1em',
-              background: 'rgba(167,139,250,0.9)',
-              borderRadius: '1px',
-              marginLeft: '1px',
-              verticalAlign: 'text-bottom',
-              animation: 'skillCursorBlink 0.7s steps(1) infinite',
-            }}
-          />
+          <span style={{ display: 'inline-block', width: '0.55em', height: '1.1em', background: 'rgba(251,191,36,0.9)', borderRadius: '1px', marginLeft: '1px', verticalAlign: 'text-bottom', animation: 'skillCursorBlink 0.7s steps(1) infinite' }} />
         </span>
         {after}
-        <style>{`
-          @keyframes skillCursorBlink {
-            0%, 49% { opacity: 1; }
-            50%, 100% { opacity: 0; }
-          }
-        `}</style>
+        <style>{`@keyframes skillCursorBlink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }`}</style>
       </pre>
     );
   }
 
-  // Post-generation highlight
-  if (highlightDescription && descMatch) {
-    const [before, ...afterParts] = content.split(descMatch[0]);
-    const after = afterParts.join(descMatch[0]);
-    return (
-      <pre className="p-4 text-xs leading-relaxed font-mono text-slate-300 whitespace-pre-wrap break-words select-all">
-        {before}
-        <span
-          style={{
-            background: 'rgba(139,92,246,0.25)',
-            outline: '1px solid rgba(139,92,246,0.5)',
-            borderRadius: '3px',
-            transition: 'background 2s ease, outline 2s ease',
-          }}
-        >
-          {descMatch[0]}
-        </span>
-        {after}
-      </pre>
+  // Annotated section rendering
+  const lines = content.split('\n');
+  const rendered: React.ReactNode[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    // Detect YAML key lines like `name: ...` or `directory_structure: |`
+    const keyMatch = line.match(/^([a-z_]+):\s*(.*)$/);
+    const meta = keyMatch ? SKILL_SECTION_META[keyMatch[1]] : null;
+
+    const isDescLine = highlightDescription && descMatch && line.includes('description:');
+
+    rendered.push(
+      <span key={i} style={{ display: 'block' }}>
+        {meta ? (
+          <span>
+            <span style={{ color: meta.color, fontWeight: 600 }}>{keyMatch![1]}</span>
+            <span style={{ color: '#64748b' }}>:</span>
+            {keyMatch![2] && <span style={{ color: '#cbd5e1' }}> {keyMatch![2]}</span>}
+            <span style={{
+              marginLeft: '10px',
+              fontSize: '9px',
+              color: meta.color,
+              opacity: 0.55,
+              fontStyle: 'italic',
+              letterSpacing: '0.02em',
+            }}>
+              → {meta.hint}
+            </span>
+          </span>
+        ) : isDescLine ? (
+          <span style={{ background: 'rgba(251,191,36,0.15)', outline: '1px solid rgba(251,191,36,0.35)', borderRadius: '3px', transition: 'background 2s ease' }}>
+            {line}
+          </span>
+        ) : (
+          <span style={{ color: '#94a3b8' }}>{line || '\u00a0'}</span>
+        )}
+      </span>
     );
   }
 
   return (
-    <pre className="p-4 text-xs leading-relaxed font-mono text-slate-300 whitespace-pre-wrap break-words select-all">
-      {content}
+    <pre className="p-4 text-xs leading-relaxed font-mono whitespace-pre-wrap break-words select-all">
+      {rendered}
     </pre>
   );
 };
