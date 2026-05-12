@@ -66,7 +66,13 @@ export const SkillExport: React.FC<SkillExportProps> = ({
       const owner = urlParts[urlParts.length - 2] ?? "";
       const repo = urlParts[urlParts.length - 1] ?? (repoNameForFilename ?? "repo");
 
-      const response = await fetch(`https://${API_HOST}/skill-zip`, {
+      const isLocal = API_HOST.startsWith("localhost") || API_HOST.startsWith("127.");
+      // Use http:// directly for local dev — the Vite proxy drops large POST bodies
+      // (ERR_CONNECTION_RESET). Calling the API directly on port 8888 avoids this.
+      const skillZipUrl = isLocal
+        ? `http://${API_HOST}/skill-zip`
+        : `https://${API_HOST}/skill-zip`;
+      const response = await fetch(skillZipUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

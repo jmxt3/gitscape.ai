@@ -757,9 +757,9 @@ const App: React.FC = () => {
       const apiScheme = apiHost.startsWith("localhost") || apiHost.startsWith("127.") ? "http" : "https";
 
       const apiUrl = new URL(`${apiScheme}://${apiHost}/converter`);
-      apiUrl.searchParams.append("repo_url", encodeURIComponent(repoUrl));
+      apiUrl.searchParams.append("repo_url", repoUrl);
       if (githubToken) {
-        apiUrl.searchParams.append("github_token", encodeURIComponent(githubToken));
+        apiUrl.searchParams.append("github_token", githubToken);
       }
 
       try {
