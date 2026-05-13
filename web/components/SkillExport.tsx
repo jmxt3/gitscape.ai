@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import { SkillManifest } from "../types";
 import type { ProgressReport, SkillSection } from "../services/webllm";
 import { SKILL_SECTIONS, SKILL_SECTION_LABELS } from "../services/webllm";
