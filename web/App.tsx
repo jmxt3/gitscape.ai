@@ -529,6 +529,9 @@ const App: React.FC = () => {
   const [progressVisible, setProgressVisible] = useState<boolean>(false);
   const [progressFading, setProgressFading] = useState<boolean>(false);
   const progressTickerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Tracks whether the user has actively generated at least once this session.
+  // Prevents cached-data restores on mount from prematurely showing checkmarks.
+  const hasGeneratedThisSessionRef = useRef(false);
 
   // Typewriter effect: animate displayedProgressMessage character-by-character
   const [displayedProgressMessage, setDisplayedProgressMessage] = useState("");
@@ -782,6 +785,7 @@ const App: React.FC = () => {
     setIsLoading(true);
     setError(null);
     setDigest("");
+    hasGeneratedThisSessionRef.current = true; // mark session as active
     setProgressMessage("🚀 Igniting the engines...");
     setProgressPercent(0);
     setProgressVisible(true);
@@ -1055,18 +1059,24 @@ const App: React.FC = () => {
     setRepoFileStructure("");
     setDiagramData(null);
     setRetryAfterSeconds(null);
-    // Reset all stage completion flags
+    // Reset all stage completion flags AND session guard
+    hasGeneratedThisSessionRef.current = false;
     setStageComplete({ digest: false, visualization: false, skill: false });
   }, [repoUrl]);
 
-  // Drive stage completion flags from data availability
+  // Drive stage completion flags from data availability.
+  // Only activate AFTER the user has triggered an active generation this session
+  // (prevents cached data restored on mount from showing checkmarks prematurely).
   useEffect(() => {
+    if (!hasGeneratedThisSessionRef.current) return;
     setStageComplete(prev => ({ ...prev, digest: !!digest }));
   }, [digest]);
   useEffect(() => {
+    if (!hasGeneratedThisSessionRef.current) return;
     setStageComplete(prev => ({ ...prev, visualization: !!diagramData }));
   }, [diagramData]);
   useEffect(() => {
+    if (!hasGeneratedThisSessionRef.current) return;
     setStageComplete(prev => ({ ...prev, skill: !!skillMd }));
   }, [skillMd]);
 

@@ -45,8 +45,7 @@ export const SKILL_SECTIONS: SkillSection[] = [
   "overview",
   "capabilities",
   "structure",
-  "usage",
-  "boundaries",
+  // usage and boundaries are kept as backend template — no LLM call needed
 ];
 
 export const SKILL_SECTION_LABELS: Record<SkillSection, string> = {
@@ -110,13 +109,12 @@ export async function getEngine(
 // output format and a focused user message with the content to rewrite.
 
 const SYSTEM_PROMPT =
-  "You are an expert technical writer specialising in Anthropic Agent Skills (agentskills.io). " +
-  "Your job is to write SKILL.md content that helps AI agents trigger accurately and execute correctly. " +
-  "The DESCRIPTION field is the most critical — it determines when the skill activates. Write descriptions " +
-  "from the agent's perspective using specific action verbs, concrete use cases, and clear boundaries. " +
-  "All other sections must be structured, actionable, and grounded exclusively in the provided README and " +
-  "file structure — never hallucinate file paths, APIs, or functions that are not shown. " +
-  "Output ONLY the requested content: no preamble, no code fences, no explanations, no labels like 'Output:'.";
+  "You are a technical writer for Anthropic Agent Skills SKILL.md files. " +
+  "Strict rules: " +
+  "1. NO PREAMBLE. Output ONLY the raw section content — no greetings, no code fences, no labels like 'Output:'. " +
+  "2. ZERO HALLUCINATION: base everything exclusively on the provided README and file structure. Never invent file paths, APIs, or functions not shown. " +
+  "3. Be extremely concise. Never repeat a sentence or idea. Stop as soon as the content is complete. " +
+  "4. Follow the exact format specified in each instruction — no extra headings or sections.";
 
 function buildMessages(
   section: SkillSection,
@@ -137,18 +135,17 @@ function buildMessages(
   switch (section) {
     case "description":
       return {
-        max_tokens: 120,
+        max_tokens: 80,
         messages: [sys, {
           role: "user", content:
-            `Write the SKILL.md description field for ${repoName} (${langStr}).
-
-${ctxBlock}Rules:
-- 2-3 sentences ONLY. No quotes around the output.
-- Sentence 1: What this repo IS and does — use the exact tech names from the README (e.g. FastAPI, Pydantic, Starlette).
-- Sentence 2: WHEN to trigger — list 3-4 specific action verbs + use cases (e.g. "Use to build API endpoints, debug middleware, understand routing patterns, integrate with Pydantic models").
-- Sentence 3 (optional): One sharp boundary — what this skill does NOT cover.
-- NEVER output meta-commentary like "The description should be..." — just write the description itself.
-- NEVER start with "This skill" or "Use when working with".`
+            // No ctxBlock here — the 1B model copies README text verbatim when given raw context.
+            // Repo name + languages is sufficient to produce a tight trigger sentence.
+            `Write the description field for the ${repoName} skill (${langStr}).
+Output one sentence only.
+Start with exactly: "Use this skill when working with the ${repoName} codebase to"
+Then list 3-4 specific actions separated by commas (e.g. navigate source files, implement features, debug errors, understand the public API).
+End with ". Not for general ${langStr} programming questions."
+No quotes around the output.`
         }],
       };
 
@@ -182,9 +179,6 @@ Required action verbs (use each once): Answer, Debug, Guide, Explain, Identify
 Each item must reference a SPECIFIC part of this repo visible in the README or File Structure (module names, patterns, APIs, config files).
 
 BAD (do NOT repeat like this):
-1. The agent can trigger the framework and execute endpoints.
-2. The agent can trigger the framework and execute endpoints by calling run.
-
 GOOD format:
 1. Answer questions about [specific architecture/design pattern from this repo].
 2. Debug [specific error type] by referencing [specific file/module].
@@ -215,32 +209,6 @@ Example:
 2. \`tests/\`: Pytest test suite covering unit and integration scenarios for all public APIs.
 3. \`docs/\`: MkDocs source used to generate the official documentation site.`
         }],
-      };
-
-    case "usage":
-      return {
-        max_tokens: 120,
-        messages: [sys, {
-          role: "user", content:
-            `Rewrite the Usage Instructions for the ${repoName} skill.
-
-${ctxBlock}Current:
-${currentContent.substring(0, 400)}
-
-Write a numbered list: 1. 2. 3. 4. Each item under 20 words. Tell the agent exactly what to do.` }],
-      };
-
-    case "boundaries":
-      return {
-        max_tokens: 100,
-        messages: [sys, {
-          role: "user", content:
-            `Rewrite the Boundaries section for the ${repoName} skill.
-
-${ctxBlock}Current:
-${currentContent.substring(0, 400)}
-
-Write a numbered list: 1. 2. 3. Each item under 20 words. State what the agent must NOT do or must acknowledge.` }],
       };
   }
 }
