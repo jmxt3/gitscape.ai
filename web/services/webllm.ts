@@ -21,46 +21,10 @@ let engineInstance: any | null = null;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let engineLoadPromise: Promise<any> | null = null;
 
-export type ProgressReport = {
-  progress: number; // 0–1
-  text: string;
-};
-
-// ─── Section types ────────────────────────────────────────────────────────────
-
-/**
- * The 5 sections we generate one at a time.
- * Order matters — each section streams and updates the preview live.
- */
-export type SkillSection =
-  | "description"
-  | "overview"
-  | "capabilities"
-  | "structure"
-  | "usage"
-  | "boundaries";
-
-export const SKILL_SECTIONS: SkillSection[] = [
-  "description",
-  "overview",
-  "capabilities",
-  "structure",
-  // usage and boundaries are kept as backend template — no LLM call needed
-];
-
-export const SKILL_SECTION_LABELS: Record<SkillSection, string> = {
-  description: "Description",
-  overview: "Overview",
-  capabilities: "Capabilities",
-  structure: "Architecture & Structure",
-  usage: "Usage Instructions",
-  boundaries: "Boundaries",
-};
-
-/** Returns true if WebGPU is available in this browser. Pure check — no imports. */
-export function isWebGPUSupported(): boolean {
-  return typeof navigator !== "undefined" && "gpu" in navigator;
-}
+// Re-export all shared types and constants from the zero-dependency types file.
+// This keeps the heavy @mlc-ai/web-llm runtime out of the main JS chunk.
+export type { ProgressReport, SkillSection } from "./webllm-types";
+export { SKILL_SECTIONS, SKILL_SECTION_LABELS, isWebGPUSupported } from "./webllm-types";
 
 /**
  * Lazily import @mlc-ai/web-llm and return the module.

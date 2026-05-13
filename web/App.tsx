@@ -18,7 +18,7 @@ import {
 } from "./constants";
 import { RawDiagramNode, CachedRepoOutput, SkillManifest } from "./types";
 import { getCachedRepo, setCachedRepo, deleteCachedRepo } from "./services/repoCache";
-import { preloadEngine, isWebGPUSupported } from "./services/webllm";
+import { isWebGPUSupported } from "./services/webllm-types";
 
 // Helper to safely get items from localStorage
 const getFromLocalStorage = (key: string, defaultValue: string): string => {
@@ -642,8 +642,11 @@ const App: React.FC = () => {
   // Kick off background model preload immediately on mount.
   // If already cached, resolves in seconds; otherwise downloads ~700 MB quietly.
   // By the time the user clicks "Rewrite Skill" the engine is warm and ready.
+  // Dynamic import keeps the 6 MB webllm bundle out of the main JS chunk.
   useEffect(() => {
-    if (isWebGPUSupported()) preloadEngine();
+    if (isWebGPUSupported()) {
+      import("./services/webllm").then(({ preloadEngine }) => preloadEngine());
+    }
   }, []);
 
 

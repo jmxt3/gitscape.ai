@@ -1,9 +1,37 @@
 import React, { useState, useCallback, useMemo } from "react";
 import { SkillManifest } from "../types";
-import type { ProgressReport, SkillSection } from "../services/webllm";
-import { SKILL_SECTIONS, SKILL_SECTION_LABELS } from "../services/webllm";
+import type { ProgressReport, SkillSection } from "../services/webllm-types";
+import { SKILL_SECTIONS, SKILL_SECTION_LABELS } from "../services/webllm-types";
 
 const webGPUSupported = typeof navigator !== "undefined" && "gpu" in navigator;
+
+/**
+ * Client-side mirror of Python's build_shallow_tree().
+ * Parses the full repoFileStructure string and returns a dirs-only, 2-level tree.
+ * Used as a fallback when repoStructureOverview is unavailable (cached repos
+ * analyzed before the structure_overview API field was added).
+ *
+ * Directory lines in the tree end with "/" and their depth is determined by
+ * the position of the "├── " or "└── " connector: every 4 chars of indent = 1 level.
+ */
+function buildShallowTree(fullTree: string, maxDepth = 2): string {
+  if (!fullTree) return "";
+  const result: string[] = [];
+
+  for (const rawLine of fullTree.split("\n")) {
+    const line = rawLine.trimEnd();
+    // Only keep directory entries (they end with /)
+    if (!line.endsWith("/")) continue;
+    // Find the connector to measure depth
+    const connIdx = Math.max(line.indexOf("├── "), line.indexOf("└── "));
+    if (connIdx === -1) continue;
+    // Each indent level is 4 chars wide ("│   " or "    ")
+    const depth = Math.floor(connIdx / 4) + 1;
+    if (depth <= maxDepth) result.push(line);
+  }
+
+  return result.join("\n");
+}
 
 interface SkillExportProps {
   skillMd: string;
@@ -145,9 +173,9 @@ export const SkillExport: React.FC<SkillExportProps> = ({
       const replaced = base.replace(sectionRegex, (_m, hdr) => `${hdr}\n${content}\n`);
 
       // If the heading doesn't exist in the template (e.g. older API deploy),
-      // insert the section before ## Usage Instructions so it's not silently dropped.
+      // insert the section before ## Boundaries so it's not silently dropped.
       if (replaced !== base) return replaced;
-      const insertBefore = "## Usage Instructions";
+      const insertBefore = "## Boundaries";
       const insertIdx = base.indexOf(insertBefore);
       if (insertIdx !== -1) {
         return (
@@ -250,10 +278,15 @@ export const SkillExport: React.FC<SkillExportProps> = ({
           setStreamingPartial(null);
           setLlmProgress(null);
 
-          // Prefer shallow overview for the tree; fall back to full structure.
-          const treeSource = (repoStructureOverview || repoFileStructure || "").trim();
+          // Prefer shallow overview (from API) for the tree.
+          // For repos cached before structure_overview was added, derive it
+          // client-side from the full tree string so we never show a deep file listing.
+          const treeSource = (
+            repoStructureOverview ||
+            buildShallowTree(repoFileStructure)
+          ).trim();
           const treeBlock = treeSource
-            ? `\`\`\`\n${treeSource.substring(0, 2000)}\n\`\`\``
+            ? `\`\`\`\n${treeSource}\n\`\`\``
             : "";
           const combined = treeBlock
             ? `${introSentence.trim()}\n\n${treeBlock}`
