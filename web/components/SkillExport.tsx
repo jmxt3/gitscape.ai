@@ -229,17 +229,37 @@ export const SkillExport: React.FC<SkillExportProps> = ({
         setActiveStep(i);
         setStreamingSection(section);
 
-        // ── Structure: static injection — no LLM call ─────────────────────
-        // We already have the exact file tree from the API. Print it verbatim
-        // in a code block so the agent can navigate the repo precisely.
+        // ── Structure: LLM writes 1 intro sentence, tree is already in template ──
+        // The backend embeds the shallow tree in the SKILL.md template at generation
+        // time. The LLM only adds a single-sentence introduction above the code block.
+        // We extract the existing tree content and re-inject as: sentence + "\n\n" + tree.
         if (section === "structure") {
-          // Prefer the shallow dirs-only overview (from new API) for cleaner SKILL.md output.
-          // Fall back to full file_structure for backward compat with pre-deploy API responses.
-          const treeSource = repoStructureOverview || repoFileStructure;
-          const treeContent = treeSource
-            ? `The repository is organized as follows:\n\n\`\`\`\n${treeSource.substring(0, 2000)}\n\`\`\``
-            : "Directory structure not available for this repository.";
-          working = applySectionToSkillMd("structure", treeContent, working);
+          setStreamingPartial("");
+
+          const introSentence = await generateSkillSection(
+            section,
+            repoName,
+            languages,
+            "",          // currentContent unused — prompt is self-contained
+            repoReadme,
+            repoFileStructure,
+            i === 0 ? (report) => setLlmProgress(report) : undefined,
+            (partial) => setStreamingPartial(partial)
+          );
+
+          setStreamingPartial(null);
+          setLlmProgress(null);
+
+          // Prefer shallow overview for the tree; fall back to full structure.
+          const treeSource = (repoStructureOverview || repoFileStructure || "").trim();
+          const treeBlock = treeSource
+            ? `\`\`\`\n${treeSource.substring(0, 2000)}\n\`\`\``
+            : "";
+          const combined = treeBlock
+            ? `${introSentence.trim()}\n\n${treeBlock}`
+            : introSentence.trim();
+
+          working = applySectionToSkillMd("structure", combined, working);
           setSkillMdOverride(working);
           setCompletedSteps((prev) => new Set([...prev, section]));
           setStreamingSection(null);
