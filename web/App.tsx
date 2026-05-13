@@ -1064,7 +1064,7 @@ const App: React.FC = () => {
                 </svg>
               </div>
               <h3 className="text-xl font-semibold text-amber-400">
-                Skill Export
+                Agent Skill
               </h3>
             </div>
             <p className="text-sm text-slate-300 leading-relaxed">
@@ -1097,7 +1097,7 @@ const App: React.FC = () => {
                   {[
                     { label: "Code Digest", threshold: 0, activeColor: "text-violet-400", inactiveColor: "text-slate-600" },
                     { label: "Code Visualization", threshold: 34, activeColor: "text-emerald-400", inactiveColor: "text-slate-600" },
-                    { label: "Skill Export", threshold: 67, activeColor: "text-amber-400", inactiveColor: "text-slate-600" },
+                    { label: "Agent Skill", threshold: 67, activeColor: "text-amber-400", inactiveColor: "text-slate-600" },
                   ].map((step, i) => {
                     const isActive = progressPercent >= step.threshold;
                     const isCurrent = getProgressStep(progressPercent) === i + 1;

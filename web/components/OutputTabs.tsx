@@ -127,7 +127,7 @@ export const OutputTabs: React.FC<OutputTabsProps> = ({
       >
         <SectionHeader
           icon={<SkillIcon />}
-          title="Skill Export"
+          title="Agent Skill"
           accentClass="text-amber-400"
           dotClass="bg-amber-500/15 text-amber-400"
         />
@@ -145,7 +145,7 @@ export const OutputTabs: React.FC<OutputTabsProps> = ({
             <span className="flex items-center justify-center w-10 h-10 rounded-full bg-amber-500/10 text-amber-500/60">
               <SkillIcon />
             </span>
-            <p className="text-sm">Generate a digest first to preview the Skill Export.</p>
+            <p className="text-sm">Generate a digest first to preview the Agent Skill.</p>
           </div>
         )}
       </section>
