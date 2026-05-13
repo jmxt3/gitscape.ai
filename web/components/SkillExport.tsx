@@ -47,14 +47,7 @@ export const SkillExport: React.FC<SkillExportProps> = ({
 
 
 
-  // Live display: during streaming, apply the partial text into the SKILL.md in real-time
-  // so ALL sections (not just description) show streaming output.
-  const displaySkillMd = useMemo(() => {
-    const base = skillMdOverride || skillMd;
-    if (!streamingSection || streamingPartial == null) return base;
-    // Append a blinking-cursor sentinel so the renderer can show it
-    return applySectionToSkillMd(streamingSection, streamingPartial + "█", base);
-  }, [skillMdOverride, skillMd, streamingSection, streamingPartial, applySectionToSkillMd]);
+
 
   const languageList = manifestJson?.metadata?.primary_languages?.join(", ") ?? "—";
   const filesAnalyzed = manifestJson?.metadata?.files_analyzed ?? "—";
@@ -111,20 +104,8 @@ export const SkillExport: React.FC<SkillExportProps> = ({
   }, [repoUrl, repoNameForFilename, digest, manifestJson]);
 
 
-  const handleCopy = useCallback(async () => {
-    try {
-      await navigator.clipboard.writeText(displaySkillMd);
-      setCopyState("copied");
-      setTimeout(() => setCopyState("idle"), 2000);
-    } catch (_) { }
-  }, [displaySkillMd]);
 
 
-
-  /**
-   * Apply a generated section's text into the current SKILL.md string.
-   * Each section targets a specific markdown block by header name.
-   */
   const applySectionToSkillMd = useCallback(
     (section: SkillSection, content: string, base: string): string => {
       if (section === "description") {
@@ -184,6 +165,24 @@ export const SkillExport: React.FC<SkillExportProps> = ({
     console.debug(`[WebLLM] extractSection(${section}):`, result.length, "chars");
     return result;
   }, []);
+
+  // ── displaySkillMd: declared here (after applySectionToSkillMd) to avoid TDZ ──
+  // During streaming, apply the partial text into the SKILL.md live so ALL sections
+  // show real-time output in the preview. A █ sentinel marks the cursor position.
+  const displaySkillMd = useMemo(() => {
+    const base = skillMdOverride || skillMd;
+    if (!streamingSection || streamingPartial == null) return base;
+    return applySectionToSkillMd(streamingSection, streamingPartial + "█", base);
+  }, [skillMdOverride, skillMd, streamingSection, streamingPartial, applySectionToSkillMd]);
+
+  const handleCopy = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(displaySkillMd);
+      setCopyState("copied");
+      setTimeout(() => setCopyState("idle"), 2000);
+    } catch (_) { }
+  }, [displaySkillMd]);
+
 
   const handleGenerateSkill = useCallback(async () => {
     if (!webGPUSupported) return;
