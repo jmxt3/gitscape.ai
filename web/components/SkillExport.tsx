@@ -170,10 +170,12 @@ export const SkillExport: React.FC<SkillExportProps> = ({
     };
     const header = headers[section];
     if (!header) return "";
-    const m = skillMd.match(
-      new RegExp(`${header.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\n([\\s\\S]*?)(?=\n##|$)`)
-    );
-    return m ? m[1].trim() : "";
+    const escaped = header.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    // \n\n## mirrors the blank-line separator in the SKILL.md template
+    const m = skillMd.match(new RegExp(`${escaped}\\n([\\s\\S]*?)(?=\\n\\n##|$)`));
+    const result = m ? m[1].trim() : "";
+    console.debug(`[WebLLM] extractSection(${section}):`, result.length, "chars");
+    return result;
   }, []);
 
   const handleGenerateSkill = useCallback(async () => {
