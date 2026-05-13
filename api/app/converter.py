@@ -315,6 +315,31 @@ def build_directory_tree(root: Path, prefix: str = "", is_last: bool = True) -> 
     return tree_str
 
 
+def build_shallow_tree(root: Path, max_depth: int = 2, prefix: str = "", depth: int = 0) -> str:
+    """
+    Return a directory-only tree capped at `max_depth` levels.
+    Files inside each folder are intentionally omitted so the output stays
+    concise enough for the SKILL.md Architecture & Structure section.
+    """
+    if depth >= max_depth:
+        return ""
+    try:
+        dirs = sorted(
+            [e for e in root.iterdir() if e.is_dir() and not is_ignored_dir(e)],
+            key=lambda x: x.name.lower(),
+        )
+    except PermissionError:
+        return ""
+    tree_str = ""
+    for idx, entry in enumerate(dirs):
+        is_last = idx == len(dirs) - 1
+        connector = "└── " if is_last else "├── "
+        tree_str += f"{prefix}{connector}{entry.name}/\n"
+        extension = "    " if is_last else "│   "
+        tree_str += build_shallow_tree(entry, max_depth, prefix + extension, depth + 1)
+    return tree_str
+
+
 README_MAX_CHARS = 8_000  # cap to keep HTTP response size bounded
 README_CANDIDATES = ["README.md", "readme.md", "README.rst", "README.txt", "readme.txt"]
 
@@ -394,8 +419,10 @@ def generate_markdown_digest(
     digest.append(f"Files analyzed: {len(text_files)}\n")
     digest.append("Directory structure:")
     digest.append(f"└── {repo_name}/")
-    # Capture the tree string for the metadata (used by WebLLM context)
+    # Capture the full tree for LLM context (overview / capabilities prompts)
     file_structure = build_directory_tree(root, prefix="    ")
+    # Capture the shallow (dirs-only, 2-level) tree for SKILL.md Architecture section
+    structure_overview = build_shallow_tree(root, max_depth=2)
     digest.append(file_structure)
     readme = extract_readme(root)
     for file_path in text_files:
@@ -430,6 +457,7 @@ def generate_markdown_digest(
             "repo": repo_short,
             "readme": readme,
             "file_structure": file_structure,
+            "structure_overview": structure_overview,
         }
         return digest_str, metadata
     return digest_str

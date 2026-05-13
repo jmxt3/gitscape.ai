@@ -83,6 +83,7 @@ def get_digest(
         files_analyzed = metadata["files_analyzed"]
         readme = metadata.get("readme", "")
         file_structure = metadata.get("file_structure", "")
+        structure_overview = metadata.get("structure_overview", "")
         generated_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
         skill_md = generate_skill_md(
@@ -110,6 +111,7 @@ def get_digest(
             "files_analyzed": files_analyzed,
             "readme": readme,
             "file_structure": file_structure,
+            "structure_overview": structure_overview,
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

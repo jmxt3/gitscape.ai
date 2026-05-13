@@ -14,6 +14,8 @@ interface SkillExportProps {
   digest: string;
   repoReadme: string;
   repoFileStructure: string;
+  /** Dirs-only, 2-level shallow tree — used in SKILL.md Architecture section. */
+  repoStructureOverview?: string;
 }
 
 declare const __API_HOST__: string;
@@ -30,6 +32,7 @@ export const SkillExport: React.FC<SkillExportProps> = ({
   digest,
   repoReadme,
   repoFileStructure,
+  repoStructureOverview,
 }) => {
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
@@ -53,15 +56,15 @@ export const SkillExport: React.FC<SkillExportProps> = ({
 
 
 
-  const languageList = manifestJson?.metadata?.primary_languages?.join(", ") ?? "ΓÇö";
-  const filesAnalyzed = manifestJson?.metadata?.files_analyzed ?? "ΓÇö";
+  const languageList = manifestJson?.metadata?.primary_languages?.join(", ") ?? "—";
+  const filesAnalyzed = manifestJson?.metadata?.files_analyzed ?? "—";
   const generatedAt = manifestJson?.metadata?.generated_at
     ? new Date(manifestJson.metadata.generated_at).toLocaleString()
-    : "ΓÇö";
+    : "—";
 
 
 
-  // ΓöÇΓöÇΓöÇ Handlers ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+  // ─── Handlers ───────────────────────────────────────────────────────────────
 
   const handleDownloadZip = useCallback(async () => {
     if (!repoUrl || !digest) return;
@@ -74,7 +77,7 @@ export const SkillExport: React.FC<SkillExportProps> = ({
       const repo = urlParts[urlParts.length - 1] ?? (repoNameForFilename ?? "repo");
 
       const isLocal = API_HOST.startsWith("localhost") || API_HOST.startsWith("127.");
-      // Use http:// directly for local dev ΓÇö the Vite proxy drops large POST bodies
+      // Use http:// directly for local dev — the Vite proxy drops large POST bodies
       // (ERR_CONNECTION_RESET). Calling the API directly on port 8888 avoids this.
       const skillZipUrl = isLocal
         ? `http://${API_HOST}/skill-zip`
@@ -121,7 +124,7 @@ export const SkillExport: React.FC<SkillExportProps> = ({
         return replaced !== base ? replaced : base + `\n<!-- description: ${content} -->`;
       }
 
-      // For markdown body sections ΓÇö replace content after the matching ## header
+      // For markdown body sections — replace content after the matching ## header
       // until the next ## header or end of file
       const SECTION_HEADERS: Record<SkillSection, string> = {
         description: "",       // handled above
@@ -185,13 +188,13 @@ export const SkillExport: React.FC<SkillExportProps> = ({
     return result;
   }, []);
 
-  // ΓöÇΓöÇ displaySkillMd: declared here (after applySectionToSkillMd) to avoid TDZ ΓöÇΓöÇ
+  // ── displaySkillMd: declared here (after applySectionToSkillMd) to avoid TDZ ──
   // During streaming, apply the partial text into the SKILL.md live so ALL sections
-  // show real-time output in the preview. A Γûê sentinel marks the cursor position.
+  // show real-time output in the preview. A █ sentinel marks the cursor position.
   const displaySkillMd = useMemo(() => {
     const base = skillMdOverride || skillMd;
     if (!streamingSection || streamingPartial == null) return base;
-    return applySectionToSkillMd(streamingSection, streamingPartial + "Γûê", base);
+    return applySectionToSkillMd(streamingSection, streamingPartial + "█", base);
   }, [skillMdOverride, skillMd, streamingSection, streamingPartial, applySectionToSkillMd]);
 
   const handleCopy = useCallback(async () => {
@@ -230,8 +233,11 @@ export const SkillExport: React.FC<SkillExportProps> = ({
         // We already have the exact file tree from the API. Print it verbatim
         // in a code block so the agent can navigate the repo precisely.
         if (section === "structure") {
-          const treeContent = repoFileStructure
-            ? `The repository is organized as follows:\n\n\`\`\`\n${repoFileStructure.substring(0, 2000)}\n\`\`\``
+          // Prefer the shallow dirs-only overview (from new API) for cleaner SKILL.md output.
+          // Fall back to full file_structure for backward compat with pre-deploy API responses.
+          const treeSource = repoStructureOverview || repoFileStructure;
+          const treeContent = treeSource
+            ? `The repository is organized as follows:\n\n\`\`\`\n${treeSource.substring(0, 2000)}\n\`\`\``
             : "Directory structure not available for this repository.";
           working = applySectionToSkillMd("structure", treeContent, working);
           setSkillMdOverride(working);
@@ -284,23 +290,23 @@ export const SkillExport: React.FC<SkillExportProps> = ({
 
 
 
-  // ΓöÇΓöÇΓöÇ Render ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+  // ─── Render ─────────────────────────────────────────────────────────────────
 
   return (
     <div className="flex flex-col gap-4 h-full">
 
 
-      {/* Metadata pills ΓÇö unified neutral style */}
+      {/* Metadata pills — unified neutral style */}
       <div className="flex flex-wrap items-center gap-2 text-xs">
         <span className="flex items-center gap-1.5 bg-slate-700/50 text-slate-400 border border-slate-600/50 px-2.5 py-1 rounded-full font-mono">{generatedAt}</span>
         <span className="flex items-center gap-1.5 bg-slate-700/50 text-slate-400 border border-slate-600/50 px-2.5 py-1 rounded-full">{filesAnalyzed} files</span>
-        {languageList !== "ΓÇö" && (
+        {languageList !== "—" && (
           <span className="flex items-center gap-1.5 bg-slate-700/50 text-slate-400 border border-slate-600/50 px-2.5 py-1 rounded-full">{languageList}</span>
         )}
         <span className="flex items-center gap-1.5 bg-slate-700/50 text-slate-400 border border-slate-600/50 px-2.5 py-1 rounded-full font-mono text-[10px] tracking-wide">agentskills.io v1.0</span>
       </div>
 
-      {/* Action buttons ΓÇö consistent with DigestOutput */}
+      {/* Action buttons — consistent with DigestOutput */}
       <div className="flex items-center gap-3">
         <button
           id="skill-download-zip-btn"
@@ -309,7 +315,7 @@ export const SkillExport: React.FC<SkillExportProps> = ({
           className="flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 disabled:bg-amber-500/50 text-black text-sm font-semibold transition-all duration-150 shadow-md hover:shadow-amber-500/20 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 focus:ring-offset-slate-900 disabled:cursor-not-allowed"
         >
           {isDownloading ? (
-            <><svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>PackagingΓÇª</>
+            <><svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>Packaging…</>
           ) : (
             <><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>Download .zip</>
           )}
@@ -330,7 +336,7 @@ export const SkillExport: React.FC<SkillExportProps> = ({
           )}
         </button>
 
-        {/* AI Skill button ΓÇö subtle, tertiary */}
+        {/* AI Skill button — subtle, tertiary */}
         {webGPUSupported && (
           <div className="relative group ml-auto">
             <button
@@ -341,11 +347,11 @@ export const SkillExport: React.FC<SkillExportProps> = ({
             >
               <span className="flex items-center gap-1.5">
                 {llmLoading ? (
-                  <><svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>WritingΓÇª</>
+                  <><svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>Writing…</>
                 ) : completedSteps.size === SKILL_SECTIONS.length ? (
-                  <>Γ£à Rewrite again</>
+                  <>✅ Rewrite again</>
                 ) : (
-                  <>Γ£¿ AI Rewriting</>
+                  <>✨ AI Rewriting</>
                 )}
                 {!llmLoading && (
                   <span className="ml-1 text-[9px] font-semibold tracking-wider uppercase bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1.5 py-0.5 rounded">WebLLM</span>
@@ -356,7 +362,7 @@ export const SkillExport: React.FC<SkillExportProps> = ({
             <div className="absolute bottom-full right-0 mb-2 w-64 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50">
               <div className="bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-[11px] text-slate-300 leading-relaxed shadow-xl">
                 <p className="font-semibold text-slate-200 mb-0.5">AI-powered SKILL.md</p>
-                Rewrites all 5 sections using a GPU-accelerated, on-device model via WebLLMΓÇöensuring no data ever leaves your browser.
+                Rewrites all 5 sections using a GPU-accelerated, on-device model via WebLLM—ensuring no data ever leaves your browser.
                 <div className="absolute top-full right-4 border-4 border-transparent border-t-slate-600" />
               </div>
             </div>
@@ -367,7 +373,7 @@ export const SkillExport: React.FC<SkillExportProps> = ({
       {/* Zip content hint */}
       <p className="text-[11px] text-slate-500 flex items-center gap-1.5">
         <svg className="w-3 h-3 shrink-0 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-        The <span className="text-slate-400 font-medium">.zip</span> includes both the <span className="text-slate-400 font-medium">SKILL.md</span> and the full <span className="text-slate-400 font-medium">Code Digest</span> ΓÇö everything your agents need in one file.
+        The <span className="text-slate-400 font-medium">.zip</span> includes both the <span className="text-slate-400 font-medium">SKILL.md</span> and the full <span className="text-slate-400 font-medium">Code Digest</span> — everything your agents need in one file.
       </p>
 
       {downloadError && (
@@ -375,7 +381,7 @@ export const SkillExport: React.FC<SkillExportProps> = ({
       )}
       {llmError && <p className="text-xs text-red-400 bg-red-900/20 border border-red-700/40 px-3 py-2 rounded-lg">{llmError}</p>}
 
-      {/* Section stepper ΓÇö shown while generating or after completion */}
+      {/* Section stepper — shown while generating or after completion */}
       {(llmLoading || completedSteps.size > 0) && (
         <div className="rounded-xl border border-slate-700 bg-slate-900/60 px-3 py-3 flex flex-col gap-2">
           {/* Model download progress (first section only) */}
@@ -453,27 +459,27 @@ export const SkillExport: React.FC<SkillExportProps> = ({
       <p className="text-xs text-slate-500 text-center">
         Compatible with{" "}
         <a href="https://agentskills.io" target="_blank" rel="noopener noreferrer" className="text-amber-400/80 hover:text-amber-300 underline underline-offset-2">agentskills.io</a>
-        {" "}┬╖ Claude Skills ┬╖ Google ADK ┬╖ Agno ┬╖ OpenAI Agents
+        {" "}· Claude Skills · Google ADK · Agno · OpenAI Agents
       </p>
     </div>
   );
 };
 
-// ΓöÇΓöÇΓöÇ Sub-components ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+// ─── Sub-components ───────────────────────────────────────────────────────────
 
-// SKILL.md section metadata ΓÇö shown as inline annotations in the preview
+// SKILL.md section metadata — shown as inline annotations in the preview
 const SKILL_SECTION_META: Record<string, { hint: string }> = {
   name: { hint: "Skill identifier used by agent frameworks" },
-  description: { hint: "What this skill does ΓÇö the agent reads this to decide when to use it" },
+  description: { hint: "What this skill does — the agent reads this to decide when to use it" },
   usage: { hint: "How to invoke this skill in your agent prompt" },
   when_to_use: { hint: "Conditions and tasks this skill is best suited for" },
-  directory_structure: { hint: "Repository layout ΓÇö the agent uses this to navigate the codebase" },
-  key_files: { hint: "Most important files ΓÇö starting points for any task" },
+  directory_structure: { hint: "Repository layout — the agent uses this to navigate the codebase" },
+  key_files: { hint: "Most important files — starting points for any task" },
   architecture: { hint: "High-level design patterns and component relationships" },
   dependencies: { hint: "External libraries and tools the repo relies on" },
 };
 
-// Map SkillSection ΓåÆ the markdown header text it produces in SKILL.md
+// Map SkillSection → the markdown header text it produces in SKILL.md
 const SECTION_HEADER_TEXT: Record<string, string> = {
   overview: "## Overview",
   capabilities: "## Capabilities",
@@ -500,7 +506,7 @@ const MarkdownPreview: React.FC<{
   const isDescStreaming = activeSection === "description";
   const isDescDone = completedSections?.has("description") && !isDescStreaming;
 
-  // Build a reverse-lookup: header text ΓåÆ SkillSection key
+  // Build a reverse-lookup: header text → SkillSection key
   const headerToSection: Record<string, string> = Object.fromEntries(
     Object.entries(SECTION_HEADER_TEXT).map(([k, v]) => [v, k])
   );
@@ -516,11 +522,11 @@ const MarkdownPreview: React.FC<{
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
 
-    // ΓöÇΓöÇ YAML frontmatter key annotations ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    // ── YAML frontmatter key annotations ────────────────────────────────────
     const keyMatch = line.match(/^([a-z_]+):\s*(.*)$/);
     const meta = keyMatch ? SKILL_SECTION_META[keyMatch[1]] : null;
 
-    // ΓöÇΓöÇ Section header detection ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    // ── Section header detection ─────────────────────────────────────────────
     const isActiveSectionHeader = activeHeader && line.startsWith(activeHeader);
     const isAnyH2 = /^## /.test(line);
 
@@ -531,9 +537,9 @@ const MarkdownPreview: React.FC<{
       inDoneBlock = !inActiveBlock && isDoneSection;
     }
 
-    // ΓöÇΓöÇ Detect cursor sentinel injected during streaming ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
-    const hasCursor = line.includes('Γûê');
-    const displayLine = hasCursor ? line.replace(/Γûê/g, '') : line;
+    // ── Detect cursor sentinel injected during streaming ─────────────────────
+    const hasCursor = line.includes('█');
+    const displayLine = hasCursor ? line.replace(/█/g, '') : line;
 
     const isDescLine = isDescStreaming && line.includes('description:');
     const isDescDoneLine = isDescDone && line.includes('description:');
@@ -580,7 +586,7 @@ const MarkdownPreview: React.FC<{
               }}> {displayLine.slice(keyMatch![1].length + 1).trimStart()}</span>
             )}
             <span style={{ marginLeft: '10px', fontSize: '9px', color: hintColor, opacity: 0.55, fontStyle: 'italic', letterSpacing: '0.02em' }}>
-              ΓåÆ {meta.hint}
+              → {meta.hint}
             </span>
           </span>
         ) : isActiveSectionHeader ? (
@@ -593,7 +599,7 @@ const MarkdownPreview: React.FC<{
             {displayLine}
           </span>
         ) : inDoneBlock && isAnyH2 ? (
-          // Completed section header ΓÇö subtle green glow
+          // Completed section header — subtle green glow
           <span style={{
             display: 'block', color: '#34d399', fontWeight: 700,
             background: 'rgba(52,211,153,0.08)', outline: '1px solid rgba(52,211,153,0.30)',

@@ -585,6 +585,7 @@ const App: React.FC = () => {
   const [manifestJson, setManifestJson] = useState<SkillManifest | null>(null);
   const [repoReadme, setRepoReadme] = useState<string>("");
   const [repoFileStructure, setRepoFileStructure] = useState<string>("");
+  const [repoStructureOverview, setRepoStructureOverview] = useState<string>("");
 
   const [showDiagramFullscreenModal, setShowDiagramFullscreenModal] =
     useState<boolean>(false);
@@ -629,6 +630,7 @@ const App: React.FC = () => {
           if (cachedData.manifest_json) setManifestJson(cachedData.manifest_json);
           if (cachedData.readme) setRepoReadme(cachedData.readme);
           if (cachedData.file_structure) setRepoFileStructure(cachedData.file_structure);
+          if (cachedData.structure_overview) setRepoStructureOverview(cachedData.structure_overview);
         } catch (e) {
           console.warn(`Failed to restore cached data for ${repoUrl}:`, e);
           deleteCachedRepo(repoUrl);
@@ -685,6 +687,7 @@ const App: React.FC = () => {
       newPrimaryLanguages?: string[],
       newReadme?: string,
       newFileStructure?: string,
+      newStructureOverview?: string,
     ) => {
       // Show digest immediately — don't keep user waiting for the tree fetch.
       setDigest(markdownDigest);
@@ -739,6 +742,7 @@ const App: React.FC = () => {
             primary_languages: newPrimaryLanguages,
             readme: newReadme,
             file_structure: newFileStructure,
+            structure_overview: newStructureOverview,
           };
           setCachedRepo(repoUrlRef.current, repoDataToCache);
         }, 0);
@@ -757,6 +761,7 @@ const App: React.FC = () => {
           primary_languages: newPrimaryLanguages,
           readme: newReadme,
           file_structure: newFileStructure,
+          structure_overview: newStructureOverview,
         };
         setCachedRepo(repoUrlRef.current, repoDataToCache);
       }
@@ -940,6 +945,7 @@ const App: React.FC = () => {
         if (data.manifest_json) setManifestJson(data.manifest_json);
         if (data.readme) setRepoReadme(data.readme);
         if (data.file_structure) setRepoFileStructure(data.file_structure);
+        if (data.structure_overview) setRepoStructureOverview(data.structure_overview);
 
         const branchForProcessing = data.default_branch || currentDefaultBranchForRequestRef.current;
         const digestFilesCount = data.files_analyzed_count !== undefined ? Number(data.files_analyzed_count) : null;
@@ -960,6 +966,7 @@ const App: React.FC = () => {
           data.primary_languages,
           data.readme,
           data.file_structure,
+          data.structure_overview,
         );
 
       } catch (err: any) {
@@ -1057,6 +1064,7 @@ const App: React.FC = () => {
     setManifestJson(null);
     setRepoReadme("");
     setRepoFileStructure("");
+    setRepoStructureOverview("");
     setDiagramData(null);
     setRetryAfterSeconds(null);
     // Reset all stage completion flags AND session guard
@@ -1330,6 +1338,7 @@ const App: React.FC = () => {
                 githubToken={githubToken}
                 repoReadme={repoReadme}
                 repoFileStructure={repoFileStructure}
+                repoStructureOverview={repoStructureOverview}
               />
             </section>
           )}

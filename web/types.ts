@@ -87,6 +87,7 @@ export interface CachedRepoOutput {
   primary_languages?: string[];
   readme?: string;
   file_structure?: string;
+  structure_overview?: string;
 }
 
 export interface SkillManifest {
