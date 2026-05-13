@@ -308,7 +308,7 @@ export const SkillExport: React.FC<SkillExportProps> = ({
                 ) : completedSteps.size === SKILL_SECTIONS.length ? (
                   <>✅ Rewrite again</>
                 ) : (
-                  <>✨ Re-write Skill</>
+                  <>✨ AI Rewriting</>
                 )}
                 {!llmLoading && (
                   <span className="ml-1 text-[9px] font-semibold tracking-wider uppercase bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1.5 py-0.5 rounded">WebLLM</span>
