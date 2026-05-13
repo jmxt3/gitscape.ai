@@ -93,6 +93,7 @@ def get_digest(
             languages=languages,
             files_analyzed=files_analyzed,
             generated_at=generated_at,
+            structure_overview=structure_overview,
         )
         manifest = generate_manifest_json(
             owner=owner,

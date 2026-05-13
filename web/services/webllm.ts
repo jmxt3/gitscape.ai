@@ -190,24 +190,12 @@ GOOD format:
 
     case "structure":
       return {
-        max_tokens: 250,
+        max_tokens: 35,
         messages: [sys, {
           role: "user", content:
-            `Write the Architecture & Structure section for the ${repoName} SKILL.md.
-
-${ctxBlock}Write 5-7 numbered entries. Each entry describes ONE path that actually appears in the File Structure above.
-
-Format: "N. \`path/\`: What this directory/file contains and its role in the project."
-
-Rules:
-- Use ONLY paths visible in the File Structure — never invent paths
-- Be specific: say WHAT is in it, not just that it "contains files"
-- List most architecturally important paths first
-
-Example:
-1. \`fastapi/\`: Core library — routing, dependency injection, and middleware implementations.
-2. \`tests/\`: Pytest test suite covering unit and integration scenarios for all public APIs.
-3. \`docs/\`: MkDocs source used to generate the official documentation site.`
+            // The tree is already embedded in the template by the backend.
+            // Only write the single intro sentence above the code block.
+            `Write one sentence (max 20 words) introducing how the ${repoName} repository is organized. Start with "The ${repoName} repository" and mention the primary technology (${langStr}). Output only the sentence.`
         }],
       };
   }
