@@ -333,7 +333,14 @@ export const SkillExport: React.FC<SkillExportProps> = ({
     } catch (err: any) {
       setStreamingPartial(null);
       setStreamingSection(null);
-      setLlmError(err.message ?? "AI generation failed.");
+      
+      let errorMsg = err.message ?? "AI generation failed.";
+      // Fix typo from @mlc-ai/web-llm internal error message
+      if (errorMsg.includes("your your browser")) {
+        errorMsg = errorMsg.replace("your your browser", "your browser");
+      }
+      
+      setLlmError(errorMsg);
     } finally {
       setLlmLoading(false);
       setLlmProgress(null);

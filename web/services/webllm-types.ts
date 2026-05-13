@@ -42,7 +42,23 @@ export const SKILL_SECTION_LABELS: Record<SkillSection, string> = {
   boundaries: "Boundaries",
 };
 
-/** Returns true if WebGPU is available in this browser. Pure check — no imports. */
+/** 
+ * Returns true if WebGPU is available and a compatible adapter is found.
+ * Pure check — no imports.
+ */
+export async function checkWebGPUSupport(): Promise<boolean> {
+  if (typeof navigator === "undefined" || !("gpu" in navigator)) return false;
+  try {
+    const adapter = await navigator.gpu.requestAdapter();
+    return !!adapter;
+  } catch (e) {
+    return false;
+  }
+}
+
+/**
+ * Synchronous check for WebGPU support.
+ */
 export function isWebGPUSupported(): boolean {
   return typeof navigator !== "undefined" && "gpu" in navigator;
 }
