@@ -15,9 +15,9 @@ import { DiagramFullscreenModal } from "./components/DiagramFullscreenModal";
 import {
   GITHUB_TOKEN_LOCAL_STORAGE_KEY,
   REPO_URL_LOCAL_STORAGE_KEY,
-  CACHED_OUTPUT_PREFIX,
 } from "./constants";
 import { RawDiagramNode, CachedRepoOutput, SkillManifest } from "./types";
+import { getCachedRepo, setCachedRepo, deleteCachedRepo } from "./services/repoCache";
 
 // Helper to safely get items from localStorage
 const getFromLocalStorage = (key: string, defaultValue: string): string => {
@@ -29,14 +29,12 @@ const getFromLocalStorage = (key: string, defaultValue: string): string => {
   }
 };
 
-// Helper to safely set or remove items in localStorage
+// Helper to safely set or remove small string values in localStorage
+// (GitHub token, last repo URL). Large repo outputs go to IndexedDB via repoCache.ts.
 const storeInLocalStorage = (key: string, value: string | null) => {
   try {
-    if (value === null) {
-      localStorage.removeItem(key);
-    } else {
-      localStorage.setItem(key, value);
-    }
+    if (value === null) localStorage.removeItem(key);
+    else localStorage.setItem(key, value);
   } catch (e) {
     console.warn(`Failed to write '${key}' to localStorage:`, e);
   }
@@ -544,25 +542,21 @@ const App: React.FC = () => {
     }
 
     if (repoUrl && !isLoading && !digest && !error) {
-      const cacheKey = `${CACHED_OUTPUT_PREFIX}${repoUrl}`;
-      const cachedDataJSON = localStorage.getItem(cacheKey);
-      if (cachedDataJSON) {
+      getCachedRepo(repoUrl).then((cachedData) => {
+        if (!cachedData) return;
         try {
-          const cachedData: CachedRepoOutput = JSON.parse(cachedDataJSON);
-
           setDigest(cachedData.digest);
           setProcessedRepoName(cachedData.processedRepoName);
           setRepoNameForFilename(cachedData.repoNameForFilename);
           setCurrentDefaultBranch(cachedData.defaultBranch);
           setFilesToRenderInDiagram(cachedData.filesToRenderInDiagram || []);
-          // Restore skill fields if present
           if (cachedData.skill_md) setSkillMd(cachedData.skill_md);
           if (cachedData.manifest_json) setManifestJson(cachedData.manifest_json);
         } catch (e) {
-          console.warn(`Failed to parse or use cached data for ${repoUrl}:`, e);
-          localStorage.removeItem(cacheKey);
+          console.warn(`Failed to restore cached data for ${repoUrl}:`, e);
+          deleteCachedRepo(repoUrl);
         }
-      }
+      });
     }
   }, []);
 
@@ -657,14 +651,7 @@ const App: React.FC = () => {
             manifest_json: newManifestJson ?? undefined,
             primary_languages: newPrimaryLanguages,
           };
-          const cacheKey = `${CACHED_OUTPUT_PREFIX}${repoUrlRef.current}`;
-          setTimeout(() => {
-            try {
-              storeInLocalStorage(cacheKey, JSON.stringify(repoDataToCache));
-            } catch (e) {
-              // quota exceeded or serialization error — non-fatal
-            }
-          }, 0);
+          setCachedRepo(repoUrlRef.current, repoDataToCache);
         }, 0);
       } else {
         // No branch info — still cache what we have.
@@ -680,12 +667,7 @@ const App: React.FC = () => {
           manifest_json: newManifestJson ?? undefined,
           primary_languages: newPrimaryLanguages,
         };
-        const cacheKey = `${CACHED_OUTPUT_PREFIX}${repoUrlRef.current}`;
-        setTimeout(() => {
-          try {
-            storeInLocalStorage(cacheKey, JSON.stringify(repoDataToCache));
-          } catch (e) { }
-        }, 0);
+        setCachedRepo(repoUrlRef.current, repoDataToCache);
       }
     },
     // Only stable references — state setters and the github service.

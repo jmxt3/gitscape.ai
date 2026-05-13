@@ -47,7 +47,14 @@ export const SkillExport: React.FC<SkillExportProps> = ({
 
 
 
-  const displaySkillMd = skillMdOverride || skillMd;
+  // Live display: during streaming, apply the partial text into the SKILL.md in real-time
+  // so ALL sections (not just description) show streaming output.
+  const displaySkillMd = useMemo(() => {
+    const base = skillMdOverride || skillMd;
+    if (!streamingSection || streamingPartial == null) return base;
+    // Append a blinking-cursor sentinel so the renderer can show it
+    return applySectionToSkillMd(streamingSection, streamingPartial + "█", base);
+  }, [skillMdOverride, skillMd, streamingSection, streamingPartial, applySectionToSkillMd]);
 
   const languageList = manifestJson?.metadata?.primary_languages?.join(", ") ?? "—";
   const filesAnalyzed = manifestJson?.metadata?.files_analyzed ?? "—";
@@ -399,8 +406,7 @@ export const SkillExport: React.FC<SkillExportProps> = ({
         <div className="pt-10 h-full overflow-auto">
           <MarkdownPreview
             content={displaySkillMd}
-            highlightDescription={false}
-            streamingPartial={streamingSection === "description" ? streamingPartial : null}
+            activeSection={streamingSection}
           />
         </div>
       </div>
@@ -431,11 +437,18 @@ const SKILL_SECTION_META: Record<string, { color: string; hint: string }> = {
   dependencies: { color: "#60a5fa", hint: "External libraries and tools the repo relies on" },
 };
 
+// Map SkillSection → the markdown header text it produces in SKILL.md
+const SECTION_HEADER_TEXT: Record<string, string> = {
+  overview:     "## Overview",
+  capabilities: "## Capabilities",
+  usage:        "## Usage Instructions",
+  boundaries:   "## Boundaries",
+};
+
 const MarkdownPreview: React.FC<{
   content: string;
-  highlightDescription?: boolean;
-  streamingPartial?: string | null;
-}> = ({ content, highlightDescription, streamingPartial }) => {
+  activeSection?: string | null;   // which section is currently streaming
+}> = ({ content, activeSection }) => {
   if (!content) {
     return (
       <pre className="p-4 text-xs leading-relaxed font-mono text-slate-300 whitespace-pre-wrap break-words select-all">
@@ -444,73 +457,106 @@ const MarkdownPreview: React.FC<{
     );
   }
 
-  // While streaming: replace the description value live
-  const isStreaming = streamingPartial != null;
-  const descPattern = /description: "(.*?)"/s;
-  const descMatch = content.match(descPattern);
+  // Determine the active header string (e.g. "## Overview") and whether
+  // we're streaming the YAML description field.
+  const activeHeader = activeSection ? SECTION_HEADER_TEXT[activeSection] ?? null : null;
+  const isDescStreaming = activeSection === "description";
 
-  if (isStreaming && descMatch) {
-    const liveDesc = `description: "${streamingPartial}"`;
-    const [before, ...afterParts] = content.split(descMatch[0]);
-    const after = afterParts.join(descMatch[0]);
-    return (
-      <pre className="p-4 text-xs leading-relaxed font-mono text-slate-300 whitespace-pre-wrap break-words select-all">
-        {before}
-        <span style={{ background: 'rgba(251,191,36,0.15)', outline: '1px solid rgba(251,191,36,0.40)', borderRadius: '3px' }}>
-          {liveDesc}
-          <span style={{ display: 'inline-block', width: '0.55em', height: '1.1em', background: 'rgba(251,191,36,0.9)', borderRadius: '1px', marginLeft: '1px', verticalAlign: 'text-bottom', animation: 'skillCursorBlink 0.7s steps(1) infinite' }} />
-        </span>
-        {after}
-        <style>{`@keyframes skillCursorBlink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }`}</style>
-      </pre>
-    );
-  }
-
-  // Annotated section rendering
   const lines = content.split('\n');
   const rendered: React.ReactNode[] = [];
 
+  // Track whether we're inside the active section's block so we can highlight it.
+  let inActiveBlock = isDescStreaming; // description is frontmatter, special-cased below
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    // Detect YAML key lines like `name: ...` or `directory_structure: |`
+
+    // ── YAML frontmatter key annotations ────────────────────────────────────
     const keyMatch = line.match(/^([a-z_]+):\s*(.*)$/);
     const meta = keyMatch ? SKILL_SECTION_META[keyMatch[1]] : null;
 
-    const isDescLine = highlightDescription && descMatch && line.includes('description:');
+    // ── Section header detection ─────────────────────────────────────────────
+    const isActiveSectionHeader = activeHeader && line.startsWith(activeHeader);
+    const isAnyH2 = /^## /.test(line);
+
+    // When we hit any ## header, stop highlighting the previous active block.
+    // Start highlighting when we hit the active section header.
+    if (isAnyH2) {
+      inActiveBlock = isActiveSectionHeader ? true : false;
+    }
+
+    // ── Detect cursor sentinel injected during streaming ─────────────────────
+    const hasCursor = line.includes('█');
+    const displayLine = hasCursor ? line.replace(/█/g, '') : line;
+
+    // ── Render ───────────────────────────────────────────────────────────────
+    const isDescLine = isDescStreaming && line.includes('description:');
+
+    const baseStyle: React.CSSProperties = inActiveBlock
+      ? { display: 'block', background: 'rgba(251,191,36,0.07)' }
+      : { display: 'block' };
 
     rendered.push(
-      <span key={i} style={{ display: 'block' }}>
+      <span key={i} style={baseStyle}>
         {meta ? (
           <span>
             <span style={{ color: meta.color, fontWeight: 600 }}>{keyMatch![1]}</span>
             <span style={{ color: '#64748b' }}>:</span>
-            {keyMatch![2] && <span style={{ color: '#cbd5e1' }}> {keyMatch![2]}</span>}
-            <span style={{
-              marginLeft: '10px',
-              fontSize: '9px',
-              color: meta.color,
-              opacity: 0.55,
-              fontStyle: 'italic',
-              letterSpacing: '0.02em',
-            }}>
+            {keyMatch![2] && (
+              <span style={{
+                color: isDescLine ? '#fde68a' : '#cbd5e1',
+                background: isDescLine ? 'rgba(251,191,36,0.15)' : undefined,
+                outline: isDescLine ? '1px solid rgba(251,191,36,0.40)' : undefined,
+                borderRadius: isDescLine ? '3px' : undefined,
+              }}> {displayLine.slice(keyMatch![1].length + 1).trimStart()}</span>
+            )}
+            <span style={{ marginLeft: '10px', fontSize: '9px', color: meta.color, opacity: 0.55, fontStyle: 'italic', letterSpacing: '0.02em' }}>
               → {meta.hint}
             </span>
           </span>
-        ) : isDescLine ? (
-          <span style={{ background: 'rgba(251,191,36,0.15)', outline: '1px solid rgba(251,191,36,0.35)', borderRadius: '3px', transition: 'background 2s ease' }}>
-            {line}
+        ) : isActiveSectionHeader ? (
+          // Active section header — amber glow + left border accent
+          <span style={{
+            display: 'block',
+            color: '#fbbf24',
+            fontWeight: 700,
+            background: 'rgba(251,191,36,0.12)',
+            outline: '1px solid rgba(251,191,36,0.45)',
+            borderLeft: '3px solid rgba(251,191,36,0.7)',
+            borderRadius: '3px',
+            paddingLeft: '6px',
+            marginLeft: '-6px',
+          }}>
+            {displayLine}
           </span>
         ) : (
-          <span style={{ color: '#94a3b8' }}>{line || '\u00a0'}</span>
+          <span style={{ color: inActiveBlock ? '#e2e8f0' : '#94a3b8' }}>
+            {displayLine || '\u00a0'}
+            {hasCursor && (
+              <span style={{
+                display: 'inline-block',
+                width: '0.5em',
+                height: '1em',
+                background: 'rgba(251,191,36,0.9)',
+                borderRadius: '1px',
+                marginLeft: '1px',
+                verticalAlign: 'text-bottom',
+                animation: 'skillCursorBlink 0.7s steps(1) infinite',
+              }} />
+            )}
+          </span>
         )}
       </span>
     );
   }
 
   return (
-    <pre className="p-4 text-xs leading-relaxed font-mono whitespace-pre-wrap break-words select-all">
-      {rendered}
-    </pre>
+    <>
+      <pre className="p-4 text-xs leading-relaxed font-mono whitespace-pre-wrap break-words select-all">
+        {rendered}
+      </pre>
+      <style>{`@keyframes skillCursorBlink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }`}</style>
+    </>
   );
 };
 
