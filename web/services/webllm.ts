@@ -24,6 +24,35 @@ export type ProgressReport = {
   text: string;
 };
 
+// ─── Section types ────────────────────────────────────────────────────────────
+
+/**
+ * The 5 sections we generate one at a time.
+ * Order matters — each section streams and updates the preview live.
+ */
+export type SkillSection =
+  | "description"
+  | "overview"
+  | "capabilities"
+  | "usage"
+  | "boundaries";
+
+export const SKILL_SECTIONS: SkillSection[] = [
+  "description",
+  "overview",
+  "capabilities",
+  "usage",
+  "boundaries",
+];
+
+export const SKILL_SECTION_LABELS: Record<SkillSection, string> = {
+  description: "Description",
+  overview:    "Overview",
+  capabilities: "Capabilities",
+  usage:       "Usage Instructions",
+  boundaries:  "Boundaries",
+};
+
 /** Returns true if WebGPU is available in this browser. Pure check — no imports. */
 export function isWebGPUSupported(): boolean {
   return typeof navigator !== "undefined" && "gpu" in navigator;
@@ -71,49 +100,87 @@ export async function getEngine(
   return engineLoadPromise;
 }
 
-/**
- * Generate a rich, repo-specific SKILL.md description using Qwen2 0.5B.
- * Only loads the model on first call; subsequent calls are instant.
- *
- * @param repoName      "owner/repo"
- * @param languages     Top detected languages e.g. ["TypeScript", "Python"]
- * @param digestSnippet First ~1500 chars of DIGEST.md for grounding context
- * @param onProgress    Optional progress callback during model download/load
- */
-export async function generateSkillDescription(
+// ─── Section-specific prompts ─────────────────────────────────────────────────
+// Kept deliberately short and direct — Qwen 0.5B follows simple, imperative
+// instructions far better than long, elaborated prompts.
+
+function buildPrompt(
+  section: SkillSection,
   repoName: string,
-  languages: string[],
-  digestSnippet: string,
-  onProgress?: (report: ProgressReport) => void,
-  /** Called with each incremental token as it streams in */
+  langStr: string,
+  currentContent: string   // existing section text to improve
+): { prompt: string; max_tokens: number } {
+  switch (section) {
+    case "description":
+      return {
+        max_tokens: 160,
+        prompt: `Rewrite this AI skill description to be clearer and more specific.
+Repository: ${repoName} (${langStr})
+Current: ${currentContent.substring(0, 400)}
+
+Rules: 2-3 sentences. Keep factual details. Use "Use when working with" phrasing. No quotes, no markdown.
+Output ONLY the rewritten description:`,
+      };
+
+    case "overview":
+      return {
+        max_tokens: 200,
+        prompt: `Rewrite this Overview section for the ${repoName} skill.
+Current text:
+${currentContent.substring(0, 500)}
+
+Rules: 3 sentences of plain prose. First: what the repo does. Second: key components. Third: who uses it. No bullets.
+Output ONLY the rewritten paragraph:`,
+      };
+
+    case "capabilities":
+      return {
+        max_tokens: 220,
+        prompt: `Rewrite these capabilities for the ${repoName} agent skill.
+Current list:
+${currentContent.substring(0, 500)}
+
+Rules: Keep 5-6 bullet points starting with "- ". Make each specific to ${repoName}. Improve wording only.
+Output ONLY the bullet list:`,
+      };
+
+    case "usage":
+      return {
+        max_tokens: 180,
+        prompt: `Rewrite these usage instructions for the ${repoName} skill.
+Current:
+${currentContent.substring(0, 400)}
+
+Rules: Numbered list 1. 2. 3. Each item under 20 words. Tell the agent exactly what to do. No headers.
+Output ONLY the numbered list:`,
+      };
+
+    case "boundaries":
+      return {
+        max_tokens: 160,
+        prompt: `Rewrite these boundary rules for the ${repoName} skill.
+Current:
+${currentContent.substring(0, 400)}
+
+Rules: Numbered list 1. 2. 3. Each says what the agent must NOT do or must acknowledge. Under 20 words each.
+Output ONLY the numbered list:`,
+      };
+  }
+}
+
+// ─── Core streaming helper ────────────────────────────────────────────────────
+
+async function streamCompletion(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  engine: any,
+  prompt: string,
+  max_tokens: number,
   onChunk?: (partial: string) => void
 ): Promise<string> {
-  const engine = await getEngine(onProgress);
-
-  const langStr = languages.join(", ") || "multiple languages";
-  const snippet = digestSnippet.substring(0, 1500);
-
-  const prompt = `You are writing the "description" field for an AI agent skill file (SKILL.md format).
-
-Repository: ${repoName}
-Languages: ${langStr}
-Code context:
-${snippet}
-
-Write a single description paragraph of 2-3 sentences for the SKILL.md "description" field.
-Requirements:
-- Mention the repository name and primary language/framework
-- Use active verbs (e.g. "Use when...", "Activate to...", "Covers...")
-- State what tasks this skill helps with (debugging, adding features, understanding architecture)
-- Be specific, not generic
-
-Output ONLY the description text. No quotes, no extra formatting, no markdown.`;
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const stream = await (engine as any).chat.completions.create({
+  const stream = await engine.chat.completions.create({
     messages: [{ role: "user", content: prompt }],
-    max_tokens: 180,
-    temperature: 0.4,
+    max_tokens,
+    temperature: 0.35,
     top_p: 0.9,
     stream: true,
   });
@@ -129,6 +196,42 @@ Output ONLY the description text. No quotes, no extra formatting, no markdown.`;
   }
 
   return full.trim();
+}
+
+// ─── Public API ───────────────────────────────────────────────────────────────
+
+/**
+ * Generate one SKILL.md section at a time.
+ * The engine is loaded once and reused across all subsequent calls in the
+ * same session — model download only happens on the very first invocation.
+ */
+export async function generateSkillSection(
+  section: SkillSection,
+  repoName: string,
+  languages: string[],
+  digestSnippet: string,
+  onProgress?: (report: ProgressReport) => void,
+  onChunk?: (partial: string) => void
+): Promise<string> {
+  const engine = await getEngine(onProgress);
+  const langStr = languages.join(", ") || "multiple languages";
+  const { prompt, max_tokens } = buildPrompt(section, repoName, langStr, digestSnippet);
+
+  return streamCompletion(engine, prompt, max_tokens, onChunk);
+}
+
+/**
+ * Legacy single-call description generator.
+ * Kept for backward compatibility — prefer generateSkillSection("description").
+ */
+export async function generateSkillDescription(
+  repoName: string,
+  languages: string[],
+  digestSnippet: string,
+  onProgress?: (report: ProgressReport) => void,
+  onChunk?: (partial: string) => void
+): Promise<string> {
+  return generateSkillSection("description", repoName, languages, digestSnippet, onProgress, onChunk);
 }
 
 /** Dispose the engine to free GPU memory (optional, call on page unload if needed) */

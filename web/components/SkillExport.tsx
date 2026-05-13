@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from "react";
 import { SkillManifest } from "../types";
-import type { ProgressReport } from "../services/webllm";
+import type { ProgressReport, SkillSection } from "../services/webllm";
+import { SKILL_SECTIONS, SKILL_SECTION_LABELS } from "../services/webllm";
 
 const webGPUSupported = typeof navigator !== "undefined" && "gpu" in navigator;
 
@@ -33,13 +34,15 @@ export const SkillExport: React.FC<SkillExportProps> = ({
 
   // WebLLM state
   const [skillMdOverride, setSkillMdOverride] = useState<string>("");
-  const [prevDescription, setPrevDescription] = useState<string>("");
-  const [newDescription, setNewDescription] = useState<string>("");
   const [llmLoading, setLlmLoading] = useState(false);
   const [llmProgress, setLlmProgress] = useState<ProgressReport | null>(null);
   const [llmError, setLlmError] = useState<string | null>(null);
-  const [descHighlight, setDescHighlight] = useState(false);
-  /** Live partial text being streamed — shown with a cursor in the preview */
+  /** Which section index (0-4) is currently being generated, null when idle */
+  const [activeStep, setActiveStep] = useState<number | null>(null);
+  /** Sections that have been successfully completed */
+  const [completedSteps, setCompletedSteps] = useState<Set<SkillSection>>(new Set());
+  /** Live partial text of the section currently streaming */
+  const [streamingSection, setStreamingSection] = useState<SkillSection | null>(null);
   const [streamingPartial, setStreamingPartial] = useState<string | null>(null);
 
 
@@ -111,59 +114,129 @@ export const SkillExport: React.FC<SkillExportProps> = ({
 
 
 
+  /**
+   * Apply a generated section's text into the current SKILL.md string.
+   * Each section targets a specific markdown block by header name.
+   */
+  const applySectionToSkillMd = useCallback(
+    (section: SkillSection, content: string, base: string): string => {
+      if (section === "description") {
+        // Replace YAML frontmatter description value
+        const replaced = base.replace(
+          /description: "[\s\S]*?"/,
+          `description: "${content.replace(/"/g, '\\"').replace(/\n/g, " ")}"`
+        );
+        return replaced !== base ? replaced : base + `\n<!-- description: ${content} -->`;
+      }
+
+      // For markdown body sections — replace content after the matching ## header
+      // until the next ## header or end of file
+      const SECTION_HEADERS: Record<SkillSection, string> = {
+        description: "",       // handled above
+        overview:     "## Overview",
+        capabilities: "## Capabilities",
+        usage:        "## Usage Instructions",
+        boundaries:   "## Boundaries",
+      };
+      const header = SECTION_HEADERS[section];
+      if (!header) return base;
+
+      // Regex: from header line up to (but not including) the next ## or end.
+      // NOTE: no 'm' flag — with 'm', '$' matches end-of-line, not end-of-string,
+      // which causes the lazy quantifier to stop immediately and replace nothing.
+      const sectionRegex = new RegExp(
+        `(${header.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\n)[\\s\\S]*?(?=\n##|$)`
+      );
+      const replaced = base.replace(sectionRegex, `$1\n${content}\n`);
+      return replaced !== base ? replaced : base;
+    },
+    []
+  );
+
+  /**
+   * Pull the current text of a section out of the SKILL.md so the LLM can
+   * rewrite it rather than hallucinate from the raw digest.
+   */
+  const extractSection = useCallback((skillMd: string, section: SkillSection): string => {
+    if (section === "description") {
+      const m = skillMd.match(/description: "([\s\S]*?)"/);
+      return m ? m[1] : "";
+    }
+    const headers: Record<SkillSection, string> = {
+      description: "",
+      overview:     "## Overview",
+      capabilities: "## Capabilities",
+      usage:        "## Usage Instructions",
+      boundaries:   "## Boundaries",
+    };
+    const header = headers[section];
+    if (!header) return "";
+    const m = skillMd.match(
+      new RegExp(`${header.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\n([\\s\\S]*?)(?=\n##|$)`)
+    );
+    return m ? m[1].trim() : "";
+  }, []);
+
   const handleGenerateSkill = useCallback(async () => {
     if (!webGPUSupported) return;
     setLlmLoading(true);
     setLlmError(null);
     setLlmProgress(null);
-    setPrevDescription("");
-    setNewDescription("");
+    setActiveStep(null);
+    setCompletedSteps(new Set());
+    setStreamingSection(null);
     setStreamingPartial(null);
+
     try {
-      const { generateSkillDescription } = await import("../services/webllm");
+      const { generateSkillSection } = await import("../services/webllm");
       const languages = manifestJson?.metadata?.primary_languages ?? [];
       const repoName = manifestJson?.display_name ?? repoNameForFilename ?? "this repo";
 
-      // Capture the old description for the diff callout
-      const oldDescMatch = displaySkillMd.match(/description: "(.*?)"/);
-      const oldDesc = oldDescMatch ? oldDescMatch[1] : "(none)";
+      // Start from the current displayed SKILL.md (or the prop)
+      let working = displaySkillMd;
 
-      // Stream the new description
-      const description = await generateSkillDescription(
-        repoName,
-        languages,
-        digest,
-        (report) => setLlmProgress(report),
-        (partial) => setStreamingPartial(partial)
-      );
+      for (let i = 0; i < SKILL_SECTIONS.length; i++) {
+        const section = SKILL_SECTIONS[i];
+        setActiveStep(i);
+        setStreamingSection(section);
+        setStreamingPartial("");
 
-      setStreamingPartial(null);
+        // Extract the CURRENT section text from the SKILL.md so the model
+        // rewrites existing correct content rather than hallucinating from
+        // the raw digest (which starts with unrelated source files).
+        const currentSectionText = extractSection(working, section);
 
-      // Replace description field AND also enrich the `when_to_use` / `usage` sections if present
-      let updated = displaySkillMd.replace(
-        /description: ".*?"/s,
-        `description: "${description.replace(/"/g, '\\"')}"`
-      );
-      // If the skill has a `usage:` or `when_to_use:` field that's empty/placeholder, populate it
-      updated = updated.replace(
-        /when_to_use: ""/,
-        `when_to_use: "Use when working with, understanding, or modifying the ${repoName} codebase. Covers architecture, implementation patterns, and configuration."`
-      );
+        const content = await generateSkillSection(
+          section,
+          repoName,
+          languages,
+          currentSectionText,
+          // Only show model-load progress on the first section
+          i === 0 ? (report) => setLlmProgress(report) : undefined,
+          (partial) => setStreamingPartial(partial)
+        );
 
-      setSkillMdOverride(updated);
-      setPrevDescription(oldDesc);
-      setNewDescription(description);
+        setStreamingPartial(null);
+        setStreamingSection(null);
+        setLlmProgress(null);
 
-      setDescHighlight(true);
-      setTimeout(() => setDescHighlight(false), 2500);
+        working = applySectionToSkillMd(section, content, working);
+        setSkillMdOverride(working);
+
+        setCompletedSteps((prev) => new Set([...prev, section]));
+      }
+
+      setActiveStep(null);
     } catch (err: any) {
       setStreamingPartial(null);
+      setStreamingSection(null);
       setLlmError(err.message ?? "AI generation failed.");
     } finally {
       setLlmLoading(false);
       setLlmProgress(null);
+      setActiveStep(null);
     }
-  }, [manifestJson, repoNameForFilename, digest, displaySkillMd]);
+  }, [manifestJson, repoNameForFilename, displaySkillMd, applySectionToSkillMd, extractSection]);
 
 
 
@@ -224,7 +297,9 @@ export const SkillExport: React.FC<SkillExportProps> = ({
             >
               <span className="flex items-center gap-1.5">
                 {llmLoading ? (
-                  <><svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>Generating…</>
+                  <><svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>Writing…</>
+                ) : completedSteps.size === SKILL_SECTIONS.length ? (
+                  <>✅ Rewrite again</>
                 ) : (
                   <>✨ Re-write Skill</>
                 )}
@@ -237,7 +312,7 @@ export const SkillExport: React.FC<SkillExportProps> = ({
             <div className="absolute bottom-full right-0 mb-2 w-64 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50">
               <div className="bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-[11px] text-slate-300 leading-relaxed shadow-xl">
                 <p className="font-semibold text-slate-200 mb-0.5">AI-powered SKILL.md</p>
-                Regenerates the <code className="text-slate-300 bg-slate-900/60 px-0.5 rounded">description</code> and enriches other fields using an on-device model via WebGPU — no data leaves your browser.
+                Rewrites all 5 sections one at a time using an on-device model via WebGPU — no data leaves your browser.
                 <div className="absolute top-full right-4 border-4 border-transparent border-t-slate-600" />
               </div>
             </div>
@@ -254,30 +329,59 @@ export const SkillExport: React.FC<SkillExportProps> = ({
       {downloadError && (
         <p className="text-xs text-red-400 bg-red-900/20 border border-red-700/40 px-3 py-2 rounded-lg">{downloadError}</p>
       )}
-      {llmLoading && llmProgress && (
-        <div className="flex flex-col gap-1">
-          <div className="h-1.5 bg-slate-700 rounded-full overflow-hidden w-48">
-            <div className="h-full bg-gradient-to-r from-amber-500 to-yellow-400 transition-all duration-300" style={{ width: `${Math.round((llmProgress.progress ?? 0) * 100)}%` }} />
-          </div>
-          <span className="text-[10px] text-slate-400 font-mono">{llmProgress.text}</span>
-        </div>
-      )}
       {llmError && <p className="text-xs text-red-400 bg-red-900/20 border border-red-700/40 px-3 py-2 rounded-lg">{llmError}</p>}
 
-      {/* AI result callout */}
-      {skillMdOverride && !llmLoading && newDescription && (
-        <div className="rounded-lg border border-amber-500/40 bg-amber-500/8 px-3 py-2.5 flex flex-col gap-1.5 animate-in fade-in slide-in-from-top-1 duration-300">
-          <p className="text-[11px] font-semibold text-amber-400 flex items-center gap-1.5">
-            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-            SKILL.md updated by AI
-          </p>
-          {prevDescription && (
-            <div className="flex flex-col gap-1">
-              <p className="text-[10px] text-slate-500 font-mono line-through truncate">− {prevDescription}</p>
-              <p className="text-[10px] text-emerald-300 font-mono truncate">+ {newDescription}</p>
+      {/* Section stepper — shown while generating or after completion */}
+      {(llmLoading || completedSteps.size > 0) && (
+        <div className="rounded-xl border border-slate-700 bg-slate-900/60 px-3 py-3 flex flex-col gap-2">
+          {/* Model download progress (first section only) */}
+          {llmLoading && llmProgress && llmProgress.progress < 1 && (
+            <div className="flex flex-col gap-1 mb-1">
+              <div className="h-1 bg-slate-700 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-amber-500 to-yellow-400 transition-all duration-300"
+                  style={{ width: `${Math.round((llmProgress.progress ?? 0) * 100)}%` }}
+                />
+              </div>
+              <span className="text-[9px] text-slate-500 font-mono truncate">{llmProgress.text}</span>
             </div>
           )}
-          <p className="text-[10px] text-slate-500">Description and skill fields have been rewritten. Copy SKILL.md or Download .zip to save.</p>
+
+          {/* Step pills */}
+          <div className="flex flex-wrap gap-1.5">
+            {SKILL_SECTIONS.map((section, i) => {
+              const isDone = completedSteps.has(section);
+              const isActive = activeStep === i && llmLoading;
+              return (
+                <div
+                  key={section}
+                  className={`flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium border transition-all duration-300 ${
+                    isDone
+                      ? "bg-emerald-900/30 border-emerald-600/40 text-emerald-400"
+                      : isActive
+                      ? "bg-amber-500/15 border-amber-500/50 text-amber-300 animate-pulse"
+                      : "bg-slate-800/60 border-slate-700 text-slate-500"
+                  }`}
+                >
+                  {isDone ? (
+                    <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+                  ) : isActive ? (
+                    <svg className="w-2.5 h-2.5 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
+                  ) : (
+                    <span className="w-2.5 h-2.5 rounded-full border border-slate-600 inline-block" />
+                  )}
+                  {SKILL_SECTION_LABELS[section]}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Done message */}
+          {!llmLoading && completedSteps.size === SKILL_SECTIONS.length && (
+            <p className="text-[10px] text-slate-400 mt-0.5">
+              All {SKILL_SECTIONS.length} sections rewritten. Copy SKILL.md or Download .zip to save.
+            </p>
+          )}
         </div>
       )}
 
@@ -294,8 +398,8 @@ export const SkillExport: React.FC<SkillExportProps> = ({
         <div className="pt-10 h-full overflow-auto">
           <MarkdownPreview
             content={displaySkillMd}
-            highlightDescription={descHighlight}
-            streamingPartial={streamingPartial}
+            highlightDescription={false}
+            streamingPartial={streamingSection === "description" ? streamingPartial : null}
           />
         </div>
       </div>
