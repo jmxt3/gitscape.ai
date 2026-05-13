@@ -51,11 +51,11 @@ export const SKILL_SECTIONS: SkillSection[] = [
 
 export const SKILL_SECTION_LABELS: Record<SkillSection, string> = {
   description: "Description",
-  overview:    "Overview",
+  overview: "Overview",
   capabilities: "Capabilities",
-  structure:   "Architecture & Structure",
-  usage:       "Usage Instructions",
-  boundaries:  "Boundaries",
+  structure: "Architecture & Structure",
+  usage: "Usage Instructions",
+  boundaries: "Boundaries",
 };
 
 /** Returns true if WebGPU is available in this browser. Pure check — no imports. */
@@ -110,9 +110,13 @@ export async function getEngine(
 // output format and a focused user message with the content to rewrite.
 
 const SYSTEM_PROMPT =
-  "You are a technical writer specialising in AI agent skill documentation. " +
-  "Follow the user's formatting rules exactly. Output ONLY the requested content — " +
-  "no preamble, no code fences, no explanations, no labels like 'Output:'.";
+  "You are an expert technical writer specialising in Anthropic Agent Skills (agentskills.io). " +
+  "Your job is to write SKILL.md content that helps AI agents trigger accurately and execute correctly. " +
+  "The DESCRIPTION field is the most critical — it determines when the skill activates. Write descriptions " +
+  "from the agent's perspective using specific action verbs, concrete use cases, and clear boundaries. " +
+  "All other sections must be structured, actionable, and grounded exclusively in the provided README and " +
+  "file structure — never hallucinate file paths, APIs, or functions that are not shown. " +
+  "Output ONLY the requested content: no preamble, no code fences, no explanations, no labels like 'Output:'.";
 
 function buildMessages(
   section: SkillSection,
@@ -133,21 +137,27 @@ function buildMessages(
   switch (section) {
     case "description":
       return {
-        max_tokens: 80,
-        messages: [sys, { role: "user", content:
-`Improve this AI skill description for the ${repoName} repository (${langStr}).
+        max_tokens: 120,
+        messages: [sys, {
+          role: "user", content:
+            `Write the SKILL.md description field for ${repoName} (${langStr}).
 
-${ctxBlock}Current description:
-${currentContent.substring(0, 400)}
-
-Write 2-3 sentences. Start with "Use when working with". Keep factual details. No quotes.` }],
+${ctxBlock}Rules:
+- 2-3 sentences ONLY. No quotes around the output.
+- Sentence 1: What this repo IS and does — use the exact tech names from the README (e.g. FastAPI, Pydantic, Starlette).
+- Sentence 2: WHEN to trigger — list 3-4 specific action verbs + use cases (e.g. "Use to build API endpoints, debug middleware, understand routing patterns, integrate with Pydantic models").
+- Sentence 3 (optional): One sharp boundary — what this skill does NOT cover.
+- NEVER output meta-commentary like "The description should be..." — just write the description itself.
+- NEVER start with "This skill" or "Use when working with".`
+        }],
       };
 
     case "overview":
       return {
         max_tokens: 200,
-        messages: [sys, { role: "user", content:
-`Write a rich Overview section for the ${repoName} skill (${langStr}).
+        messages: [sys, {
+          role: "user", content:
+            `Write a rich Overview section for the ${repoName} skill (${langStr}).
 
 ${ctxBlock}Write 4-5 plain-prose sentences covering:
 1. What this repository does and its main purpose (use the README).
@@ -159,35 +169,60 @@ No bullet points. No headings. Be specific — reference actual names from the R
 
     case "capabilities":
       return {
-        max_tokens: 160,
-        messages: [sys, { role: "user", content:
-`Rewrite the Capabilities section for the ${repoName} skill.
+        max_tokens: 250,
+        messages: [sys, {
+          role: "user", content:
+            `Write the Capabilities section for the ${repoName} SKILL.md.
 
-${ctxBlock}Current:
-${currentContent.substring(0, 500)}
+${ctxBlock}Write exactly 5 numbered items. CRITICAL: each item MUST describe a DIFFERENT capability.
 
-Write a numbered list: 1. 2. 3. 4. 5. Each item under 20 words. Each describes one specific thing this skill enables the agent to do.` }],
+Format each item as: "N. [Strong action verb] [specific technical thing from this codebase]."
+
+Required action verbs (use each once): Answer, Debug, Guide, Explain, Identify
+Each item must reference a SPECIFIC part of this repo visible in the README or File Structure (module names, patterns, APIs, config files).
+
+BAD (do NOT repeat like this):
+1. The agent can trigger the framework and execute endpoints.
+2. The agent can trigger the framework and execute endpoints by calling run.
+
+GOOD format:
+1. Answer questions about [specific architecture/design pattern from this repo].
+2. Debug [specific error type] by referencing [specific file/module].
+3. Guide implementation of [specific feature] following the project's conventions.
+4. Explain [specific config/env/deployment aspect] from the repository.
+5. Identify [specific integration points or APIs] exposed by this codebase.`
+        }],
       };
 
     case "structure":
       return {
-        max_tokens: 200,
-        messages: [sys, { role: "user", content:
-`Write an "Architecture & Structure" section for the ${repoName} skill.
+        max_tokens: 250,
+        messages: [sys, {
+          role: "user", content:
+            `Write the Architecture & Structure section for the ${repoName} SKILL.md.
 
-${ctxBlock}Write a numbered list describing the key top-level directories and files.
-For each entry: give the directory/file name followed by a colon and a one-line description of its purpose.
-Example format:
-1. src/: Main application source code containing components and business logic.
-2. tests/: Unit and integration test suites.
-Limit to the 5-7 most important paths. Be specific to this repo. No generic filler.` }],
+${ctxBlock}Write 5-7 numbered entries. Each entry describes ONE path that actually appears in the File Structure above.
+
+Format: "N. \`path/\`: What this directory/file contains and its role in the project."
+
+Rules:
+- Use ONLY paths visible in the File Structure — never invent paths
+- Be specific: say WHAT is in it, not just that it "contains files"
+- List most architecturally important paths first
+
+Example:
+1. \`fastapi/\`: Core library — routing, dependency injection, and middleware implementations.
+2. \`tests/\`: Pytest test suite covering unit and integration scenarios for all public APIs.
+3. \`docs/\`: MkDocs source used to generate the official documentation site.`
+        }],
       };
 
     case "usage":
       return {
         max_tokens: 120,
-        messages: [sys, { role: "user", content:
-`Rewrite the Usage Instructions for the ${repoName} skill.
+        messages: [sys, {
+          role: "user", content:
+            `Rewrite the Usage Instructions for the ${repoName} skill.
 
 ${ctxBlock}Current:
 ${currentContent.substring(0, 400)}
@@ -198,8 +233,9 @@ Write a numbered list: 1. 2. 3. 4. Each item under 20 words. Tell the agent exac
     case "boundaries":
       return {
         max_tokens: 100,
-        messages: [sys, { role: "user", content:
-`Rewrite the Boundaries section for the ${repoName} skill.
+        messages: [sys, {
+          role: "user", content:
+            `Rewrite the Boundaries section for the ${repoName} skill.
 
 ${ctxBlock}Current:
 ${currentContent.substring(0, 400)}

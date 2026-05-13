@@ -140,7 +140,20 @@ export const SkillExport: React.FC<SkillExportProps> = ({
       const escaped = header.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       const sectionRegex = new RegExp(`(${escaped}\\n)[\\s\\S]*?(?=\\n\\n##|$)`);
       const replaced = base.replace(sectionRegex, (_m, hdr) => `${hdr}\n${content}\n`);
-      return replaced !== base ? replaced : base;
+
+      // If the heading doesn't exist in the template (e.g. older API deploy),
+      // insert the section before ## Usage Instructions so it's not silently dropped.
+      if (replaced !== base) return replaced;
+      const insertBefore = "## Usage Instructions";
+      const insertIdx = base.indexOf(insertBefore);
+      if (insertIdx !== -1) {
+        return (
+          base.slice(0, insertIdx) +
+          `${header}\n\n${content}\n\n` +
+          base.slice(insertIdx)
+        );
+      }
+      return base;
     },
     []
   );

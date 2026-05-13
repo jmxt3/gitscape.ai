@@ -93,35 +93,35 @@ const FuseParticles: React.FC<FuseParticlesProps> = ({ progressPercent, step }) 
     const [eBase, eRange] = STEP_EMBER_HUE[stepRef.current];
     const [sBase, sRange] = STEP_SPARK_HUE[stepRef.current];
 
-    const emberCount = isMoving ? 10 : 4;
+    const emberCount = isMoving ? 6 : 2;
     for (let i = 0; i < emberCount; i++) {
       const angle = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 1.6;
-      const speed = isMoving ? 0.8 + Math.random() * 2.2 : 0.3 + Math.random() * 1.0;
+      const speed = isMoving ? 0.5 + Math.random() * 1.4 : 0.2 + Math.random() * 0.6;
       particlesRef.current.push({
-        x: OX + (Math.random() - 0.5) * 5,
-        y: OY + (Math.random() - 0.5) * 3,
+        x: OX + (Math.random() - 0.5) * 4,
+        y: OY + (Math.random() - 0.5) * 2,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
         life: 1,
-        decay: isMoving ? 0.022 + Math.random() * 0.038 : 0.035 + Math.random() * 0.055,
-        size: isMoving ? 1.4 + Math.random() * 2.6 : 0.7 + Math.random() * 1.5,
+        decay: isMoving ? 0.04 + Math.random() * 0.06 : 0.06 + Math.random() * 0.08,
+        size: isMoving ? 0.8 + Math.random() * 1.4 : 0.4 + Math.random() * 0.8,
         hue: eBase + Math.random() * eRange,
         type: "ember",
       });
     }
 
-    const sparkCount = isMoving ? 8 : 2;
+    const sparkCount = isMoving ? 4 : 1;
     for (let i = 0; i < sparkCount; i++) {
       const angle = (Math.random() - 0.5) * Math.PI * 2;
-      const speed = isMoving ? 2.2 + Math.random() * 4.5 : 0.8 + Math.random() * 2.0;
+      const speed = isMoving ? 1.4 + Math.random() * 2.8 : 0.6 + Math.random() * 1.2;
       particlesRef.current.push({
-        x: OX + (Math.random() - 0.5) * 4,
-        y: OY + (Math.random() - 0.5) * 3,
+        x: OX + (Math.random() - 0.5) * 3,
+        y: OY + (Math.random() - 0.5) * 2,
         vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed - 0.9,
+        vy: Math.sin(angle) * speed - 0.6,
         life: 1,
-        decay: isMoving ? 0.045 + Math.random() * 0.065 : 0.08 + Math.random() * 0.10,
-        size: 0.5 + Math.random() * 1.1,
+        decay: isMoving ? 0.07 + Math.random() * 0.09 : 0.10 + Math.random() * 0.12,
+        size: 0.4 + Math.random() * 0.7,
         hue: sBase + Math.random() * sRange,
         type: "spark",
       });
@@ -141,7 +141,10 @@ const FuseParticles: React.FC<FuseParticlesProps> = ({ progressPercent, step }) 
       lastTime = now;
 
       const currentPercent = progressPercentRef.current;
-      const isMoving = Math.abs(currentPercent - prevPercentRef.current) > 0.05;
+      // With 50 ms micro-steps the per-frame delta is far too small to
+      // reliably exceed a fixed threshold. Instead: the flame is "active"
+      // whenever the bar is in motion (0 < progress < 100).
+      const isMoving = currentPercent > 0 && currentPercent < 100;
       prevPercentRef.current = currentPercent;
 
       spawn(isMoving);
@@ -165,31 +168,31 @@ const FuseParticles: React.FC<FuseParticlesProps> = ({ progressPercent, step }) 
       // ── Outer ambient glow (step-aware color) ────────────────────────────
       const [eBase] = STEP_EMBER_HUE[stepRef.current];
       const glowHue = eBase + 15; // slightly shifted for glow warmth
-      const outerGlow = ctx.createRadialGradient(OX, OY, 0, OX, OY, 24);
-      outerGlow.addColorStop(0, `hsla(${glowHue}, 85%, 65%, 0.20)`);
-      outerGlow.addColorStop(0.5, `hsla(${glowHue}, 80%, 45%, 0.10)`);
+      const outerGlow = ctx.createRadialGradient(OX, OY, 0, OX, OY, 16);
+      outerGlow.addColorStop(0, `hsla(${glowHue}, 85%, 65%, 0.14)`);
+      outerGlow.addColorStop(0.5, `hsla(${glowHue}, 80%, 45%, 0.07)`);
       outerGlow.addColorStop(1, "transparent");
       ctx.beginPath();
-      ctx.arc(OX, OY, 24, 0, Math.PI * 2);
+      ctx.arc(OX, OY, 16, 0, Math.PI * 2);
       ctx.fillStyle = outerGlow;
       ctx.fill();
 
       // ── Core flame glow (step-aware → white-hot centre) ──────────────────
-      const coreGlow = ctx.createRadialGradient(OX, OY, 0, OX, OY, 14);
-      coreGlow.addColorStop(0, "rgba(255,255,255,1)");                              // white-hot core
-      coreGlow.addColorStop(0.15, `hsla(${glowHue + 20}, 95%, 88%, 0.95)`);        // light tint
-      coreGlow.addColorStop(0.4, `hsla(${glowHue}, 90%, 60%, 0.80)`);              // step color
-      coreGlow.addColorStop(0.75, `hsla(${glowHue - 10}, 85%, 40%, 0.35)`);        // deeper shade
+      const coreGlow = ctx.createRadialGradient(OX, OY, 0, OX, OY, 9);
+      coreGlow.addColorStop(0, "rgba(255,255,255,0.95)");                             // white-hot core
+      coreGlow.addColorStop(0.15, `hsla(${glowHue + 20}, 95%, 88%, 0.80)`);          // light tint
+      coreGlow.addColorStop(0.4, `hsla(${glowHue}, 90%, 60%, 0.60)`);                // step color
+      coreGlow.addColorStop(0.75, `hsla(${glowHue - 10}, 85%, 40%, 0.25)`);          // deeper shade
       coreGlow.addColorStop(1, "transparent");
       ctx.beginPath();
-      ctx.arc(OX, OY, 14, 0, Math.PI * 2);
+      ctx.arc(OX, OY, 9, 0, Math.PI * 2);
       ctx.fillStyle = coreGlow;
       ctx.fill();
 
       // ── White-hot centre dot ──────────────────────────────────────────────
       ctx.beginPath();
-      ctx.arc(OX, OY, 2.5, 0, Math.PI * 2);
-      ctx.fillStyle = "rgba(255,255,255,0.98)";
+      ctx.arc(OX, OY, 1.8, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(255,255,255,0.92)";
       ctx.fill();
 
       // ── Draw embers ───────────────────────────────────────────────────────
@@ -246,7 +249,7 @@ const FuseParticles: React.FC<FuseParticlesProps> = ({ progressPercent, step }) 
         top: "50%",
         transform: "translateY(-50%)",
         left: `calc(${progressPercent}% - ${CANVAS_W / 2}px)`,
-        transition: "left 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
+        transition: "left 0.08s linear",
         width: CANVAS_W,
         height: CANVAS_H,
         pointerEvents: "none",
