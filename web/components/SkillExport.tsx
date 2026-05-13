@@ -201,11 +201,10 @@ export const SkillExport: React.FC<SkillExportProps> = ({
         <button
           onClick={handleCopy}
           id="skill-copy-btn"
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 border ${
-            copyState === "copied"
-              ? "bg-emerald-600/20 border-emerald-500/40 text-emerald-400 focus:ring-emerald-500"
-              : "bg-slate-700/50 hover:bg-slate-700 border-slate-600 text-slate-300 hover:text-slate-100 focus:ring-violet-500"
-          }`}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 border ${copyState === "copied"
+            ? "bg-emerald-600/20 border-emerald-500/40 text-emerald-400 focus:ring-emerald-500"
+            : "bg-slate-700/50 hover:bg-slate-700 border-slate-600 text-slate-300 hover:text-slate-100 focus:ring-violet-500"
+            }`}
         >
           {copyState === "copied" ? (
             <><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4.5 12.75l6 6 9-13.5" /></svg>Copied!</>
@@ -224,14 +223,14 @@ export const SkillExport: React.FC<SkillExportProps> = ({
               className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg bg-slate-700/50 hover:bg-slate-700 border border-slate-600 text-slate-400 hover:text-slate-200 disabled:opacity-50 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2 focus:ring-offset-slate-900 disabled:cursor-not-allowed"
             >
               <span className="flex items-center gap-1.5">
-              {llmLoading ? (
-                <><svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>Generating…</>
-              ) : (
-                <>✨ AI Description</>
-              )}
-              {!llmLoading && (
-                <span className="ml-1 text-[9px] font-semibold tracking-wider uppercase bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1.5 py-0.5 rounded">WebGPU</span>
-              )}
+                {llmLoading ? (
+                  <><svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>Generating…</>
+                ) : (
+                  <>✨ Re-write Skill</>
+                )}
+                {!llmLoading && (
+                  <span className="ml-1 text-[9px] font-semibold tracking-wider uppercase bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1.5 py-0.5 rounded">WebGPU</span>
+                )}
               </span>
             </button>
             {/* Tooltip */}
@@ -317,14 +316,14 @@ export const SkillExport: React.FC<SkillExportProps> = ({
 
 // SKILL.md section metadata — shown as inline annotations in the preview
 const SKILL_SECTION_META: Record<string, { color: string; hint: string }> = {
-  name:             { color: "#fbbf24", hint: "Skill identifier used by agent frameworks" },
-  description:      { color: "#fbbf24", hint: "What this skill does — the agent reads this to decide when to use it" },
-  usage:            { color: "#34d399", hint: "How to invoke this skill in your agent prompt" },
-  when_to_use:      { color: "#34d399", hint: "Conditions and tasks this skill is best suited for" },
+  name: { color: "#fbbf24", hint: "Skill identifier used by agent frameworks" },
+  description: { color: "#fbbf24", hint: "What this skill does — the agent reads this to decide when to use it" },
+  usage: { color: "#34d399", hint: "How to invoke this skill in your agent prompt" },
+  when_to_use: { color: "#34d399", hint: "Conditions and tasks this skill is best suited for" },
   directory_structure: { color: "#fbbf24", hint: "Repository layout — the agent uses this to navigate the codebase" },
-  key_files:        { color: "#fbbf24", hint: "Most important files — starting points for any task" },
-  architecture:     { color: "#60a5fa", hint: "High-level design patterns and component relationships" },
-  dependencies:     { color: "#60a5fa", hint: "External libraries and tools the repo relies on" },
+  key_files: { color: "#fbbf24", hint: "Most important files — starting points for any task" },
+  architecture: { color: "#60a5fa", hint: "High-level design patterns and component relationships" },
+  dependencies: { color: "#60a5fa", hint: "External libraries and tools the repo relies on" },
 };
 
 const MarkdownPreview: React.FC<{

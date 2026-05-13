@@ -462,6 +462,24 @@ const App: React.FC = () => {
   const [progressFading, setProgressFading] = useState<boolean>(false);
   const progressTickerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Typewriter effect: animate displayedProgressMessage character-by-character
+  const [displayedProgressMessage, setDisplayedProgressMessage] = useState("");
+  const typewriterRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  useEffect(() => {
+    if (typewriterRef.current) clearInterval(typewriterRef.current);
+    if (!progressMessage) { setDisplayedProgressMessage(""); return; }
+    let i = 0;
+    setDisplayedProgressMessage("");
+    typewriterRef.current = setInterval(() => {
+      i++;
+      setDisplayedProgressMessage(progressMessage.slice(0, i));
+      if (i >= progressMessage.length) {
+        if (typewriterRef.current) clearInterval(typewriterRef.current);
+      }
+    }, 28);
+    return () => { if (typewriterRef.current) clearInterval(typewriterRef.current); };
+  }, [progressMessage]);
+
   // Countdown timer for rate-limit cooldown
   useEffect(() => {
     if (retryAfterSeconds === null || retryAfterSeconds <= 0) return;
@@ -712,9 +730,9 @@ const App: React.FC = () => {
         const stepSize = Math.max(0.3, remaining * 0.04);
         return Math.min(88, prev + stepSize);
       });
-      // Rotate joke every ~3 ticks (700ms × 3 ≈ 2.1s)
+      // Rotate joke every ~6 ticks (700ms × 6 ≈ 4.2s)
       msgTick++;
-      if (msgTick % 3 === 0) {
+      if (msgTick % 6 === 0) {
         setProgressPercent((pct) => {
           const s = getProgressStep(pct);
           const pool = s === 1 ? DIGEST_MESSAGES : s === 2 ? VISUALIZATION_MESSAGES : SKILL_MESSAGES;
@@ -1162,9 +1180,32 @@ const App: React.FC = () => {
                       : "text-amber-400"
                   }`}
               >
-                {progressMessage}
+                {displayedProgressMessage}
+                {/* Blinking cursor while message is still typing or loading */}
+                <span
+                  style={{
+                    display: 'inline-block',
+                    width: '0.5em',
+                    height: '1em',
+                    marginLeft: '2px',
+                    verticalAlign: 'text-bottom',
+                    borderRadius: '1px',
+                    animation: 'msgCursorBlink 0.8s steps(1) infinite',
+                    background: getProgressStep(progressPercent) === 1
+                      ? 'rgba(167,139,250,0.85)'
+                      : getProgressStep(progressPercent) === 2
+                      ? 'rgba(52,211,153,0.85)'
+                      : 'rgba(251,191,36,0.85)',
+                  }}
+                />
               </p>
             )}
+            <style>{`
+              @keyframes msgCursorBlink {
+                0%, 49% { opacity: 1; }
+                50%, 100% { opacity: 0; }
+              }
+            `}</style>
             {error && !isLoading && (
               retryAfterSeconds !== null ? (
                 <div className="mt-3 flex items-center gap-3 text-sm bg-amber-900/20 border border-amber-700/50 p-3 rounded-md">
