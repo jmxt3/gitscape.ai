@@ -8,6 +8,41 @@
  *
  * Author: João Machete
  */
+
+// Import isWebGPUSupported for internal use inside this module.
+// A bare `export { isWebGPUSupported } from "..."` re-export does NOT
+// bring the name into this module's own scope — calling it in preloadEngine()
+// would throw "ReferenceError: isWebGPUSupported is not defined" at runtime.
+import { isWebGPUSupported } from "./webllm-types";
+import type { ProgressReport, SkillSection } from "./webllm-types";
+
+// Re-export shared types and constants so callers can import from one place.
+// This keeps the heavy @mlc-ai/web-llm runtime out of the main JS chunk.
+export type { ProgressReport, SkillSection } from "./webllm-types";
+export { SKILL_SECTIONS, SKILL_SECTION_LABELS, isWebGPUSupported } from "./webllm-types";
+
+// Llama-3.2-1B-Instruct — ~700 MB, cached in browser Cache API after first download.
+// Significantly better instruction following than Qwen 0.5B, eliminating most
+// prompt-leak artifacts ("Output: []", code fences, preamble lines).
+const MODEL_ID = "Llama-3.2-1B-Instruct-q4f16_1-MLC";
+
+// We use `any` here to avoid pulling in the webllm types at compile time.
+// The dynamic import resolves the real types at runtime.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let engineInstance: any | null = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let engineLoadPromise: Promise<any> | null = null;
+
+/**
+ * Lazily import @mlc-ai/web-llm and return the module.
+ * The dynamic import() is only executed once; subsequent calls reuse the cached module.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let _webllmModule: any | null = null;
+async function getWebLLMModule() {
+  if (!_webllmModule) {
+    // Dynamic import — only fetches and parses the bundle on first call
+    _webllmModule = await import("@mlc-ai/web-llm");
   }
   return _webllmModule;
 }
