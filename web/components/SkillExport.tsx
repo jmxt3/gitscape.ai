@@ -141,13 +141,12 @@ export const SkillExport: React.FC<SkillExportProps> = ({
       const header = SECTION_HEADERS[section];
       if (!header) return base;
 
-      // Regex: from header line up to (but not including) the next ## or end.
-      // NOTE: no 'm' flag — with 'm', '$' matches end-of-line, not end-of-string,
-      // which causes the lazy quantifier to stop immediately and replace nothing.
-      const sectionRegex = new RegExp(
-        `(${header.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\n)[\\s\\S]*?(?=\n##|$)`
-      );
-      const replaced = base.replace(sectionRegex, `$1\n${content}\n`);
+      // Build regex with proper \\n escapes. Sections are separated by \n\n## in the
+      // SKILL.md template, so the lookahead is \n\n## (blank line then header) or end-of-string.
+      // Use a replacer function so any $ chars in AI content aren't misread by String.replace().
+      const escaped = header.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const sectionRegex = new RegExp(`(${escaped}\\n)[\\s\\S]*?(?=\\n\\n##|$)`);
+      const replaced = base.replace(sectionRegex, (_m, hdr) => `${hdr}\n${content}\n`);
       return replaced !== base ? replaced : base;
     },
     []
