@@ -16,9 +16,8 @@ import {
   GITHUB_TOKEN_LOCAL_STORAGE_KEY,
   REPO_URL_LOCAL_STORAGE_KEY,
 } from "./constants";
-import { RawDiagramNode, CachedRepoOutput, SkillManifest } from "./types";
+import { RawDiagramNode, CachedRepoOutput, SkillManifest, ScanReport, SkillReferences } from "./types";
 import { getCachedRepo, setCachedRepo, deleteCachedRepo } from "./services/repoCache";
-import { isWebGPUSupported } from "./services/webllm-types";
 
 // Helper to safely get items from localStorage
 const getFromLocalStorage = (key: string, defaultValue: string): string => {
@@ -583,9 +582,8 @@ const App: React.FC = () => {
   // Skill export state
   const [skillMd, setSkillMd] = useState<string>("");
   const [manifestJson, setManifestJson] = useState<SkillManifest | null>(null);
-  const [repoReadme, setRepoReadme] = useState<string>("");
-  const [repoFileStructure, setRepoFileStructure] = useState<string>("");
-  const [repoStructureOverview, setRepoStructureOverview] = useState<string>("");
+  const [scanReport, setScanReport] = useState<ScanReport | null>(null);
+  const [skillReferences, setSkillReferences] = useState<SkillReferences | null>(null);
 
   const [showDiagramFullscreenModal, setShowDiagramFullscreenModal] =
     useState<boolean>(false);
@@ -628,9 +626,8 @@ const App: React.FC = () => {
           setFilesToRenderInDiagram(cachedData.filesToRenderInDiagram || []);
           if (cachedData.skill_md) setSkillMd(cachedData.skill_md);
           if (cachedData.manifest_json) setManifestJson(cachedData.manifest_json);
-          if (cachedData.readme) setRepoReadme(cachedData.readme);
-          if (cachedData.file_structure) setRepoFileStructure(cachedData.file_structure);
-          if (cachedData.structure_overview) setRepoStructureOverview(cachedData.structure_overview);
+          if (cachedData.scan_report) setScanReport(cachedData.scan_report);
+          if (cachedData.references) setSkillReferences(cachedData.references);
         } catch (e) {
           console.warn(`Failed to restore cached data for ${repoUrl}:`, e);
           deleteCachedRepo(repoUrl);
@@ -638,17 +635,6 @@ const App: React.FC = () => {
       });
     }
   }, []);
-
-  // Kick off background model preload immediately on mount.
-  // If already cached, resolves in seconds; otherwise downloads ~700 MB quietly.
-  // By the time the user clicks "Rewrite Skill" the engine is warm and ready.
-  // Dynamic import keeps the 6 MB webllm bundle out of the main JS chunk.
-  useEffect(() => {
-    if (isWebGPUSupported()) {
-      import("./services/webllm").then(({ preloadEngine }) => preloadEngine());
-    }
-  }, []);
-
 
   useEffect(() => {
     storeInLocalStorage(REPO_URL_LOCAL_STORAGE_KEY, repoUrl || null);
@@ -691,6 +677,8 @@ const App: React.FC = () => {
       newReadme?: string,
       newFileStructure?: string,
       newStructureOverview?: string,
+      newScanReport?: ScanReport | null,
+      newReferences?: SkillReferences | null,
     ) => {
       // Show digest immediately — don't keep user waiting for the tree fetch.
       setDigest(markdownDigest);
@@ -742,6 +730,8 @@ const App: React.FC = () => {
             timestamp: Date.now(),
             skill_md: newSkillMd,
             manifest_json: newManifestJson ?? undefined,
+            references: newReferences ?? undefined,
+            scan_report: newScanReport ?? undefined,
             primary_languages: newPrimaryLanguages,
             readme: newReadme,
             file_structure: newFileStructure,
@@ -761,6 +751,8 @@ const App: React.FC = () => {
           timestamp: Date.now(),
           skill_md: newSkillMd,
           manifest_json: newManifestJson ?? undefined,
+          references: newReferences ?? undefined,
+          scan_report: newScanReport ?? undefined,
           primary_languages: newPrimaryLanguages,
           readme: newReadme,
           file_structure: newFileStructure,
@@ -833,6 +825,8 @@ const App: React.FC = () => {
     setFilesToRenderInDiagram([]);
     setSkillMd("");
     setManifestJson(null);
+    setScanReport(null);
+    setSkillReferences(null);
     currentRepoInfoRef.current = null;
     currentDefaultBranchForRequestRef.current = null;
 
@@ -943,12 +937,12 @@ const App: React.FC = () => {
           throw new Error("Invalid or empty digest returned by the server.");
         }
 
-        // Store skill fields from enhanced /converter response
+        // Store skill fields from the SkillForge /converter response.
+        // (Additive: digest + visualization fields above are unaffected.)
         if (data.skill_md) setSkillMd(data.skill_md);
-        if (data.manifest_json) setManifestJson(data.manifest_json);
-        if (data.readme) setRepoReadme(data.readme);
-        if (data.file_structure) setRepoFileStructure(data.file_structure);
-        if (data.structure_overview) setRepoStructureOverview(data.structure_overview);
+        if (data.manifest) setManifestJson(data.manifest);
+        if (data.scan_report) setScanReport(data.scan_report);
+        if (data.references) setSkillReferences(data.references);
 
         const branchForProcessing = data.default_branch || currentDefaultBranchForRequestRef.current;
         const digestFilesCount = data.files_analyzed_count !== undefined ? Number(data.files_analyzed_count) : null;
@@ -965,11 +959,13 @@ const App: React.FC = () => {
           branchForProcessing,
           digestFilesCount,
           data.skill_md,
-          data.manifest_json,
+          data.manifest,
           data.primary_languages,
           data.readme,
           data.file_structure,
           data.structure_overview,
+          data.scan_report,
+          data.references,
         );
 
       } catch (err: any) {
@@ -1065,9 +1061,8 @@ const App: React.FC = () => {
     setFilesToRenderInDiagram([]);
     setSkillMd("");
     setManifestJson(null);
-    setRepoReadme("");
-    setRepoFileStructure("");
-    setRepoStructureOverview("");
+    setScanReport(null);
+    setSkillReferences(null);
     setDiagramData(null);
     setRetryAfterSeconds(null);
     // Reset all stage completion flags AND session guard
@@ -1416,11 +1411,10 @@ const App: React.FC = () => {
                 onOpenDiagramFullscreenModal={handleOpenDiagramFullscreenModal}
                 skillMd={skillMd}
                 manifestJson={manifestJson}
+                scanReport={scanReport}
+                references={skillReferences}
                 repoUrl={repoUrl}
                 githubToken={githubToken}
-                repoReadme={repoReadme}
-                repoFileStructure={repoFileStructure}
-                repoStructureOverview={repoStructureOverview}
               />
             </section>
           )}

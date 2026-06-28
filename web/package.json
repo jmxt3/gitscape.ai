@@ -10,7 +10,6 @@
   },
   "dependencies": {
     "@google/genai": "^1.0.1",
-    "@mlc-ai/web-llm": "^0.2.82",
     "@tailwindcss/postcss": "^4.1.8",
     "d3": "^7.9.0",
     "postcss": "^8.5.4",

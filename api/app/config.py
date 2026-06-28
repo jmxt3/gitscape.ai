@@ -34,6 +34,11 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
     DEBUG: bool = ENVIRONMENT == "development"
 
+    # HD skill prose (Gemini Flash). Held server-side so the key never ships to
+    # the browser. The deterministic skill build never reads this.
+    GEMINI_API_KEY: Optional[str] = os.getenv("GEMINI_API_KEY", "")
+    HD_MODEL: str = os.getenv("HD_MODEL", "gemini-2.5-flash")
+
     # CORS settings
     # CORS_ORIGINS: List[str] = origins
 

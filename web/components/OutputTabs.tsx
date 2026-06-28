@@ -2,7 +2,7 @@ import React from 'react';
 import { DigestOutput } from './DigestOutput';
 import { Diagram } from './Diagram';
 import { SkillExport } from './SkillExport';
-import { RawDiagramNode, SkillManifest } from '../types';
+import { RawDiagramNode, SkillManifest, ScanReport, SkillReferences } from '../types';
 
 interface OutputTabsProps {
   digest: string;
@@ -17,10 +17,10 @@ interface OutputTabsProps {
 
   skillMd?: string;
   manifestJson?: SkillManifest | null;
+  scanReport?: ScanReport | null;
+  references?: SkillReferences | null;
   repoUrl?: string;
   githubToken?: string | null;
-  repoReadme?: string;
-  repoFileStructure?: string;
 }
 
 const SectionHeader: React.FC<{
@@ -66,10 +66,10 @@ export const OutputTabs: React.FC<OutputTabsProps> = ({
   onOpenDiagramFullscreenModal,
   skillMd,
   manifestJson,
+  scanReport,
+  references,
   repoUrl,
   githubToken,
-  repoReadme,
-  repoFileStructure,
 }) => {
   return (
     <div className="mt-8 flex flex-col gap-8">
@@ -139,12 +139,12 @@ export const OutputTabs: React.FC<OutputTabsProps> = ({
           <SkillExport
             skillMd={skillMd}
             manifestJson={manifestJson ?? null}
+            scanReport={scanReport ?? null}
+            references={references ?? null}
             repoUrl={repoUrl ?? ""}
             repoNameForFilename={repoNameForFilename}
             githubToken={githubToken ?? null}
             digest={digest}
-            repoReadme={repoReadme ?? ""}
-            repoFileStructure={repoFileStructure ?? ""}
           />
         ) : (
           <div className="flex flex-col items-center justify-center py-16 gap-3 text-slate-500">

@@ -84,11 +84,36 @@ export interface CachedRepoOutput {
   // Skill fields (optional for backward compat with older cache entries)
   skill_md?: string;
   manifest_json?: SkillManifest;
+  references?: SkillReferences;
+  scan_report?: ScanReport;
   primary_languages?: string[];
   readme?: string;
   file_structure?: string;
   structure_overview?: string;
 }
+
+// SkillForge security scan report (deterministic, gates export)
+export type ScanStatus = "PASS" | "WARN" | "FAIL";
+
+export interface ScanFinding {
+  rule: string;
+  severity: string;
+  file: string;
+  line: number;
+  source_path?: string | null;
+  snippet: string;
+  message: string;
+}
+
+export interface ScanReport {
+  status: ScanStatus;
+  findings: ScanFinding[];
+}
+
+// references/*.md content, keyed by package-relative path (e.g. "references/api.md")
+export type SkillReferences = Record<string, string>;
+
+export type SkillTier = "standard" | "hd";
 
 export interface SkillManifest {
   schema_version: string;
@@ -96,18 +121,20 @@ export interface SkillManifest {
   display_name: string;
   description: string;
   version: string;
-  capabilities: string[];
+  builder_version?: string;
+  digest_hash?: string;
+  files?: string[];
+  provenance?: { chunk: string; source_paths: string[] }[];
+  scan_status?: ScanStatus;
   framework_compatibility: string[];
-  files: {
-    instructions: string;
-    knowledge_base: string;
-  };
   metadata: {
     source_repo: string;
     generated_by: string;
-    generated_by_url: string;
+    generated_by_url?: string;
     generated_at: string;
     files_analyzed: number;
     primary_languages: string[];
+    symbols_indexed?: number;
+    modules_indexed?: number;
   };
 }

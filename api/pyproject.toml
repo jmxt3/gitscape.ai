@@ -13,4 +13,14 @@ dependencies = [
     "requests>=2.32.3",
     "slowapi>=0.1.9",
     "jinja2>=3.1.6",
+    "tree-sitter>=0.25",
+    "tree-sitter-python>=0.23",
+    "tree-sitter-typescript>=0.23",
+    "tree-sitter-javascript>=0.23",
+    "tree-sitter-go>=0.23",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
 ]

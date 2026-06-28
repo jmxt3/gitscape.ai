@@ -12,13 +12,16 @@
 
 ## 🚀 Overview
 
-Git Scape AI is an open-source platform that instantly generates AI-ready text digests of GitHub codebases, visualizes repository structures with interactive diagrams, and enables contextual AI-powered chat to help you understand, debug, and refactor code. It supports both public and private repositories.
+Git Scape AI is an open-source platform that instantly generates AI-ready text digests of GitHub codebases, visualizes repository structures with interactive diagrams, and packages any repo into a downloadable **Agent Skill** for Claude, Google ADK, Agno, and other agent frameworks. It supports both public and private repositories.
 
-- **AI Code Summaries:** Get concise, AI-generated summaries of any GitHub repo.
+- **Code Digests:** Generate a complete, AI-ready text digest of any GitHub repo.
 - **Interactive Visualizations:** Explore your codebase structure with beautiful, interactive diagrams.
-- **AI Chat with Code:** Ask questions about your codebase and get instant, context-aware answers.
-- **Privacy First:** All API keys are stored securely in your browser.
+- **Agent Skills (SkillForge):** Turn a repo into a progressively-disclosed `SKILL.md` + `references/` package, built **deterministically** (tree-sitter) with an optional LLM "HD" mode.
+- **Security Scanner:** Every generated skill is scanned for prompt injection, exfiltration, and hidden text — export is gated behind a visible **PASS / WARN / FAIL** report.
+- **Privacy First:** GitHub tokens stay in your browser; the HD model key stays server-side.
 - **Real-Time Streaming:** WebSocket-powered digest generation with live progress updates.
+
+> **What changed recently:** the old in-browser WebLLM skill writer was replaced by **SkillForge** — a deterministic, server-side pipeline that does ~90% of the work with zero LLM calls, gated by a security scanner. See [Agent Skills (SkillForge)](#-agent-skills-skillforge) below.
 
 ---
 
@@ -43,23 +46,27 @@ GitScape/
 │  │                                 │ │
 │  │  • Digest viewer (Markdown)     │ │
 │  │  • Interactive D3 diagram       │ │
-│  │  • AI Chat (Gemini SDK)         │ │
+│  │  • Agent Skill export + badge   │ │
 │  │  • URL → GitHub repo resolver   │ │
 │  └──────────┬──────────────────────┘ │
 │             │ HTTP / WebSocket        │
 └─────────────┼────────────────────────┘
               │
               ▼
-┌─────────────────────────────────────┐
-│   api/  (FastAPI on Cloud Run)      │
-│                                     │
-│  GET  /converter  → digest (HTTP)   │
-│  WS   /ws/converter → streaming     │
-│                                     │
-│  • Clones & analyzes git repos      │
-│  • Rate limiting (SlowAPI)          │
-│  • Dockerized, PORT-agnostic        │
-└─────────────────────────────────────┘
+┌──────────────────────────────────────┐
+│   api/  (FastAPI on Cloud Run)       │
+│                                      │
+│  GET  /converter      → digest+skill │
+│  WS   /ws/converter   → streaming    │
+│  POST /skill-zip      → .zip (gated) │
+│  POST /skill/hd-prose → HD prose     │
+│  GET  /export/{fw}    → ADK / Agno   │
+│                                      │
+│  • Clones & analyzes git repos       │
+│  • SkillForge skill pipeline         │
+│  • Deterministic security scanner    │
+│  • Rate limiting (SlowAPI)           │
+└──────────────────────────────────────┘
 ```
 
 ### `web/` — Frontend
@@ -70,21 +77,71 @@ GitScape/
 | Bundler | Vite 6 |
 | Styling | Tailwind CSS 4 |
 | Diagrams | D3.js 7 |
-| AI Chat | `@google/genai` (Gemini) |
 | Deployment | Docker + Nginx → Cloud Run |
 
-Key components: `App.tsx` (orchestrator), `RepoChat` (AI chat), `Diagram` (interactive D3 tree), `DigestOutput` (Markdown render), `RepoInput` (URL → repo resolver).
+Key components: `App.tsx` (orchestrator), `Diagram` (interactive D3 tree), `DigestOutput` (Markdown render), `SkillExport` (Agent Skill preview, scan badge, Standard/HD toggle), `RepoInput` (URL → repo resolver).
 
 ### `api/` — Backend
 
 | Layer | Technology |
 |---|---|
 | Framework | FastAPI |
-| Runtime | Python 3.12 (managed via `uv`) |
+| Runtime | Python 3.10 (managed via `uv`) |
+| Code parsing | tree-sitter (Python, TS/TSX, JS/JSX, Go) |
+| HD prose (optional) | Gemini Flash (server-side key) |
 | Rate Limiting | SlowAPI |
 | Deployment | Docker → Google Cloud Run |
 
-Key modules: `main.py` (entrypoint + middleware), `app/api.py` (router + CORS), `app/converter.py` (clone & digest logic), `app/config.py` (settings).
+Key modules: `main.py` (entrypoint + middleware), `app/api.py` (router + CORS), `app/converter.py` (clone & digest logic), `app/config.py` (settings), `app/skillforge/` (the Agent Skill pipeline — see below).
+
+---
+
+## 🧠 Agent Skills (SkillForge)
+
+SkillForge turns a repository digest into a high-quality, progressively-disclosed
+[Agent Skill](https://agentskills.io). The guiding principle is **invert the labor**:
+do ~90% of the work deterministically from the code's structure, and use an LLM only
+for short natural-language glue.
+
+**Pipeline** (`api/app/skillforge/`):
+
+```
+ingest → parse → classify → extract → sanitize → assemble → scan (GATE) → package
+```
+
+- **parse** — split the digest by its `FILE:` markers (or read the live clone) into typed `ContentUnit`s.
+- **extract** — the quality lever, fully deterministic via **tree-sitter**: a public API/symbol index (signatures + one-line purpose), an import/dependency graph, mined setup commands, and deduped code examples.
+- **assemble** — a slim, token-budgeted `SKILL.md` plus a `references/` folder (`api.md`, `architecture.md`, `examples.md`, `setup.md`, `config.md`), every chunk stamped with its source path.
+- **scan** — a deterministic, zero-LLM security gate (see below).
+
+**Output package:**
+
+```
+<owner-repo>/
+├── SKILL.md            # slim entry point (token-budgeted, links into references/)
+├── references/*.md     # api, architecture, examples, setup, config (provenance-stamped)
+├── exporters/*.py      # Google ADK + Agno wrappers
+└── manifest.json       # digest hash + per-chunk provenance + scan status
+```
+
+### Two tiers
+
+| Tier | What it does | Needs a key? |
+|---|---|---|
+| **Standard** (default) | Complete, valid skill built **deterministically** — instant, no model | No |
+| **HD** | Adds LLM-written prose (the "what / when / description") via Gemini Flash | Server-side `GEMINI_API_KEY` |
+
+### 🛡️ Security scanner (the trust layer)
+
+The digest is repo-derived and untrusted, so an injection planted in a README or
+docstring could flow into `SKILL.md` and then into your agent's context. Every
+generated skill is scanned (pure Python, no LLM) for **prompt injection**,
+**exfiltration**, **hidden/invisible text**, and high-entropy blobs. The result is a
+visible badge:
+
+- **PASS** → export allowed.
+- **WARN** → requires explicit "I accept the warnings".
+- **FAIL** → export **blocked** (`POST /skill-zip` returns `422` with the report, naming the originating file).
 
 ---
 
@@ -93,7 +150,7 @@ Key modules: `main.py` (entrypoint + middleware), `app/api.py` (router + CORS), 
 ### Prerequisites
 
 - [Node.js](https://nodejs.org/) v18+ (for `web/`)
-- [Python 3.12+](https://python.org/) + [`uv`](https://github.com/astral-sh/uv) (for `api/`)
+- [Python 3.10+](https://python.org/) + [`uv`](https://github.com/astral-sh/uv) (for `api/`)
 - [Docker](https://www.docker.com/) (optional, for containerized runs)
 
 ### Run the Frontend
@@ -105,10 +162,15 @@ npm run dev
 # → http://localhost:5173
 ```
 
-Set up your Gemini API key in `web/.env.local`:
+By default the frontend talks to the **production** API (`api.gitscape.ai`). To run
+end-to-end against your **local** backend (required to use the new skill endpoints),
+point it at your local API in `web/.env.local`:
+
 ```env
-VITE_GEMINI_API_KEY=your-gemini-api-key-here
+VITE_API_HOST=localhost:8080
 ```
+
+> No client-side Gemini key is needed — HD prose is generated server-side by the API.
 
 ### Run the Backend
 
@@ -117,8 +179,9 @@ cd api
 uv venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 uv sync
 cp .env.example .env
-uvicorn main:app --reload --port 8000
-# → http://localhost:8000/docs
+# (optional) set GEMINI_API_KEY in .env to enable HD mode
+uvicorn main:app --reload --port 8080
+# → http://localhost:8080/docs
 ```
 
 ---

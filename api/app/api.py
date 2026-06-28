@@ -10,6 +10,8 @@ import asyncio
 import urllib.parse
 import json
 import logging
+from datetime import datetime, timezone
+from pathlib import Path
 
 from fastapi import (
     FastAPI,
@@ -24,12 +26,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from starlette.websockets import WebSocketState
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 
 from app.config import settings, origins
 import app.converter as converter
-from app.skill_builder import build_skill_zip, generate_skill_md, generate_manifest_json
-from app.skill_generator import render_framework_export
+from app import skillforge
+from app.skillforge import hd as hd_mod
+from app.skillforge.errors import ScanBlocked
+from app.skillforge.models import RepoMeta
+from app.skillforge.exporters import render_framework_export
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
@@ -64,12 +69,20 @@ def get_digest(
 ):
     """
     HTTP endpoint to clone a Git repository and generate a Markdown digest.
-    Returns the digest plus skill preview fields (skill_md, manifest_json, primary_languages).
+    Returns the digest (Code Digest + Visualization fields) plus the SkillForge
+    skill preview (skill_md, references, scan_report, manifest). The skill build is
+    defensively wrapped: a skill failure never affects the digest response.
     """
-    from datetime import datetime, timezone
-
     try:
         repo_url = urllib.parse.unquote(repo_url)
+        # The digest fields are produced first and always returned unchanged; the
+        # skill is built inside the same block so the live clone is still on disk.
+        skill_fields = {
+            "skill_md": None,
+            "references": None,
+            "scan_report": None,
+            "manifest": None,
+        }
         with tempfile.TemporaryDirectory() as tmpdir:
             clone_path = os.path.join(tmpdir, "repo")
             converter.clone_repository(repo_url, clone_path, github_token=github_token)
@@ -77,42 +90,44 @@ def get_digest(
                 repo_url, clone_path, return_metadata=True
             )
 
-        owner = metadata["owner"]
-        repo = metadata["repo"]
-        languages = metadata["primary_languages"]
-        files_analyzed = metadata["files_analyzed"]
-        readme = metadata.get("readme", "")
-        file_structure = metadata.get("file_structure", "")
-        structure_overview = metadata.get("structure_overview", "")
-        generated_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+            owner = metadata["owner"]
+            repo = metadata["repo"]
+            languages = metadata["primary_languages"]
+            files_analyzed = metadata["files_analyzed"]
+            readme = metadata.get("readme", "")
+            file_structure = metadata.get("file_structure", "")
+            structure_overview = metadata.get("structure_overview", "")
+            generated_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
-        skill_md = generate_skill_md(
-            owner=owner,
-            repo=repo,
-            repo_url=repo_url,
-            languages=languages,
-            files_analyzed=files_analyzed,
-            generated_at=generated_at,
-            structure_overview=structure_overview,
-        )
-        manifest = generate_manifest_json(
-            owner=owner,
-            repo=repo,
-            repo_url=repo_url,
-            languages=languages,
-            files_analyzed=files_analyzed,
-            generated_at=generated_at,
-        )
+            try:
+                meta = RepoMeta(
+                    owner=owner, repo=repo, repo_url=repo_url,
+                    primary_languages=languages, files_analyzed=files_analyzed,
+                    readme=readme, file_structure=file_structure,
+                    structure_overview=structure_overview, generated_at=generated_at,
+                )
+                units = skillforge.units_from_clone(Path(clone_path))
+                pkg = skillforge.build_skill(
+                    units, meta, digest_hash=skillforge.content_hash(digest_str)
+                )
+                skillforge.skill_cache.set(skillforge.cache_key(digest_str), pkg)
+                skill_fields = {
+                    "skill_md": pkg.skill_md,
+                    "references": pkg.references,
+                    "scan_report": pkg.scan_report.model_dump(mode="json"),
+                    "manifest": pkg.manifest.model_dump(mode="json"),
+                }
+            except Exception:
+                logger.exception("SkillForge build failed; returning digest only")
 
         return {
             "digest": digest_str,
-            "skill_md": skill_md,
-            "manifest_json": manifest,
             "primary_languages": languages,
             "files_analyzed": files_analyzed,
             "readme": readme,
             "file_structure": file_structure,
             "structure_overview": structure_overview,
+            **skill_fields,
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -127,6 +142,36 @@ class SkillZipRequest(BaseModel):
     files_analyzed: int = 0
 
 
+def _readme_from_units(units) -> str:
+    for u in units:
+        if Path(u.path).name.lower().startswith("readme"):
+            return u.content
+    return ""
+
+
+def _build_from_digest(body: "SkillZipRequest", repo_url: str, *, hd: bool = False):
+    """Build (or fetch cached) a SkillPackage from a client-supplied digest."""
+    key = skillforge.cache_key(body.digest_md)
+    if hd:
+        key += ":hd"
+    pkg = None if hd else skillforge.skill_cache.get(key)
+    if pkg is not None:
+        return pkg
+
+    doc = skillforge.parse_digest(body.digest_md)
+    meta = RepoMeta(
+        owner=body.owner, repo=body.repo, repo_url=repo_url,
+        primary_languages=body.languages,
+        files_analyzed=body.files_analyzed or doc.files_analyzed,
+        readme=_readme_from_units(doc.units), file_structure=doc.tree,
+    )
+    pkg = skillforge.build_skill(
+        doc.units, meta, digest_hash=skillforge.content_hash(body.digest_md), hd=hd
+    )
+    skillforge.skill_cache.set(key, pkg)
+    return pkg
+
+
 @router.post("/skill-zip")
 def get_skill_zip(
     request: Request,
@@ -134,25 +179,26 @@ def get_skill_zip(
 ):
     """
     Build and return a downloadable ZIP skill package from a pre-computed digest.
-    No repository cloning is performed — the digest is supplied by the client
-    from the already-completed /converter response, making this endpoint fast (~50ms).
 
-    ZIP contains:
-      - SKILL.md       : Canonical Agent Skills instructions (agentskills.io)
-      - DIGEST.md      : Full code digest knowledge base
-      - manifest.json  : Machine-readable metadata for ADK / OpenAI Agents
+    Hits the SkillForge cache when the digest matches a prior /converter build
+    (no recompute); otherwise rebuilds deterministically from the digest. The
+    security scanner gates the download: a FAIL returns 422 with the report.
+
+    ZIP contains: SKILL.md, references/*.md, exporters/*.py, manifest.json.
     """
     try:
         repo_url = urllib.parse.unquote(body.repo_url)
-
-        zip_buffer = build_skill_zip(
-            owner=body.owner,
-            repo=body.repo,
-            repo_url=repo_url,
-            digest_md=body.digest_md,
-            languages=body.languages,
-            files_analyzed=body.files_analyzed,
-        )
+        pkg = _build_from_digest(body, repo_url)
+        try:
+            zip_buffer = skillforge.build_zip(pkg)
+        except ScanBlocked as blocked:
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "error": "scan_failed",
+                    "scan_report": blocked.report.model_dump(mode="json"),
+                },
+            )
 
         filename = f"{body.repo}-skill.zip"
         return StreamingResponse(
@@ -160,6 +206,38 @@ def get_skill_zip(
             media_type="application/zip",
             headers={"Content-Disposition": f'attachment; filename="{filename}"'},
         )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class HdProseRequest(SkillZipRequest):
+    """Same payload as /skill-zip; rebuilds the skill with Gemini-written prose."""
+
+
+@router.post("/skill/hd-prose")
+@limiter.limit("5/minute")
+def get_hd_prose(
+    request: Request,
+    body: HdProseRequest,
+):
+    """
+    HD mode: rebuild the skill with LLM-written prose (Gemini Flash, server-side
+    key) layered over the deterministic structure. Returns the enhanced skill_md +
+    references + scan_report + manifest. 503 when no server key is configured.
+    """
+    if not hd_mod.hd_available():
+        raise HTTPException(status_code=503, detail="HD mode is not configured on this server.")
+    try:
+        repo_url = urllib.parse.unquote(body.repo_url)
+        pkg = _build_from_digest(body, repo_url, hd=True)
+        return {
+            "skill_md": pkg.skill_md,
+            "references": pkg.references,
+            "scan_report": pkg.scan_report.model_dump(mode="json"),
+            "manifest": pkg.manifest.model_dump(mode="json"),
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

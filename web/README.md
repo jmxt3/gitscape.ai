@@ -16,15 +16,18 @@
 
 ![GitScape](https://ik.imagekit.io/lmewht1ww/Git%20Scape%20AI/Screenshot_12.png?updatedAt=1748956392835)
 
-The `web/` workspace is the browser-based interface for Git Scape AI. It lets you analyze any public or private GitHub repository, visualize its structure as an interactive diagram, read a Markdown digest, and chat with an AI assistant that has full context of the codebase.
+The `web/` workspace is the browser-based interface for Git Scape AI. It lets you analyze any public or private GitHub repository, read a Markdown digest, visualize its structure as an interactive diagram, and export the repo as a downloadable **Agent Skill** — with a visible security report.
 
 ### Key Features
 
-- **AI Code Summaries** — Concise, AI-generated digests of any GitHub repo via the backend API.
+- **Code Digest** — A complete, AI-ready text digest of any GitHub repo via the backend API.
 - **Interactive Diagram** — D3-powered tree visualization of the repository file structure.
-- **AI Chat with Code** — Contextual Q&A powered by the Gemini API directly in the browser.
+- **Agent Skill Export** — Preview the generated `SKILL.md` + `references/`, switch between **Standard** (deterministic) and **HD** (LLM prose) tiers, and download the packaged `.zip`.
+- **Scanned & Safe badge** — Every skill shows a PASS / WARN / FAIL scan result; download is blocked on FAIL and requires acceptance on WARN.
 - **URL Converter** — Transforms a GitHub URL into API-compatible repo parameters.
-- **Privacy First** — Your Gemini API key and GitHub PAT are stored only in the browser (never sent to our servers).
+- **Privacy First** — Your GitHub PAT is stored only in the browser; the HD model key lives server-side, never in the bundle.
+
+> **Note:** the old in-browser **WebLLM** skill writer (`@mlc-ai/web-llm`, ~700 MB model download) has been **removed**. Skill generation is now deterministic on the server, and HD prose runs through the API — so there's nothing heavy to download and the Standard tier needs no GPU/WebGPU.
 
 ---
 
@@ -43,15 +46,13 @@ web/
 │   ├── DigestOutput.tsx    # Markdown digest renderer
 │   ├── Diagram.tsx         # D3 interactive file-tree diagram
 │   ├── DiagramFullscreenModal.tsx
-│   ├── OutputTabs.tsx      # Tabs: Digest / Diagram / Chat
-│   ├── RepoChat.tsx        # AI chat panel (Gemini)
+│   ├── OutputTabs.tsx      # Lays out Digest / Visualization / Agent Skill
+│   ├── SkillExport.tsx     # Agent Skill preview, scan badge, Standard/HD toggle, download
 │   ├── UrlConverter.tsx    # GitHub URL → path converter utility
-│   ├── GeminiApiKeyModal.tsx
 │   ├── GithubTokenModal.tsx
 │   ├── LoadingSpinner.tsx
 │   └── diagramUtils.ts     # D3 tree layout helpers
-├── services/               # External integrations
-│   └── ...                 # GitHub & Gemini API calls
+├── services/               # External integrations (GitHub API, repo cache)
 ├── public/                 # Static assets
 ├── vite.config.ts
 ├── tailwind.config.js
@@ -67,7 +68,7 @@ web/
 | Bundler | Vite 6 |
 | Styling | Tailwind CSS 4 |
 | Diagrams | D3.js 7 |
-| AI | `@google/genai` (Gemini) |
+| Skill generation | Backend SkillForge API (no client model) |
 | Deployment | Docker + Nginx → Google Cloud Run |
 
 ---
@@ -87,14 +88,22 @@ npm install
 
 ### 2. Configure Environment
 
-Create a `.env.local` file in the `web/` directory:
+By default the app talks to the **production** API at `api.gitscape.ai`. To develop
+against a **local** backend (required to use the new skill endpoints such as
+`/skill-zip` and `/skill/hd-prose`), create a `.env.local` file in `web/`:
 
 ```env
-VITE_GEMINI_API_KEY=your-gemini-api-key-here
+# Point the frontend at your locally-running api/ service
+VITE_API_HOST=localhost:8080
 ```
 
-- Get your [Gemini API Key](https://ai.google.dev/gemini-api/docs/api-key).
-- Your **GitHub Personal Access Token** (PAT) for private repos can be entered directly in the app UI — no `.env` needed.
+- Run the backend on the matching port — see [`api/README.md`](../api/README.md) (`uvicorn main:app --port 8080`).
+- Your **GitHub Personal Access Token** (PAT) for private repos is entered directly in the app UI — no `.env` needed.
+- **No Gemini key is needed here** — HD skill prose is generated server-side by the API.
+
+> **Seeing `api.gitscape.ai/skill/hd-prose 404`?** Your frontend is hitting production
+> (which may not have the latest routes yet). Set `VITE_API_HOST=localhost:8080` and run
+> the local backend to test the new features end-to-end.
 
 ### 3. Run the Dev Server
 
@@ -110,6 +119,23 @@ npm run dev
 | `npm run dev` | Start local dev server (HMR) |
 | `npm run build` | Build production bundle |
 | `npm run preview` | Preview the production build |
+
+---
+
+## 🧠 Agent Skill Export
+
+The **Agent Skill** card (`SkillExport.tsx`) is the UI for the backend
+[SkillForge](../api/README.md#-skillforge--agent-skill-generation) pipeline:
+
+- **Standard / HD toggle** — *Standard* renders the deterministic skill instantly (no model).
+  *HD* calls `POST /skill/hd-prose` to layer in Gemini-written prose; returns `503` (shown inline) if the server has no key.
+- **Scanned & Safe badge** — shows the scan `status` and expandable findings. **FAIL disables the
+  download**; **WARN requires** ticking "I accept the warnings" first.
+- **File viewer** — switch between `SKILL.md` and each `references/*.md` and copy any of them.
+- **Download `.zip`** — `POST /skill-zip`; a server-side `FAIL` returns `422` and the badge updates to show the blocking findings.
+
+This card is the only part of the app that talks to the skill endpoints — the Code Digest and
+Code Visualization features are unchanged.
 
 ---
 
@@ -145,8 +171,9 @@ gcloud run deploy git-scape-web \
 
 ## 🛡️ Security & Privacy
 
-- **API keys** are never proxied through any GitScape server — they go directly from your browser to the Gemini or GitHub APIs.
-- **No tracking**: Analytical data is opt-in and anonymized.
+- **GitHub PAT** stays in your browser and goes directly to the GitHub API — never to a GitScape server.
+- **HD model key** lives **server-side** only; it is never shipped in the frontend bundle.
+- **Skill safety**: every generated skill passes through a deterministic security scanner before it can be downloaded.
 - **Open Source**: Audit the code, fork it, or self-host it.
 
 ---

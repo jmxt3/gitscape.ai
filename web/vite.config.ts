@@ -25,13 +25,9 @@ export default defineConfig(({ mode }) => {
               vendor: ['react', 'react-dom'],
               d3: ['d3'],
               markdown: ['react-markdown', 'rehype-highlight'],
-              webllm: ['@mlc-ai/web-llm'],
             }
           }
         }
-      },
-      optimizeDeps: {
-        exclude: ['@mlc-ai/web-llm'],
       },
       server: {
         proxy: {
