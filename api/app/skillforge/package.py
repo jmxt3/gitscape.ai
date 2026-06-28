@@ -16,16 +16,17 @@ from .errors import ScanBlocked
 from .models import ScanStatus, SkillPackage
 
 
-def build_zip(pkg: SkillPackage, *, allow_warn: bool = True) -> io.BytesIO:
+def build_zip(pkg: SkillPackage, *, allow_warn: bool = True, bypass_scan_gate: bool = False) -> io.BytesIO:
     """Serialize a SkillPackage to an in-memory ZIP.
 
     Raises:
         ScanBlocked: if the scan status is FAIL (always), or WARN when
-            allow_warn is False.
+            allow_warn is False, and bypass_scan_gate is False.
     """
     status = pkg.scan_report.status
-    if status == ScanStatus.FAIL or (status == ScanStatus.WARN and not allow_warn):
-        raise ScanBlocked(pkg.scan_report)
+    if not bypass_scan_gate:
+        if status == ScanStatus.FAIL or (status == ScanStatus.WARN and not allow_warn):
+            raise ScanBlocked(pkg.scan_report)
 
     root = pkg.name
     manifest_json = json.dumps(pkg.manifest.model_dump(mode="json"), indent=2, ensure_ascii=False)

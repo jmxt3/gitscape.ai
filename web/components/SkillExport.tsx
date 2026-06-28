@@ -120,8 +120,8 @@ export const SkillExport: React.FC<SkillExportProps> = ({
   const displayScan = blockedReport ?? (usingHd ? hdScanReport : scanReport);
 
   const status: ScanStatus | null = displayScan?.status ?? null;
-  const downloadBlocked = status === "FAIL";
-  const needsAccept = status === "WARN" && !warnAccepted;
+  const showAcceptCheckbox = status === "WARN" || status === "FAIL";
+  const needsAccept = showAcceptCheckbox && !warnAccepted;
 
   const fileNames = useMemo(() => ["SKILL.md", ...Object.keys(displayReferences)], [displayReferences]);
   const [selectedFile, setSelectedFile] = useState<string>("SKILL.md");
@@ -194,13 +194,14 @@ export const SkillExport: React.FC<SkillExportProps> = ({
       digest_md: digest,
       languages: manifestJson?.metadata?.primary_languages ?? [],
       files_analyzed: manifestJson?.metadata?.files_analyzed ?? 0,
+      bypass_scan_gate: status === "FAIL" && warnAccepted,
     };
-  }, [repoUrl, repoNameForFilename, digest, manifestJson]);
+  }, [repoUrl, repoNameForFilename, digest, manifestJson, status, warnAccepted]);
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
   const handleDownloadZip = useCallback(async () => {
-    if (!repoUrl || !digest || downloadBlocked || needsAccept) return;
+    if (!repoUrl || !digest || needsAccept) return;
     setIsDownloading(true);
     setDownloadError(null);
     setBlockedReport(null);
@@ -230,7 +231,7 @@ export const SkillExport: React.FC<SkillExportProps> = ({
     } finally {
       setIsDownloading(false);
     }
-  }, [repoUrl, repoNameForFilename, digest, downloadBlocked, needsAccept, requestBody]);
+  }, [repoUrl, repoNameForFilename, digest, needsAccept, requestBody]);
 
   const handleGenerateHd = useCallback(async () => {
     if (!digest) return;
@@ -333,8 +334,8 @@ export const SkillExport: React.FC<SkillExportProps> = ({
         <button
           id="skill-download-zip-btn"
           onClick={handleDownloadZip}
-          disabled={isDownloading || downloadBlocked || needsAccept}
-          title={downloadBlocked ? "Export blocked: the scan found unsafe content." : needsAccept ? "Accept the warnings to enable download." : undefined}
+          disabled={isDownloading || needsAccept}
+          title={needsAccept ? "Accept the security findings to enable download." : undefined}
           className="flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 disabled:bg-slate-600 disabled:text-slate-400 text-black text-sm font-semibold transition-all duration-150 shadow-md disabled:cursor-not-allowed"
         >
           {isDownloading ? (
@@ -354,20 +355,20 @@ export const SkillExport: React.FC<SkillExportProps> = ({
           {copyState === "copied" ? "Copied!" : `Copy ${selectedFile}`}
         </button>
 
-        {needsAccept && (
+        {showAcceptCheckbox && (
           <label className="flex items-center gap-2 text-xs text-amber-300 cursor-pointer">
             <input type="checkbox" checked={warnAccepted} onChange={(e) => setWarnAccepted(e.target.checked)} className="accent-amber-500" />
-            I accept the warnings
+            {status === "FAIL" ? "I accept the security risks and want to download anyway" : "I accept the warnings"}
           </label>
         )}
       </div>
 
-      {downloadBlocked && (
+      {status === "FAIL" && !warnAccepted && (
         <p className="text-xs text-red-400 bg-red-900/20 border border-red-700/40 px-3 py-2 rounded-lg">
-          Download is blocked because the security scan returned <span className="font-semibold">FAIL</span>. Review the findings above — the offending content originates from the repository.
+          Download is restricted because the security scan returned <span className="font-semibold">FAIL</span>. Review the findings above — you must accept the security risks below to enable the download anyway.
         </p>
       )}
-      {downloadError && !downloadBlocked && (
+      {downloadError && (
         <p className="text-xs text-red-400 bg-red-900/20 border border-red-700/40 px-3 py-2 rounded-lg">{downloadError}</p>
       )}
 

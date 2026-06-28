@@ -140,6 +140,7 @@ class SkillZipRequest(BaseModel):
     digest_md: str
     languages: List[str] = []
     files_analyzed: int = 0
+    bypass_scan_gate: bool = False
 
 
 def _readme_from_units(units) -> str:
@@ -190,7 +191,7 @@ def get_skill_zip(
         repo_url = urllib.parse.unquote(body.repo_url)
         pkg = _build_from_digest(body, repo_url)
         try:
-            zip_buffer = skillforge.build_zip(pkg)
+            zip_buffer = skillforge.build_zip(pkg, bypass_scan_gate=body.bypass_scan_gate)
         except ScanBlocked as blocked:
             raise HTTPException(
                 status_code=422,
