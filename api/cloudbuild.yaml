@@ -40,6 +40,8 @@ steps:
       - '--allow-unauthenticated'
       - '--set-env-vars'
       - 'ENVIRONMENT=production'
+      - '--set-secrets'
+      - 'GEMINI_API_KEY=GEMINI_API_KEY:latest'
       - '--timeout'
       - '300s'
       - '--memory'
