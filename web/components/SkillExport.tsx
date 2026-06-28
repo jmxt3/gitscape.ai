@@ -1,4 +1,7 @@
 import React, { useCallback, useMemo, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import rehypeHighlight from "rehype-highlight";
+import "highlight.js/styles/github-dark.css";
 import { ScanReport, ScanStatus, SkillManifest, SkillReferences, SkillTier, SkillType } from "../types";
 
 interface SkillExportProps {
@@ -85,6 +88,23 @@ const ScanBadge: React.FC<{ report: ScanReport }> = ({ report }) => {
       )}
     </div>
   );
+};
+
+const preprocessMarkdown = (content: string): string => {
+  if (!content) return "";
+  return content
+    // Convert breaks to newlines
+    .replace(/<\/?br\s*\/?>/gi, "\n")
+    // Convert bold/strong
+    .replace(/<(strong|b)>([\s\S]*?)<\/\1>/gi, "**$2**")
+    // Convert italics/emphasis
+    .replace(/<(em|i)>([\s\S]*?)<\/\1>/gi, "*$2*")
+    // Convert inline code blocks
+    .replace(/<code>([\s\S]*?)<\/code>/gi, "`$1`")
+    // Convert anchors/links (e.g., <a href="...">text</a>)
+    .replace(/<a\s+(?:[^>]*?\s+)?href=["']([^"']*)["'][^>]*>([\s\S]*?)<\/a>/gi, "[$2]($1)")
+    // Convert paragraph tags to newlines
+    .replace(/<\/?p>/gi, "\n");
 };
 
 // ─── Main component ─────────────────────────────────────────────────────────
@@ -508,9 +528,52 @@ export const SkillExport: React.FC<SkillExportProps> = ({
           </div>
         )}
         <div className="flex-1 overflow-auto">
-          <pre className="p-4 text-xs leading-relaxed font-mono text-slate-300 whitespace-pre-wrap break-words select-all">
-            {previewContent || <span className="text-slate-600 italic">No content available.</span>}
-          </pre>
+          {previewContent ? (
+            selectedFile.endsWith(".md") ? (
+              <div className="p-5 prose-skill">
+                <ReactMarkdown
+                  rehypePlugins={[rehypeHighlight]}
+                  components={{
+                    h1: ({ children }) => <h1 className="text-lg font-bold text-slate-100 mb-3 mt-1 border-b border-slate-700 pb-2">{children}</h1>,
+                    h2: ({ children }) => <h2 className="text-base font-semibold text-slate-100 mb-2 mt-5">{children}</h2>,
+                    h3: ({ children }) => <h3 className="text-sm font-semibold text-slate-200 mb-1.5 mt-4">{children}</h3>,
+                    h4: ({ children }) => <h4 className="text-xs font-semibold text-slate-300 mb-1 mt-3 uppercase tracking-wide">{children}</h4>,
+                    p: ({ children }) => <p className="text-xs text-slate-300 leading-relaxed mb-3">{children}</p>,
+                    ul: ({ children }) => <ul className="list-disc list-inside mb-3 space-y-1">{children}</ul>,
+                    ol: ({ children }) => <ol className="list-decimal list-inside mb-3 space-y-1">{children}</ol>,
+                    li: ({ children }) => <li className="text-xs text-slate-300 leading-relaxed">{children}</li>,
+                    strong: ({ children }) => <strong className="font-semibold text-slate-100">{children}</strong>,
+                    em: ({ children }) => <em className="italic text-slate-300">{children}</em>,
+                    code: ({ className, children, ...props }) => {
+                      const isBlock = className?.includes("language-");
+                      return isBlock ? (
+                        <code className={`${className ?? ""} block text-[11px] leading-relaxed`} {...props}>{children}</code>
+                      ) : (
+                        <code className="bg-slate-800 text-amber-300 text-[11px] px-1.5 py-0.5 rounded font-mono" {...props}>{children}</code>
+                      );
+                    },
+                    pre: ({ children }) => <pre className="bg-slate-900 border border-slate-700/60 rounded-lg p-3 mb-3 overflow-x-auto text-[11px]">{children}</pre>,
+                    blockquote: ({ children }) => <blockquote className="border-l-2 border-amber-500/50 pl-3 text-slate-400 italic my-3">{children}</blockquote>,
+                    a: ({ href, children }) => <a href={href} target="_blank" rel="noopener noreferrer" className="text-amber-400 hover:text-amber-300 underline underline-offset-2">{children}</a>,
+                    hr: () => <hr className="border-slate-700 my-4" />,
+                    table: ({ children }) => <div className="overflow-x-auto mb-3"><table className="text-xs w-full border-collapse">{children}</table></div>,
+                    th: ({ children }) => <th className="text-left px-3 py-1.5 bg-slate-800 text-slate-200 font-semibold border border-slate-700">{children}</th>,
+                    td: ({ children }) => <td className="px-3 py-1.5 text-slate-300 border border-slate-700/60">{children}</td>,
+                  }}
+                >
+                  {preprocessMarkdown(previewContent)}
+                </ReactMarkdown>
+              </div>
+            ) : (
+              <pre className="p-4 text-xs leading-relaxed font-mono text-slate-300 whitespace-pre-wrap break-words select-all">
+                {previewContent}
+              </pre>
+            )
+          ) : (
+            <pre className="p-4 text-xs leading-relaxed font-mono text-slate-300 whitespace-pre-wrap break-words select-all">
+              <span className="text-slate-600 italic">No content available.</span>
+            </pre>
+          )}
         </div>
       </div>
 
