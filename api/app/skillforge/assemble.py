@@ -19,6 +19,7 @@ from .models import (
     ContentUnit,
     Extract,
     FileKind,
+    FrameworkProseFields,
     ProseFields,
     ProvenanceEntry,
     RepoMeta,
@@ -26,7 +27,8 @@ from .models import (
 )
 from .sanitize import sanitize_prose
 
-TOKEN_BUDGET = 5000  # SKILL.md hard cap
+TOKEN_BUDGET = 5000  # SKILL.md hard cap for Code Skills
+FRAMEWORK_TOKEN_BUDGET = 10_000  # Engineering Skills — all 6 sections are load-bearing, never trim
 _MAX_QUICKREF = 40  # starting number of quick-reference rows
 
 
@@ -327,15 +329,141 @@ def _render_skill_md(
     return "\n".join(lines).strip() + "\n"
 
 
+def _render_framework_skill_md(
+    meta: RepoMeta,
+    name: str,
+    description: str,
+    fw: FrameworkProseFields,
+) -> str:
+    """Render the canonical 6-section engineering skill anatomy.
+
+    Every section is load-bearing and is always included. This renderer is
+    only called from the HD path — fw is guaranteed non-None.
+    """
+    lines: list[str] = [
+        "---",
+        f"name: {name}",
+        f'description: "{description}"',
+        "---",
+        "",
+        f"# {meta.owner}/{meta.repo} — Engineering Skill",
+        "",
+    ]
+
+    # ─── Overview ─────────────────────────────────────────────────────────
+    lines += ["## Overview", ""]
+    if fw.overview:
+        lines.append(sanitize_prose(fw.overview))
+    else:
+        lines.append(
+            f"{meta.owner}/{meta.repo} is a project that requires careful, structured engineering "
+            "practices. This skill guides agents through the established patterns and workflows."
+        )
+    lines.append("")
+
+    # ─── When to Use ──────────────────────────────────────────────────
+    lines += ["## When to Use", ""]
+    if fw.when_to_use:
+        for item in fw.when_to_use:
+            lines.append(f"- {sanitize_prose(item)}")
+    else:
+        lines.append(f"- Working within the {meta.repo} codebase")
+        lines.append("- Making changes that affect existing patterns or architecture")
+    if fw.when_not_to_use:
+        lines.append("")
+        lines.append(f"**When NOT to use:** {sanitize_prose(fw.when_not_to_use)}")
+    lines.append("")
+
+    # ─── Core Process ────────────────────────────────────────────────
+    lines += ["## Core Process", ""]
+    if fw.core_process:
+        for i, step in enumerate(fw.core_process, 1):
+            lines.append(f"### Step {i}: {step.title}")
+            lines.append("")
+            lines.append(sanitize_prose(step.content))
+            lines.append("")
+    else:
+        lines += [
+            "### Step 1: Understand the Context",
+            "",
+            f"Read the existing code in {meta.repo} before making changes. "
+            "Identify the patterns being extended, not invented.",
+            "",
+        ]
+
+    # ─── Common Rationalizations ─────────────────────────────────────
+    lines += ["## Common Rationalizations", ""]
+    if fw.common_rationalizations:
+        lines += ["| Rationalization | Reality |", "|---|---|"]  
+        for r in fw.common_rationalizations:
+            excuse = sanitize_prose(r.excuse).replace("|", "\\|")
+            reality = sanitize_prose(r.reality).replace("|", "\\|")
+            lines.append(f"| {excuse} | {reality} |")
+    else:
+        lines += [
+            "| Rationalization | Reality |",
+            "|---|---|",
+            "| \"I know the codebase, I don't need to follow the process\" | "
+            "Consistency matters more than speed. Future agents and engineers depend on predictable patterns. |",
+        ]
+    lines.append("")
+
+    # ─── Red Flags ──────────────────────────────────────────────────────────
+    lines += ["## Red Flags", ""]
+    if fw.red_flags:
+        for flag in fw.red_flags:
+            lines.append(f"- {sanitize_prose(flag)}")
+    else:
+        lines.append("- Changes made without reading existing patterns first")
+        lines.append("- No tests written before implementation")
+    lines.append("")
+
+    # ─── Verification ──────────────────────────────────────────────────────
+    lines += ["## Verification", ""]
+    if fw.verification:
+        for item in fw.verification:
+            lines.append(f"- [ ] {sanitize_prose(item)}")
+    else:
+        lines.append("- [ ] All tests pass")
+        lines.append("- [ ] Code follows existing patterns in this repository")
+        lines.append("- [ ] No regressions introduced")
+    lines.append("")
+
+    return "\n".join(lines).strip() + "\n"
+
+
 def assemble(
     meta: RepoMeta,
     extract: Extract,
     units: list[ContentUnit],
     token_budget: int = TOKEN_BUDGET,
     prose: ProseFields | None = None,
+    framework_prose: FrameworkProseFields | None = None,
 ) -> AssembledSkill:
+    """Assemble a SkillPackage.
+
+    When *framework_prose* is provided the output follows the canonical 6-section
+    engineering skill anatomy and uses FRAMEWORK_TOKEN_BUDGET (no trimming).
+    When only *prose* is provided the existing Code Skill path is used.
+    """
     name = generate_skill_name(meta.owner, meta.repo)
     description = _description(meta, extract)
+
+    if framework_prose is not None:
+        # Engineering Skill path — HD only, no budget trimming
+        if framework_prose.description:
+            description = sanitize_prose(framework_prose.description)[:1024]
+        skill_md = _render_framework_skill_md(meta, name, description, framework_prose)
+        references, provenance = _build_references(meta, extract, units)
+        return AssembledSkill(
+            name=name,
+            description=description,
+            skill_md=skill_md,
+            references=references,
+            provenance=provenance,
+        )
+
+    # Code Skill path — deterministic + optional prose glue
     if prose and prose.description:
         description = sanitize_prose(prose.description)[:1024]
     references, provenance = _build_references(meta, extract, units)

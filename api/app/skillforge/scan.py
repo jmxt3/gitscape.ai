@@ -51,6 +51,37 @@ _EXFIL_RULES: list[tuple[str, re.Pattern, Severity, str]] = [
      Severity.MEDIUM, "Suspicious URL pointing at a raw IP address."),
 ]
 
+# ─── Framework skill structural quality rules ─────────────────────────────────
+# These fire on the assembled SKILL.md when skill_type="framework".
+# MEDIUM → WARN (not FAIL) — the user can still download but is notified of gaps.
+
+_FRAMEWORK_SECTION_RULES: list[tuple[str, re.Pattern, Severity, str]] = [
+    ("framework.missing_overview",
+     re.compile(r"^## Overview", re.M),
+     Severity.MEDIUM,
+     "Engineering Skill is missing the required ## Overview section."),
+    ("framework.missing_when_to_use",
+     re.compile(r"^## When to Use", re.M),
+     Severity.MEDIUM,
+     "Engineering Skill is missing the required ## When to Use section."),
+    ("framework.missing_core_process",
+     re.compile(r"^## Core Process", re.M),
+     Severity.MEDIUM,
+     "Engineering Skill is missing the required ## Core Process section."),
+    ("framework.missing_rationalizations",
+     re.compile(r"^## Common Rationalizations", re.M),
+     Severity.MEDIUM,
+     "Engineering Skill is missing the ## Common Rationalizations section."),
+    ("framework.missing_red_flags",
+     re.compile(r"^## Red Flags", re.M),
+     Severity.MEDIUM,
+     "Engineering Skill is missing the required ## Red Flags section."),
+    ("framework.missing_verification",
+     re.compile(r"^## Verification", re.M),
+     Severity.MEDIUM,
+     "Engineering Skill is missing the required ## Verification section."),
+]
+
 # invisible / control characters that must not survive into shipped text
 _INVISIBLE = {
     0x200B, 0x200C, 0x200D, 0x2060, 0xFEFF,  # zero-width
@@ -155,8 +186,14 @@ def scan_skill(
     units: Optional[list[ContentUnit]] = None,
     scripts: Optional[dict[str, str]] = None,
     enable_semgrep: bool = False,
+    is_framework_skill: bool = False,
 ) -> ScanReport:
-    """Scan the assembled skill and return a gated report."""
+    """Scan the assembled skill and return a gated report.
+
+    When *is_framework_skill* is True, additional structural quality checks run
+    against the 6 canonical sections. Missing sections produce WARN findings
+    (MEDIUM severity) so the user can still export but is informed of gaps.
+    """
     findings: list[ScanFinding] = []
 
     findings.extend(_scan_text("SKILL.md", skill_md))
@@ -167,6 +204,17 @@ def scan_skill(
 
     if enable_semgrep and scripts:
         findings.extend(_semgrep_scan(scripts))
+
+    if is_framework_skill:
+        for rule, pattern, severity, message in _FRAMEWORK_SECTION_RULES:
+            if not pattern.search(skill_md):
+                findings.append(ScanFinding(
+                    rule=rule,
+                    severity=severity,
+                    file="SKILL.md",
+                    line=0,
+                    message=message,
+                ))
 
     # attribute findings back to originating repo files
     for f in findings:

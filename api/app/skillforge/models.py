@@ -125,6 +125,37 @@ class ProseFields(BaseModel):
     description: Optional[str] = None
 
 
+class FrameworkProcessStep(BaseModel):
+    """One step in the Core Process section of a framework skill."""
+
+    title: str
+    content: str
+
+
+class FrameworkRationalization(BaseModel):
+    """One row in the Common Rationalizations table."""
+
+    excuse: str
+    reality: str
+
+
+class FrameworkProseFields(BaseModel):
+    """LLM-written content for the canonical 6-section engineering skill anatomy (HD only).
+
+    Each field maps to one load-bearing section. None fields fall back to
+    the deterministic Code Skill renderer — they should not be trimmed.
+    """
+
+    description: Optional[str] = None
+    overview: Optional[str] = None
+    when_to_use: list[str] = Field(default_factory=list)
+    when_not_to_use: Optional[str] = None
+    core_process: list[FrameworkProcessStep] = Field(default_factory=list)
+    common_rationalizations: list[FrameworkRationalization] = Field(default_factory=list)
+    red_flags: list[str] = Field(default_factory=list)
+    verification: list[str] = Field(default_factory=list)
+
+
 # ─── Scan (Phase 4) ────────────────────────────────────────────────────────
 
 

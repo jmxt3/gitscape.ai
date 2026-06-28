@@ -12,11 +12,11 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from .assemble import TOKEN_BUDGET, assemble
+from .assemble import FRAMEWORK_TOKEN_BUDGET, TOKEN_BUDGET, assemble
 from .exporters import render_exporters
 from .extract import build_extract
 from .ingest import BUILDER_VERSION
-from .models import Manifest, ProseFields, RepoMeta, ScanReport, SkillPackage
+from .models import FrameworkProseFields, Manifest, ProseFields, RepoMeta, ScanReport, SkillPackage
 from .scan import scan_skill
 
 _FRAMEWORKS = ["claude-skills", "google-adk", "agno", "openai-agents", "langchain", "langgraph"]
@@ -30,16 +30,42 @@ def build_skill(
     token_budget: int = TOKEN_BUDGET,
     enable_semgrep: bool = False,
     prose: ProseFields | None = None,
+    framework_prose: FrameworkProseFields | None = None,
     hd: bool = False,
+    skill_type: str = "code",
 ) -> SkillPackage:
-    extract = build_extract(units, readme=meta.readme)
-    if prose is None and hd:
-        from .hd import generate_prose  # lazy: keeps the deterministic path network-free
+    """Build a SkillPackage from content units and repo metadata.
 
-        prose = generate_prose(meta, extract)
-    assembled = assemble(meta, extract, units, token_budget=token_budget, prose=prose)
+    skill_type="framework" triggers the HD-only Engineering Skill path:
+      - Calls generate_framework_prose() to get all 6 canonical sections from Gemini.
+      - Uses FRAMEWORK_TOKEN_BUDGET (10 000 tokens) with no section trimming.
+      - Falls back to the Code Skill path if Gemini is unavailable.
+
+    skill_type="code" (default) preserves the existing deterministic path with
+    optional LLM prose glue when hd=True.
+    """
+    extract = build_extract(units, readme=meta.readme)
+
+    if skill_type == "framework":
+        # Engineering Skill path — HD only; Gemini generates all 6 sections.
+        if framework_prose is None:
+            from .hd import generate_framework_prose  # lazy: keeps deterministic path network-free
+            framework_prose = generate_framework_prose(meta, extract)
+        assembled = assemble(
+            meta, extract, units,
+            token_budget=FRAMEWORK_TOKEN_BUDGET,
+            framework_prose=framework_prose,
+        )
+    else:
+        # Code Skill path — deterministic + optional prose glue.
+        if prose is None and hd:
+            from .hd import generate_prose  # lazy
+            prose = generate_prose(meta, extract)
+        assembled = assemble(meta, extract, units, token_budget=token_budget, prose=prose)
     scan_report: ScanReport = scan_skill(
-        assembled.skill_md, assembled.references, units=units, enable_semgrep=enable_semgrep
+        assembled.skill_md, assembled.references, units=units,
+        enable_semgrep=enable_semgrep,
+        is_framework_skill=(skill_type == "framework"),
     )
 
     generated_at = meta.generated_at or datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")

@@ -19,7 +19,7 @@ import requests
 
 from app.config import settings
 
-from .models import Extract, ProseFields, RepoMeta
+from .models import Extract, FrameworkProcessStep, FrameworkProseFields, FrameworkRationalization, ProseFields, RepoMeta
 
 logger = logging.getLogger(__name__)
 
@@ -114,4 +114,85 @@ def generate_prose(meta: RepoMeta, extract: Extract) -> ProseFields | None:
         )
     except Exception:
         logger.exception("HD prose generation failed; falling back to deterministic prose")
+        return None
+
+
+def _framework_prompt(meta: RepoMeta, extract: Extract) -> str:
+    """Build the Gemini prompt that generates all 6 canonical engineering skill sections."""
+    return (
+        "You are a senior engineering skills author producing a Production-grade Engineering Skill "
+        "(SKILL.md) for an AI coding agent working in this repository. "
+        "Your goal is to teach the agent HOW TO ACT in this codebase — not just what it contains.\n\n"
+        "Use ONLY the structured context below. Do not invent files, APIs, or facts not present.\n\n"
+        "Return STRICT JSON with exactly these keys:\n"
+        '  "description": One sentence, trigger-first (max 256 chars). Example: '
+        '"Use when implementing features or fixing bugs in {repo} to follow established patterns.\'\n'
+        '  "overview": 2-3 paragraphs. What this skill is for, why it matters for THIS specific '
+        "repo, and what an agent must understand before touching the codebase.\n"
+        '  "when_to_use": Array of 4-6 short strings. Each is a concrete trigger scenario '
+        '("Implementing a new API endpoint", "Debugging a failing test").\n'
+        '  "when_not_to_use": One sentence. The counter-indicator.\n'
+        '  "core_process": Array of {"title": string, "content": string} objects. '
+        "3-5 numbered steps that define the workflow. Each step should have a descriptive title "
+        "and 2-4 sentences of content. Include code examples in the content where relevant.\n"
+        '  "common_rationalizations": Array of {"excuse": string, "reality": string} objects. '
+        "3-5 rows of shortcuts engineers take and why they fail in this codebase.\n"
+        '  "red_flags": Array of 5-7 short strings. Observable warning signs that the agent '
+        "is going off track (e.g. \"Modifying files without reading their callers first\").\n"
+        '  "verification": Array of 6-8 strings. Checklist items an agent checks before declaring '
+        'work done (do NOT include leading "- [ ] ").\n\n'
+        "No markdown, no code fences, no commentary — JSON only.\n\n"
+        "=== STRUCTURED CONTEXT ===\n" + _structured_context(meta, extract)
+    )
+
+
+def generate_framework_prose(meta: RepoMeta, extract: Extract) -> FrameworkProseFields | None:
+    """Return all 6 framework skill sections from Gemini, or None on any failure.
+
+    This is the HD path for Engineering Skills. It uses a higher token budget
+    (2048) and a richer prompt than the Code Skill prose path.
+    """
+    key = settings.GEMINI_API_KEY
+    if not key:
+        return None
+
+    url = _ENDPOINT.format(model=settings.HD_MODEL)
+    body = {
+        "contents": [{"parts": [{"text": _framework_prompt(meta, extract)}]}],
+        "generationConfig": {
+            "temperature": 0.4,
+            "maxOutputTokens": 2048,
+            "responseMimeType": "application/json",
+            "thinkingConfig": {"thinkingBudget": 0},
+        },
+    }
+    try:
+        resp = requests.post(url, params={"key": key}, json=body, timeout=_TIMEOUT)
+        resp.raise_for_status()
+        text = resp.json()["candidates"][0]["content"]["parts"][0]["text"]
+        data = _extract_json(text)
+
+        core_process = [
+            FrameworkProcessStep(title=s.get("title", ""), content=s.get("content", ""))
+            for s in (data.get("core_process") or [])
+            if isinstance(s, dict)
+        ]
+        rationalizations = [
+            FrameworkRationalization(excuse=r.get("excuse", ""), reality=r.get("reality", ""))
+            for r in (data.get("common_rationalizations") or [])
+            if isinstance(r, dict)
+        ]
+
+        return FrameworkProseFields(
+            description=data.get("description"),
+            overview=data.get("overview"),
+            when_to_use=[str(x) for x in (data.get("when_to_use") or [])][:7],
+            when_not_to_use=data.get("when_not_to_use"),
+            core_process=core_process,
+            common_rationalizations=rationalizations,
+            red_flags=[str(x) for x in (data.get("red_flags") or [])][:8],
+            verification=[str(x) for x in (data.get("verification") or [])][:10],
+        )
+    except Exception:
+        logger.exception("Framework prose generation failed; caller should handle None")
         return None

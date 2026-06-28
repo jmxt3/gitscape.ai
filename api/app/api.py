@@ -141,6 +141,7 @@ class SkillZipRequest(BaseModel):
     languages: List[str] = []
     files_analyzed: int = 0
     bypass_scan_gate: bool = False
+    skill_type: str = "code"  # "code" | "framework"
 
 
 def _readme_from_units(units) -> str:
@@ -153,9 +154,12 @@ def _readme_from_units(units) -> str:
 def _build_from_digest(body: "SkillZipRequest", repo_url: str, *, hd: bool = False):
     """Build (or fetch cached) a SkillPackage from a client-supplied digest."""
     key = skillforge.cache_key(body.digest_md)
+    skill_type = getattr(body, "skill_type", "code")
     if hd:
         key += ":hd"
-    pkg = None if hd else skillforge.skill_cache.get(key)
+    if skill_type == "framework":
+        key += ":framework"
+    pkg = None if hd or skill_type == "framework" else skillforge.skill_cache.get(key)
     if pkg is not None:
         return pkg
 
@@ -167,7 +171,10 @@ def _build_from_digest(body: "SkillZipRequest", repo_url: str, *, hd: bool = Fal
         readme=_readme_from_units(doc.units), file_structure=doc.tree,
     )
     pkg = skillforge.build_skill(
-        doc.units, meta, digest_hash=skillforge.content_hash(body.digest_md), hd=hd
+        doc.units, meta,
+        digest_hash=skillforge.content_hash(body.digest_md),
+        hd=hd,
+        skill_type=skill_type,
     )
     skillforge.skill_cache.set(key, pkg)
     return pkg
@@ -233,6 +240,42 @@ def get_hd_prose(
     try:
         repo_url = urllib.parse.unquote(body.repo_url)
         pkg = _build_from_digest(body, repo_url, hd=True)
+        return {
+            "skill_md": pkg.skill_md,
+            "references": pkg.references,
+            "scan_report": pkg.scan_report.model_dump(mode="json"),
+            "manifest": pkg.manifest.model_dump(mode="json"),
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class FrameworkSkillRequest(SkillZipRequest):
+    """Same payload as /skill-zip; builds an Engineering Skill using the framework anatomy."""
+    skill_type: str = "framework"
+
+
+@router.post("/skill/framework")
+@limiter.limit("5/minute")
+def get_framework_skill(
+    request: Request,
+    body: FrameworkSkillRequest,
+):
+    """
+    Engineering Skill mode: uses Gemini to generate all 6 canonical framework
+    sections (Overview, When to Use, Core Process, Common Rationalizations,
+    Red Flags, Verification) over the deterministic extract. HD key required.
+    Returns skill_md + references + scan_report + manifest.
+    503 when no Gemini API key is configured on this server.
+    """
+    if not hd_mod.hd_available():
+        raise HTTPException(
+            status_code=503,
+            detail="Engineering Skill mode requires the Gemini API key to be configured on this server.",
+        )
+    try:
+        repo_url = urllib.parse.unquote(body.repo_url)
+        pkg = _build_from_digest(body, repo_url)
         return {
             "skill_md": pkg.skill_md,
             "references": pkg.references,

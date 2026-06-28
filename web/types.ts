@@ -114,6 +114,29 @@ export interface ScanReport {
 export type SkillReferences = Record<string, string>;
 
 export type SkillTier = "standard" | "hd";
+export type SkillType = "code" | "framework";
+
+// Framework Engineering Skill — 6-section canonical anatomy returned by /skill/framework
+export interface FrameworkProcessStep {
+  title: string;
+  content: string;
+}
+
+export interface FrameworkRationalization {
+  excuse: string;
+  reality: string;
+}
+
+export interface FrameworkSkillContent {
+  description?: string;
+  overview?: string;
+  when_to_use: string[];
+  when_not_to_use?: string;
+  core_process: FrameworkProcessStep[];
+  common_rationalizations: FrameworkRationalization[];
+  red_flags: string[];
+  verification: string[];
+}
 
 export interface SkillManifest {
   schema_version: string;
