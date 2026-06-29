@@ -90,6 +90,11 @@ export interface CachedRepoOutput {
   readme?: string;
   file_structure?: string;
   structure_overview?: string;
+  // Cached framework (engineering) skill fields
+  framework_skill_md?: string;
+  framework_manifest?: SkillManifest;
+  framework_references?: SkillReferences;
+  framework_scan_report?: ScanReport;
 }
 
 // SkillForge security scan report (deterministic, gates export)

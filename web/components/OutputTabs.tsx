@@ -21,7 +21,20 @@ interface OutputTabsProps {
   references?: SkillReferences | null;
   repoUrl?: string;
   githubToken?: string | null;
+
+  // New framework skill props
+  frameworkSkillMd?: string | null;
+  frameworkManifest?: SkillManifest | null;
+  frameworkScanReport?: ScanReport | null;
+  frameworkReferences?: SkillReferences | null;
+  onFrameworkSkillGenerated?: (
+    skillMd: string,
+    manifest: SkillManifest | null,
+    scanReport: ScanReport | null,
+    references: SkillReferences | null
+  ) => void;
 }
+
 
 const SectionHeader: React.FC<{
   icon: React.ReactNode;
@@ -70,6 +83,11 @@ export const OutputTabs: React.FC<OutputTabsProps> = ({
   references,
   repoUrl,
   githubToken,
+  frameworkSkillMd,
+  frameworkManifest,
+  frameworkScanReport,
+  frameworkReferences,
+  onFrameworkSkillGenerated,
 }) => {
   return (
     <div className="mt-8 flex flex-col gap-8">
@@ -145,6 +163,11 @@ export const OutputTabs: React.FC<OutputTabsProps> = ({
             repoNameForFilename={repoNameForFilename}
             githubToken={githubToken ?? null}
             digest={digest}
+            frameworkSkillMd={frameworkSkillMd}
+            frameworkManifest={frameworkManifest}
+            frameworkScanReport={frameworkScanReport}
+            frameworkReferences={frameworkReferences}
+            onFrameworkSkillGenerated={onFrameworkSkillGenerated}
           />
         ) : (
           <div className="flex flex-col items-center justify-center py-16 gap-3 text-slate-500">

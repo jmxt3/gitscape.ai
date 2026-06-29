@@ -17,7 +17,7 @@ import {
   REPO_URL_LOCAL_STORAGE_KEY,
 } from "./constants";
 import { RawDiagramNode, CachedRepoOutput, SkillManifest, ScanReport, SkillReferences } from "./types";
-import { getCachedRepo, setCachedRepo, deleteCachedRepo } from "./services/repoCache";
+import { getCachedRepo, setCachedRepo, deleteCachedRepo, clearCache } from "./services/repoCache";
 
 // Helper to safely get items from localStorage
 const getFromLocalStorage = (key: string, defaultValue: string): string => {
@@ -28,6 +28,9 @@ const getFromLocalStorage = (key: string, defaultValue: string): string => {
     return defaultValue;
   }
 };
+
+declare const __API_HOST__: string;
+
 
 // Helper to safely set or remove small string values in localStorage
 // (GitHub token, last repo URL). Large repo outputs go to IndexedDB via repoCache.ts.
@@ -585,6 +588,12 @@ const App: React.FC = () => {
   const [scanReport, setScanReport] = useState<ScanReport | null>(null);
   const [skillReferences, setSkillReferences] = useState<SkillReferences | null>(null);
 
+  // Framework Skill export state
+  const [frameworkSkillMd, setFrameworkSkillMd] = useState<string | null>(null);
+  const [frameworkManifest, setFrameworkManifest] = useState<SkillManifest | null>(null);
+  const [frameworkScanReport, setFrameworkScanReport] = useState<ScanReport | null>(null);
+  const [frameworkReferences, setFrameworkReferences] = useState<SkillReferences | null>(null);
+
   const [showDiagramFullscreenModal, setShowDiagramFullscreenModal] =
     useState<boolean>(false);
   const [diagramDataForModal, setDiagramDataForModal] =
@@ -615,10 +624,21 @@ const App: React.FC = () => {
       console.warn("Failed to read GitHub token from localStorage:", e);
     }
 
-    if (repoUrl && !isLoading && !digest && !error) {
-      getCachedRepo(repoUrl).then((cachedData) => {
-        if (!cachedData) return;
+    const checkSessionAndLoad = async () => {
+      try {
+        const sessionActive = sessionStorage.getItem("gitScapeSessionActive");
+        if (!sessionActive) {
+          await clearCache();
+          sessionStorage.setItem("gitScapeSessionActive", "true");
+        }
+      } catch (e) {
+        console.warn("Failed to handle session caching logic:", e);
+      }
+
+      if (repoUrl && !isLoading && !digest && !error) {
         try {
+          const cachedData = await getCachedRepo(repoUrl);
+          if (!cachedData) return;
           setDigest(cachedData.digest);
           setProcessedRepoName(cachedData.processedRepoName);
           setRepoNameForFilename(cachedData.repoNameForFilename);
@@ -628,12 +648,18 @@ const App: React.FC = () => {
           if (cachedData.manifest_json) setManifestJson(cachedData.manifest_json);
           if (cachedData.scan_report) setScanReport(cachedData.scan_report);
           if (cachedData.references) setSkillReferences(cachedData.references);
+          if (cachedData.framework_skill_md) setFrameworkSkillMd(cachedData.framework_skill_md);
+          if (cachedData.framework_manifest) setFrameworkManifest(cachedData.framework_manifest);
+          if (cachedData.framework_scan_report) setFrameworkScanReport(cachedData.framework_scan_report);
+          if (cachedData.framework_references) setFrameworkReferences(cachedData.framework_references);
         } catch (e) {
           console.warn(`Failed to restore cached data for ${repoUrl}:`, e);
           deleteCachedRepo(repoUrl);
         }
-      });
-    }
+      }
+    };
+
+    checkSessionAndLoad();
   }, []);
 
   useEffect(() => {
@@ -827,6 +853,10 @@ const App: React.FC = () => {
     setManifestJson(null);
     setScanReport(null);
     setSkillReferences(null);
+    setFrameworkSkillMd(null);
+    setFrameworkManifest(null);
+    setFrameworkScanReport(null);
+    setFrameworkReferences(null);
     currentRepoInfoRef.current = null;
     currentDefaultBranchForRequestRef.current = null;
 
@@ -992,6 +1022,32 @@ const App: React.FC = () => {
     githubService,
     processSuccessfulDigestData,
   ]);
+
+  const handleFrameworkSkillGenerated = useCallback((
+    newSkillMd: string,
+    newManifest: SkillManifest | null,
+    newScanReport: ScanReport | null,
+    newReferences: SkillReferences | null
+  ) => {
+    setFrameworkSkillMd(newSkillMd);
+    setFrameworkManifest(newManifest);
+    setFrameworkScanReport(newScanReport);
+    setFrameworkReferences(newReferences);
+
+    // Save to IndexedDB cache
+    getCachedRepo(repoUrlRef.current).then((cachedData) => {
+      if (!cachedData) return;
+      const updatedCache: CachedRepoOutput = {
+        ...cachedData,
+        framework_skill_md: newSkillMd,
+        framework_manifest: newManifest ?? undefined,
+        framework_scan_report: newScanReport ?? undefined,
+        framework_references: newReferences ?? undefined,
+        timestamp: Date.now(),
+      };
+      setCachedRepo(repoUrlRef.current, updatedCache);
+    });
+  }, []);
 
 
   // Defer the expensive tree transform to a separate browser task.
@@ -1415,6 +1471,11 @@ const App: React.FC = () => {
                 references={skillReferences}
                 repoUrl={repoUrl}
                 githubToken={githubToken}
+                frameworkSkillMd={frameworkSkillMd}
+                frameworkManifest={frameworkManifest}
+                frameworkScanReport={frameworkScanReport}
+                frameworkReferences={frameworkReferences}
+                onFrameworkSkillGenerated={handleFrameworkSkillGenerated}
               />
             </section>
           )}

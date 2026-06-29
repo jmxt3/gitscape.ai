@@ -13,6 +13,18 @@ interface SkillExportProps {
   repoNameForFilename: string | null;
   githubToken?: string | null;
   digest: string;
+
+  // Cached framework skill props
+  frameworkSkillMd?: string | null;
+  frameworkManifest?: SkillManifest | null;
+  frameworkScanReport?: ScanReport | null;
+  frameworkReferences?: SkillReferences | null;
+  onFrameworkSkillGenerated?: (
+    skillMd: string,
+    manifest: SkillManifest | null,
+    scanReport: ScanReport | null,
+    references: SkillReferences | null
+  ) => void;
 }
 
 declare const __API_HOST__: string;
@@ -164,6 +176,11 @@ export const SkillExport: React.FC<SkillExportProps> = ({
   repoNameForFilename,
   githubToken: _githubToken,
   digest,
+  frameworkSkillMd,
+  frameworkManifest,
+  frameworkScanReport,
+  frameworkReferences,
+  onFrameworkSkillGenerated,
 }) => {
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
@@ -173,10 +190,6 @@ export const SkillExport: React.FC<SkillExportProps> = ({
   // Engineering Skill state
   const [frameworkLoading, setFrameworkLoading] = useState(false);
   const [frameworkError, setFrameworkError] = useState<string | null>(null);
-  const [frameworkSkillMd, setFrameworkSkillMd] = useState<string | null>(null);
-  const [frameworkReferences, setFrameworkReferences] = useState<SkillReferences | null>(null);
-  const [frameworkScanReport, setFrameworkScanReport] = useState<ScanReport | null>(null);
-  const [frameworkManifest, setFrameworkManifest] = useState<SkillManifest | null>(null);
 
   // A report attached when a download is rejected by the server gate (422)
   const [blockedReport, setBlockedReport] = useState<ScanReport | null>(null);
@@ -331,10 +344,14 @@ export const SkillExport: React.FC<SkillExportProps> = ({
       if (response.status === 503) throw new Error("Engineering Skill requires the Gemini API key on this server.");
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
-      setFrameworkSkillMd(data.skill_md ?? "");
-      setFrameworkReferences(data.references ?? {});
-      setFrameworkScanReport(data.scan_report ?? null);
-      setFrameworkManifest(data.manifest ?? null);
+      if (onFrameworkSkillGenerated) {
+        onFrameworkSkillGenerated(
+          data.skill_md ?? "",
+          data.manifest ?? null,
+          data.scan_report ?? null,
+          data.references ?? {}
+        );
+      }
       setWarnAccepted(false);
       setBlockedReport(null);
     } catch (err: any) {
@@ -342,7 +359,7 @@ export const SkillExport: React.FC<SkillExportProps> = ({
     } finally {
       setFrameworkLoading(false);
     }
-  }, [digest, requestBody]);
+  }, [digest, requestBody, onFrameworkSkillGenerated]);
 
   // Auto-generate Engineering Skill as soon as a digest is available
   useEffect(() => {
@@ -350,7 +367,7 @@ export const SkillExport: React.FC<SkillExportProps> = ({
       handleGenerateFramework();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [digest]);
+  }, [digest, frameworkSkillMd, frameworkLoading, handleGenerateFramework]);
 
   const handleCopy = useCallback(async () => {
     try {

@@ -86,3 +86,18 @@ export async function deleteCachedRepo(repoUrl: string): Promise<void> {
     console.warn("[repoCache] deleteCachedRepo failed:", e);
   }
 }
+
+/** Clear all cached entries in the store. */
+export async function clearCache(): Promise<void> {
+  try {
+    const db = await openDB();
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, "readwrite");
+      tx.objectStore(STORE_NAME).clear();
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  } catch (e) {
+    console.warn("[repoCache] clearCache failed:", e);
+  }
+}
