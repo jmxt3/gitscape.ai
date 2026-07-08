@@ -170,14 +170,31 @@ def _build_from_digest(body: "SkillZipRequest", repo_url: str, *, hd: bool = Fal
         files_analyzed=body.files_analyzed or doc.files_analyzed,
         readme=_readme_from_units(doc.units), file_structure=doc.tree,
     )
+
+    # Option A — for framework builds, reuse references from the Code Skill
+    # package (built from the live clone) so the security scan sees the same
+    # full-fidelity content it saw during /converter.  Falls back to digest
+    # reconstruction when the cache is cold (recycled Cloud Run instance).
+    prebuilt_references: dict | None = None
+    if skill_type == "framework" and not hd:
+        code_pkg = skillforge.skill_cache.get(skillforge.cache_key(body.digest_md))
+        if code_pkg is not None:
+            prebuilt_references = code_pkg.references
+            logger.info(
+                "framework build: reusing %d live-clone references from code-skill cache",
+                len(prebuilt_references),
+            )
+
     pkg = skillforge.build_skill(
         doc.units, meta,
         digest_hash=skillforge.content_hash(body.digest_md),
         hd=hd,
         skill_type=skill_type,
+        prebuilt_references=prebuilt_references,
     )
     skillforge.skill_cache.set(key, pkg)
     return pkg
+
 
 
 @router.post("/skill-zip")
@@ -481,18 +498,16 @@ def create_app() -> FastAPI:
         version=str(settings.APP_VERSION),
     )
 
-    # Configure CORS
+    # CORS is only needed for local development where the Vite dev server
+    # (localhost:5173) makes direct XHR calls to the FastAPI process (localhost:8081).
+    # In production, all browser requests go to the same origin and nginx proxies
+    # /api/* to the FastAPI sidecar on 127.0.0.1:8081 — no cross-origin request occurs.
     app.add_middleware(
         CORSMiddleware,
         allow_origins=origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
-        expose_headers=[
-            "Access-Control-Allow-Origin",
-            "Access-Control-Allow-Methods",
-            "Access-Control-Allow-Headers",
-        ],
     )
 
     return app

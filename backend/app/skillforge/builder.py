@@ -33,6 +33,7 @@ def build_skill(
     framework_prose: FrameworkProseFields | None = None,
     hd: bool = False,
     skill_type: str = "code",
+    prebuilt_references: dict | None = None,
 ) -> SkillPackage:
     """Build a SkillPackage from content units and repo metadata.
 
@@ -55,6 +56,7 @@ def build_skill(
             meta, extract, units,
             token_budget=FRAMEWORK_TOKEN_BUDGET,
             framework_prose=framework_prose,
+            prebuilt_references=prebuilt_references,
         )
     else:
         # Code Skill path — deterministic + optional prose glue.

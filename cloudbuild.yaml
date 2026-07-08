@@ -1,0 +1,109 @@
+substitutions:
+  _IMAGE_TAG: latest  # overridden automatically by CI with $COMMIT_SHA
+  _REGION: us-central1
+
+steps:
+
+  # ── Step 1a: Build the API image ──────────────────────────────────────────────
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'build-api'
+    dir: 'api'
+    args:
+      - 'build'
+      - '--tag'
+      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/gitscape-api:$_IMAGE_TAG'
+      - '--tag'
+      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/gitscape-api:latest'
+      - '--cache-from'
+      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/gitscape-api:latest'
+      - '.'
+
+  # ── Step 1b: Build the web image (nginx + React SPA) — runs in parallel ───────
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'build-web'
+    dir: 'web'
+    args:
+      - 'build'
+      - '--tag'
+      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/gitscape-web:$_IMAGE_TAG'
+      - '--tag'
+      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/gitscape-web:latest'
+      - '--cache-from'
+      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/gitscape-web:latest'
+      - '.'
+
+  # ── Step 2a: Push API image ───────────────────────────────────────────────────
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'push-api'
+    waitFor: ['build-api']
+    args:
+      - 'push'
+      - '--all-tags'
+      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/gitscape-api'
+
+  # ── Step 2b: Push web image ───────────────────────────────────────────────────
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'push-web'
+    waitFor: ['build-web']
+    args:
+      - 'push'
+      - '--all-tags'
+      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/gitscape-web'
+
+  # ── Step 3: Substitute image tags into service.yaml ──────────────────────────
+  # Uses sed to replace the placeholder values in service.yaml before deploying.
+  - name: 'ubuntu'
+    id: 'patch-service-yaml'
+    waitFor: ['push-api', 'push-web']
+    entrypoint: bash
+    args:
+      - '-c'
+      - |
+        sed -i \
+          -e "s|PROJECT_ID|$PROJECT_ID|g" \
+          -e "s|IMAGE_TAG|$_IMAGE_TAG|g" \
+          service.yaml
+        echo "--- Patched service.yaml ---"
+        cat service.yaml
+
+  # ── Step 4: Deploy the multi-container service ────────────────────────────────
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'deploy'
+    waitFor: ['patch-service-yaml']
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'services'
+      - 'replace'
+      - 'service.yaml'
+      - '--region'
+      - '${_REGION}'
+      - '--quiet'
+
+  # ── Step 5: Allow unauthenticated access (public frontend) ────────────────────
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'allow-unauth'
+    waitFor: ['deploy']
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'services'
+      - 'add-iam-policy-binding'
+      - 'gitscape'
+      - '--region'
+      - '${_REGION}'
+      - '--member'
+      - 'allUsers'
+      - '--role'
+      - 'roles/run.invoker'
+      - '--quiet'
+
+# Store both images in Artifact Registry
+images:
+  - '${_REGION}-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/gitscape-api:$_IMAGE_TAG'
+  - '${_REGION}-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/gitscape-api:latest'
+  - '${_REGION}-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/gitscape-web:$_IMAGE_TAG'
+  - '${_REGION}-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/gitscape-web:latest'
+
+options:
+  logging: CLOUD_LOGGING_ONLY

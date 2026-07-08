@@ -20,7 +20,7 @@ import {
   REPO_URL_LOCAL_STORAGE_KEY,
 } from "./constants";
 import { RawDiagramNode, CachedRepoOutput, SkillManifest, ScanReport, SkillReferences } from "./types";
-import { getCachedRepo, setCachedRepo, deleteCachedRepo, clearCache } from "./services/repoCache";
+import { getCachedRepo, setCachedRepo, deleteCachedRepo, sweepStaleEntries } from "./services/repoCache";
 
 // Helper to safely get items from localStorage
 const getFromLocalStorage = (key: string, defaultValue: string): string => {
@@ -32,7 +32,7 @@ const getFromLocalStorage = (key: string, defaultValue: string): string => {
   }
 };
 
-declare const __API_HOST__: string;
+
 
 
 // Helper to safely set or remove small string values in localStorage
@@ -573,7 +573,8 @@ const App: React.FC = () => {
       try {
         const sessionActive = sessionStorage.getItem("gitScapeSessionActive");
         if (!sessionActive) {
-          await clearCache();
+          // Sweep entries older than 24 h — preserves recent scans across new tabs.
+          await sweepStaleEntries();
           sessionStorage.setItem("gitScapeSessionActive", "true");
         }
       } catch (e) {
@@ -857,10 +858,10 @@ const App: React.FC = () => {
       setProgressMessage(pick(DIGEST_MESSAGES));
       // Ticker is already running from init — no need to restart it here
 
-      const apiHost: string = __API_HOST__;
-      const apiScheme = apiHost.startsWith("localhost") || apiHost.startsWith("127.") ? "http" : "https";
 
-      const apiUrl = new URL(`${apiScheme}://${apiHost}/converter`);
+      // API calls use a relative /api/* path — nginx proxies to the FastAPI sidecar in
+      // production, and the Vite dev server proxies to localhost:8081 in development.
+      const apiUrl = new URL("/api/converter", window.location.origin);
       apiUrl.searchParams.append("repo_url", repoUrl);
       if (githubToken) {
         apiUrl.searchParams.append("github_token", githubToken);
@@ -1095,9 +1096,18 @@ const App: React.FC = () => {
         hasToken={!!githubToken}
       />
       <main className="flex-grow">
-        <Hero />
-        <div className="space-y-12">
-          <section id="digest-generator-input" className="relative w-full max-w-[752px] mx-auto px-4">
+        {/* ── First-screen hero section with shared aurora background ── */}
+        <div className="relative overflow-hidden pb-12">
+          {/* Aurora blobs */}
+          <div className="hero-blob-1" />
+          <div className="hero-blob-2" />
+          <div className="hero-blob-3" />
+          {/* Subtle dot/grid overlay */}
+          <div className="grid-pattern" />
+
+          <Hero />
+          <div className="relative space-y-12">
+            <section id="digest-generator-input" className="relative w-full max-w-[752px] mx-auto px-4">
             <div
               className="rounded-2xl p-3.5 sm:p-4 flex flex-col gap-3"
               style={{
@@ -1243,32 +1253,34 @@ const App: React.FC = () => {
 
           <FeatureCards stageComplete={stageComplete} />
 
-          {showOutputArea && (
-            <section id="output-area" className="max-w-5xl mx-auto px-4 sm:px-6 w-full">
-              <OutputTabs
-                digest={digest}
-                isLoadingDigest={isLoading && progressPercent < 100 && !digest}
-                diagramData={diagramData}
-                repoName={processedRepoName!}
-                repoNameForFilename={repoNameForFilename}
-                defaultBranch={currentDefaultBranch}
-                filesCount={filesToRenderInDiagram.filter((f) => f.type === "blob").length || null}
-                onOpenDiagramFullscreenModal={handleOpenDiagramFullscreenModal}
-                skillMd={skillMd}
-                manifestJson={manifestJson}
-                scanReport={scanReport}
-                references={skillReferences}
-                repoUrl={repoUrl}
-                githubToken={githubToken}
-                frameworkSkillMd={frameworkSkillMd}
-                frameworkManifest={frameworkManifest}
-                frameworkScanReport={frameworkScanReport}
-                frameworkReferences={frameworkReferences}
-                onFrameworkSkillGenerated={handleFrameworkSkillGenerated}
-              />
-            </section>
-          )}
-        </div>
+          </div>{/* end relative space-y-12 */}
+        </div>{/* end aurora wrapper */}
+
+        {showOutputArea && (
+          <section id="output-area" className="max-w-5xl mx-auto px-4 sm:px-6 w-full mt-12">
+            <OutputTabs
+              digest={digest}
+              isLoadingDigest={isLoading && progressPercent < 100 && !digest}
+              diagramData={diagramData}
+              repoName={processedRepoName!}
+              repoNameForFilename={repoNameForFilename}
+              defaultBranch={currentDefaultBranch}
+              filesCount={filesToRenderInDiagram.filter((f) => f.type === "blob").length || null}
+              onOpenDiagramFullscreenModal={handleOpenDiagramFullscreenModal}
+              skillMd={skillMd}
+              manifestJson={manifestJson}
+              scanReport={scanReport}
+              references={skillReferences}
+              repoUrl={repoUrl}
+              githubToken={githubToken}
+              frameworkSkillMd={frameworkSkillMd}
+              frameworkManifest={frameworkManifest}
+              frameworkScanReport={frameworkScanReport}
+              frameworkReferences={frameworkReferences}
+              onFrameworkSkillGenerated={handleFrameworkSkillGenerated}
+            />
+          </section>
+        )}
 
         <div className="mt-16 sm:mt-20">
           <HowItWorks />
@@ -1302,7 +1314,7 @@ const App: React.FC = () => {
             GitHub
           </a>
           <a
-            href="https://api.gitscape.ai/docs"
+            href="/api/docs"
             target="_blank"
             rel="noopener noreferrer"
             className="hover:text-slate-300 transition-colors"

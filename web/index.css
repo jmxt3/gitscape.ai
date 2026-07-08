@@ -70,30 +70,30 @@ body {
 /* ─── Hero mesh blobs ─── */
 .hero-blob-1 {
   position: absolute;
-  width: 600px; height: 600px;
+  width: 900px; height: 900px;
   border-radius: 50%;
-  background: radial-gradient(ellipse, rgba(139,92,246,0.18) 0%, transparent 70%);
-  top: -150px; left: -100px;
+  background: radial-gradient(ellipse, rgba(139,92,246,0.16) 0%, transparent 65%);
+  top: -200px; left: -200px;
   animation: pulse-glow 6s ease-in-out infinite;
   pointer-events: none;
 }
 
 .hero-blob-2 {
   position: absolute;
-  width: 500px; height: 500px;
+  width: 750px; height: 750px;
   border-radius: 50%;
-  background: radial-gradient(ellipse, rgba(99,102,241,0.14) 0%, transparent 70%);
-  top: -50px; right: -80px;
+  background: radial-gradient(ellipse, rgba(99,102,241,0.13) 0%, transparent 65%);
+  top: -100px; right: -150px;
   animation: pulse-glow 8s ease-in-out infinite 2s;
   pointer-events: none;
 }
 
 .hero-blob-3 {
   position: absolute;
-  width: 400px; height: 400px;
+  width: 600px; height: 600px;
   border-radius: 50%;
-  background: radial-gradient(ellipse, rgba(16,185,129,0.10) 0%, transparent 70%);
-  bottom: -100px; right: 20%;
+  background: radial-gradient(ellipse, rgba(16,185,129,0.09) 0%, transparent 65%);
+  bottom: -150px; right: 10%;
   animation: pulse-glow 10s ease-in-out infinite 4s;
   pointer-events: none;
 }

@@ -109,11 +109,21 @@ def _shannon_entropy(s: str) -> float:
 def _scan_text(label: str, text: str) -> list[ScanFinding]:
     findings: list[ScanFinding] = []
 
+    # Whether this file is the agent's instruction document (SKILL.md) or a
+    # reference/lookup document.  Role-tag XML in reference files is almost
+    # always legitimate API documentation (chat protocol schemas, OpenAPI specs,
+    # etc.); downgrade those hits to INFO so they never gate the download.
+    is_instruction_file = (label == "SKILL.md")
+
     for ruleset in (_INJECTION_RULES, _EXFIL_RULES):
         for rule, pattern, severity, message in ruleset:
+            effective_severity = severity
+            if rule == "injection.role_tags" and not is_instruction_file:
+                # Reference-file role tags: informational only, not a gate.
+                effective_severity = Severity.INFO
             for m in pattern.finditer(text):
                 findings.append(ScanFinding(
-                    rule=rule, severity=severity, file=label,
+                    rule=rule, severity=effective_severity, file=label,
                     line=_line_of(text, m.start()),
                     snippet=m.group(0)[:160], message=message,
                 ))

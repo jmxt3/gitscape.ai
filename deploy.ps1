@@ -1,61 +1,42 @@
 # deploy.ps1
-# Runs Cloud Build for the /api and /web services.
+# Submits the unified Cloud Build pipeline from the repository root.
+# Both the API (FastAPI sidecar) and Web (nginx ingress) images are built in parallel,
+# then deployed as a single Cloud Run multi-container service named 'gitscape'.
+#
 # Usage:
-#   .\deploy.ps1              — deploy both API and Web
-#   .\deploy.ps1 -Target f   — deploy Web (frontend) only
-#   .\deploy.ps1 -Target b   — deploy API (backend) only
+#   .\deploy.ps1                        — full build + deploy
+#   .\deploy.ps1 -ImageTag $COMMIT_SHA  — deploy a specific image tag
 
 param (
-    [ValidateSet("f", "b", "")]
-    [string]$Target = ""
+    [string]$ImageTag = "latest"
 )
 
 $ErrorActionPreference = "Stop"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 
-function Deploy-Service {
-    param (
-        [string]$ServiceName,
-        [string]$ServicePath
-    )
+Write-Host ""
+Write-Host "========================================" -ForegroundColor Cyan
+Write-Host "  GitScape — Multi-Container Deploy"     -ForegroundColor Cyan
+Write-Host "  Image tag: $ImageTag"                   -ForegroundColor Cyan
+Write-Host "========================================" -ForegroundColor Cyan
 
-    Write-Host ""
-    Write-Host "========================================" -ForegroundColor Cyan
-    Write-Host "  Deploying: $ServiceName" -ForegroundColor Cyan
-    Write-Host "  Path:      $ServicePath" -ForegroundColor Cyan
-    Write-Host "========================================" -ForegroundColor Cyan
+Push-Location $ScriptDir
+try {
+    gcloud beta builds submit `
+        --config cloudbuild.yaml `
+        --substitutions "_IMAGE_TAG=$ImageTag" `
+        .
 
-    if (-not (Test-Path $ServicePath)) {
-        Write-Host "[ERROR] Directory not found: $ServicePath" -ForegroundColor Red
-        exit 1
-    }
-
-    Push-Location $ServicePath
-    try {
-        gcloud beta builds submit --config cloudbuild.yaml .
-        if ($LASTEXITCODE -ne 0) {
-            Write-Host "[ERROR] Cloud Build failed for $ServiceName (exit code $LASTEXITCODE)" -ForegroundColor Red
-            exit $LASTEXITCODE
-        }
-        Write-Host "[OK] $ServiceName deployed successfully." -ForegroundColor Green
-    }
-    finally {
-        Pop-Location
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "[ERROR] Cloud Build failed (exit code $LASTEXITCODE)" -ForegroundColor Red
+        exit $LASTEXITCODE
     }
 }
-
-$deployApi = $Target -eq "" -or $Target -eq "b"
-$deployWeb = $Target -eq "" -or $Target -eq "f"
-
-if (-not $deployApi -and -not $deployWeb) {
-    Write-Host "[ERROR] Invalid -Target value. Use 'f' for frontend, 'b' for backend, or omit for both." -ForegroundColor Red
-    exit 1
+finally {
+    Pop-Location
 }
-
-if ($deployApi)  { Deploy-Service -ServiceName "API" -ServicePath (Join-Path $ScriptDir "api") }
-if ($deployWeb)  { Deploy-Service -ServiceName "Web" -ServicePath (Join-Path $ScriptDir "web") }
 
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Green
-Write-Host "  All selected services deployed!" -ForegroundColor Green
+Write-Host "  Deployed successfully!"                 -ForegroundColor Green
 Write-Host "========================================" -ForegroundColor Green

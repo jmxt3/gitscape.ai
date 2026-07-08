@@ -44,5 +44,7 @@ async def add_process_time_header(request: Request, call_next):
     return response
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8080))
-    uvicorn.run(app, host="0.0.0.0", port=port, reload=True)
+    # In production, uvicorn is started via the Dockerfile ENTRYPOINT which
+    # binds to 127.0.0.1:8081 (sidecar — only reachable via nginx proxy).
+    port = int(os.environ.get("PORT", 8081))
+    uvicorn.run(app, host="127.0.0.1", port=port, reload=True)

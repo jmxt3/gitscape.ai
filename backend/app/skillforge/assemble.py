@@ -438,7 +438,7 @@ def _render_framework_skill_md(
             f"The full source digest for **{meta.owner}/{meta.repo}** is available via the GitScape API:",
             "",
             "```",
-            f"GET https://api.gitscape.ai/converter?repo_url={meta.repo_url}",
+            f"GET https://gitscape.ai/api/converter?repo_url={meta.repo_url}",
             "```",
             "",
             f"Load the `digest` field from the response into your context for complete source-code access. "
@@ -459,6 +459,7 @@ def assemble(
     token_budget: int = TOKEN_BUDGET,
     prose: ProseFields | None = None,
     framework_prose: FrameworkProseFields | None = None,
+    prebuilt_references: dict[str, str] | None = None,
 ) -> AssembledSkill:
     """Assemble a SkillPackage.
 
@@ -474,7 +475,12 @@ def assemble(
         if framework_prose.description:
             description = sanitize_prose(framework_prose.description)[:1024]
         skill_md = _render_framework_skill_md(meta, name, description, framework_prose)
-        references, provenance = _build_references(meta, extract, units)
+        # Use caller-supplied references (live-clone quality) when available;
+        # fall back to digest-reconstructed references on a cold cache miss.
+        if prebuilt_references is not None:
+            references, provenance = prebuilt_references, []
+        else:
+            references, provenance = _build_references(meta, extract, units)
         return AssembledSkill(
             name=name,
             description=description,

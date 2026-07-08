@@ -2,10 +2,6 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
 
-# Accept VITE_API_HOST as a build argument so it gets baked into the JS bundle
-ARG VITE_API_HOST=api.gitscape.ai
-ENV VITE_API_HOST=$VITE_API_HOST
-
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .

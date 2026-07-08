@@ -27,13 +27,10 @@ interface SkillExportProps {
   ) => void;
 }
 
-declare const __API_HOST__: string;
-const API_HOST: string = __API_HOST__;
 
-function apiBase(): string {
-  const isLocal = API_HOST.startsWith("localhost") || API_HOST.startsWith("127.");
-  return isLocal ? `http://${API_HOST}` : `https://${API_HOST}`;
-}
+// API calls use a relative /api/* base — nginx proxies to the FastAPI sidecar in production,
+// and the Vite dev server proxies to http://localhost:8081 in development.
+const API_BASE = '/api';
 
 function ownerRepoFromUrl(repoUrl: string, fallback: string | null): { owner: string; repo: string } {
   const parts = repoUrl.replace(/\.git$/, "").split("/").filter(Boolean);
@@ -363,7 +360,7 @@ export const SkillExport: React.FC<SkillExportProps> = ({
     setBlockedReport(null);
     try {
       const { repo } = ownerRepoFromUrl(repoUrl, repoNameForFilename);
-      const response = await fetch(`${apiBase()}/skill-zip`, {
+      const response = await fetch(`${API_BASE}/skill-zip`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(requestBody()),
@@ -394,7 +391,7 @@ export const SkillExport: React.FC<SkillExportProps> = ({
     setFrameworkLoading(true);
     setFrameworkError(null);
     try {
-      const response = await fetch(`${apiBase()}/skill/framework`, {
+      const response = await fetch(`${API_BASE}/skill/framework`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...requestBody(), skill_type: "framework" }),
