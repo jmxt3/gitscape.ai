@@ -46,9 +46,35 @@ function ownerRepoFromUrl(repoUrl: string, fallback: string | null): { owner: st
 // ─── Scan badge ───────────────────────────────────────────────────────────
 
 const STATUS_STYLES: Record<ScanStatus, { label: string; chip: string; dot: string }> = {
-  PASS: { label: "Scanned & Safe", chip: "bg-emerald-900/30 border-emerald-600/40 text-emerald-300", dot: "bg-emerald-400" },
-  WARN: { label: "Scanned — review warnings", chip: "bg-amber-900/30 border-amber-600/40 text-amber-300", dot: "bg-amber-400" },
-  FAIL: { label: "Blocked — unsafe content", chip: "bg-red-900/30 border-red-600/40 text-red-300", dot: "bg-red-400" },
+  PASS: { label: "Scanned & Safe",     chip: "bg-emerald-900/30 border-emerald-600/40 text-emerald-300", dot: "bg-emerald-400" },
+  WARN: { label: "Scan Warnings",      chip: "bg-amber-900/30 border-amber-600/40 text-amber-300",   dot: "bg-amber-400" },
+  FAIL: { label: "Scan Failed",         chip: "bg-red-900/30 border-red-600/40 text-red-300",         dot: "bg-red-400" },
+};
+
+// ─── Category chip map — sourced from api/app/skillforge/scan.py ─────────────
+
+const RULE_CATEGORY: Record<string, { label: string; color: "red" | "amber" | "slate" }> = {
+  "injection.ignore_previous":      { label: "Prompt Injection",  color: "red" },
+  "injection.reveal_system_prompt": { label: "Prompt Injection",  color: "red" },
+  "injection.persona_override":     { label: "Prompt Injection",  color: "red" },
+  "injection.role_tags":            { label: "Prompt Injection",  color: "red" },
+  "injection.tool_abuse":           { label: "Tool Abuse",        color: "red" },
+  "exfil.send_secrets":             { label: "Exfiltration",      color: "red" },
+  "exfil.raw_ip_url":               { label: "Suspicious URL",   color: "amber" },
+  "exfil.high_entropy_blob":        { label: "Hidden Payload",   color: "amber" },
+  "hidden.invisible_char":          { label: "Hidden Characters", color: "red" },
+};
+
+function resolveCategory(rule: string): { label: string; color: "red" | "amber" | "slate" } {
+  if (RULE_CATEGORY[rule]) return RULE_CATEGORY[rule];
+  if (rule.startsWith("framework.")) return { label: "Structure Gap", color: "amber" };
+  return { label: rule, color: "slate" };
+}
+
+const CATEGORY_CHIP_CLASSES: Record<"red" | "amber" | "slate", string> = {
+  red:   "bg-red-900/30 border border-red-700/50 text-red-300",
+  amber: "bg-amber-900/30 border border-amber-700/50 text-amber-300",
+  slate: "bg-slate-800/50 border border-slate-700/50 text-slate-400",
 };
 
 const SEVERITY_COLOR: Record<string, string> = {
@@ -57,6 +83,26 @@ const SEVERITY_COLOR: Record<string, string> = {
   medium: "text-amber-400",
   low: "text-amber-300",
   info: "text-slate-400",
+};
+
+// Status icons — one per ScanStatus
+const ScanStatusIcon: React.FC<{ status: ScanStatus }> = ({ status }) => {
+  if (status === "PASS") return (
+    <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  );
+  if (status === "WARN") return (
+    <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+    </svg>
+  );
+  // FAIL
+  return (
+    <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  );
 };
 
 const ScanBadge: React.FC<{ report: ScanReport }> = ({ report }) => {
@@ -68,9 +114,9 @@ const ScanBadge: React.FC<{ report: ScanReport }> = ({ report }) => {
         onClick={() => setOpen((v) => !v)}
         className="flex items-center gap-2 w-full text-left"
       >
-        <span className={`w-2.5 h-2.5 rounded-full ${style.dot}`} />
+        <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${style.dot}`} />
         <span className="text-xs font-semibold tracking-wide flex items-center gap-1.5">
-          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          <ScanStatusIcon status={report.status} />
           {style.label}
         </span>
         <span className="ml-auto text-[10px] font-mono opacity-70">
@@ -79,23 +125,35 @@ const ScanBadge: React.FC<{ report: ScanReport }> = ({ report }) => {
         </span>
       </button>
       {open && report.findings.length > 0 && (
-        <ul className="mt-2 flex flex-col gap-1.5 max-h-48 overflow-auto">
-          {report.findings.map((f, i) => (
-            <li key={i} className="text-[11px] bg-slate-900/50 rounded-md px-2 py-1.5 border border-slate-700/60">
-              <div className="flex items-center gap-2">
-                <span className={`font-semibold ${SEVERITY_COLOR[f.severity] ?? "text-slate-300"}`}>{f.severity.toUpperCase()}</span>
-                <span className="font-mono text-slate-400">{f.rule}</span>
-              </div>
-              <div className="text-slate-300 mt-0.5">{f.message}</div>
-              <div className="text-slate-500 mt-0.5 font-mono">
-                in {f.file}{f.line ? `:${f.line}` : ""}
-                {f.source_path ? ` · from ${f.source_path}` : ""}
-              </div>
-              {f.snippet && (
-                <div className="text-slate-500 mt-0.5 font-mono truncate">“{f.snippet}”</div>
-              )}
-            </li>
-          ))}
+        <ul className="mt-2 flex flex-col gap-1.5 max-h-56 overflow-auto">
+          {report.findings.map((f, i) => {
+            const category = resolveCategory(f.rule);
+            return (
+              <li key={i} className="text-[11px] bg-slate-900/50 rounded-md px-2.5 py-2 border border-slate-700/60">
+                {/* Row 1: category chip + severity + rule */}
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold tracking-wide ${CATEGORY_CHIP_CLASSES[category.color]}`}>
+                    {category.label}
+                  </span>
+                  <span className={`font-bold text-[10px] ${SEVERITY_COLOR[f.severity] ?? "text-slate-300"}`}>
+                    {f.severity.toUpperCase()}
+                  </span>
+                  <span className="font-mono text-slate-500 text-[10px]">{f.rule}</span>
+                </div>
+                {/* Row 2: message */}
+                <div className="text-slate-300 mt-1 leading-relaxed">{f.message}</div>
+                {/* Row 3: file location + source attribution */}
+                <div className="text-slate-500 mt-0.5 font-mono text-[10px]">
+                  {f.file}{f.line ? `:${f.line}` : ""}
+                  {f.source_path ? <span className="text-slate-600"> · from {f.source_path}</span> : null}
+                </div>
+                {/* Row 4: offending snippet */}
+                {f.snippet && (
+                  <div className="text-slate-500 mt-0.5 font-mono text-[10px] truncate italic">"{f.snippet}"</div>
+                )}
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>

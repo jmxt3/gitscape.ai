@@ -73,7 +73,8 @@ export const OutputTabs: React.FC<OutputTabsProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<TabKey>(() => (skillMd ? 'skill' : 'digest'));
 
-  const badge = scanReport ? SCAN_BADGE[scanReport.status] : null;
+  const resolvedScan = frameworkScanReport ?? scanReport;
+  const badge = resolvedScan ? SCAN_BADGE[resolvedScan.status] : null;
 
   return (
     <div
