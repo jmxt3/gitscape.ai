@@ -29,7 +29,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleTokenModal, hasToken }) 
         borderBottom: '1px solid rgba(71, 85, 105, 0.3)',
       }}
     >
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
         {/* Logo */}
         <div className="flex items-center gap-2.5">
           <div className="flex items-baseline gap-1">
@@ -48,6 +48,21 @@ export const Header: React.FC<HeaderProps> = ({ onToggleTokenModal, hasToken }) 
             </span>
           </div>
         </div>
+
+        {/* Center nav */}
+        <nav className="hidden md:flex items-center gap-7 text-[13px] font-medium text-slate-400">
+          <a href="#how-it-works" className="hover:text-slate-200 transition-colors">How it works</a>
+          <a href="#security" className="hover:text-slate-200 transition-colors">Security</a>
+          <a href="#open-source" className="hover:text-slate-200 transition-colors">Open source</a>
+          <a
+            href="https://github.com/jmxt3/Git-Scape-Web#readme"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-slate-200 transition-colors"
+          >
+            Docs
+          </a>
+        </nav>
 
         {/* Right controls */}
         <div className="flex items-center gap-3">
