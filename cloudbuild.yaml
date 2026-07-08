@@ -7,7 +7,7 @@ steps:
   # ── Step 1a: Build the API image ──────────────────────────────────────────────
   - name: 'gcr.io/cloud-builders/docker'
     id: 'build-api'
-    dir: 'api'
+    dir: 'backend'
     args:
       - 'build'
       - '--tag'
@@ -21,7 +21,7 @@ steps:
   # ── Step 1b: Build the web image (nginx + React SPA) — runs in parallel ───────
   - name: 'gcr.io/cloud-builders/docker'
     id: 'build-web'
-    dir: 'web'
+    dir: 'frontend'
     args:
       - 'build'
       - '--tag'
