@@ -20,7 +20,7 @@ export const Hero: React.FC = () => (
 
       <h1 className="m-0 text-5xl sm:text-6xl lg:text-[68px] font-extrabold tracking-[-0.035em] leading-[1.04] text-slate-100">
         Turn any repo into an{" "}
-        <span className="text-gradient">AI Skill.</span>.
+        <span className="text-gradient">AI Skill.</span>
       </h1>
 
       <p className="m-0 text-lg sm:text-[19px] leading-relaxed text-slate-400 max-w-2xl">
