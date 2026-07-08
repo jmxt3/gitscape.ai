@@ -1,0 +1,241 @@
+import React, { useEffect, useState } from "react";
+
+/**
+ * Aurora landing sections — How it works, Security, Open source.
+ * Static/presentational marketing content shown on the home (no-results) state.
+ */
+
+const REPO_API_URL = "https://api.github.com/repos/jmxt3/Git-Scape-Web";
+const REPO_URL = "https://github.com/jmxt3/Git-Scape-Web";
+
+const CheckRow: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <div className="flex items-center gap-3">
+    <div
+      className="flex items-center justify-center shrink-0 rounded-md"
+      style={{ width: 22, height: 22, background: "rgba(16,185,129,0.15)" }}
+    >
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+        <path d="M20 6 9 17l-5-5" />
+      </svg>
+    </div>
+    <span className="text-sm text-slate-300">{children}</span>
+  </div>
+);
+
+const STEPS = [
+  {
+    n: 1,
+    title: "Ingest",
+    desc: "Sparse-clones the repo, filters noise, and distills every file into one structured digest.",
+    border: "#7c3aed",
+    color: "#a78bfa",
+    titleColor: "#c4b5fd",
+    glow: "0 0 20px rgba(124,58,237,0.35)",
+  },
+  {
+    n: 2,
+    title: "Map",
+    desc: "Builds an interactive architecture diagram from the file tree — every branch, literally.",
+    border: "#10b981",
+    color: "#34d399",
+    titleColor: "#6ee7b7",
+    glow: "0 0 20px rgba(16,185,129,0.3)",
+  },
+  {
+    n: 3,
+    title: "Forge",
+    desc: "Compiles digest + map into a scanned, packaged SKILL.md your agents load in one line.",
+    border: "#f59e0b",
+    color: "#fbbf24",
+    titleColor: "#fcd34d",
+    glow: "0 0 20px rgba(245,158,11,0.3)",
+  },
+];
+
+export const HowItWorks: React.FC = () => (
+  <section
+    id="how-it-works"
+    className="px-6 sm:px-10 py-16 sm:py-[72px]"
+    style={{ borderTop: "1px solid rgba(71,85,105,0.25)", background: "rgba(15,23,42,0.35)" }}
+  >
+    <div className="max-w-[1100px] mx-auto flex flex-col gap-12">
+      <div className="flex flex-col items-center gap-2.5 text-center">
+        <span className="text-[11px] font-bold tracking-[0.1em] text-violet-400">HOW IT WORKS</span>
+        <h2 className="m-0 text-3xl sm:text-[38px] font-extrabold tracking-[-0.025em] text-slate-100">
+          One URL in. Three artifacts out.
+        </h2>
+        <p className="m-0 text-[15px] text-slate-400">
+          About a minute, start to finish. The progress bar only lies a little.
+        </p>
+      </div>
+      <div className="relative grid grid-cols-1 sm:grid-cols-3 gap-8 sm:gap-6">
+        <div
+          className="hidden sm:block absolute"
+          style={{
+            top: 24,
+            left: "15%",
+            right: "15%",
+            height: 2,
+            background: "linear-gradient(90deg,#7c3aed,#10b981,#f59e0b)",
+            opacity: 0.45,
+          }}
+        />
+        {STEPS.map((s) => (
+          <div key={s.n} className="relative flex flex-col items-center gap-3.5 text-center">
+            <div
+              className="flex items-center justify-center rounded-full text-[15px] font-extrabold"
+              style={{
+                width: 48,
+                height: 48,
+                background: "#0f172a",
+                border: `2px solid ${s.border}`,
+                color: s.color,
+                boxShadow: s.glow,
+              }}
+            >
+              {s.n}
+            </div>
+            <div className="text-[17px] font-bold" style={{ color: s.titleColor }}>{s.title}</div>
+            <div className="text-[13.5px] leading-relaxed text-slate-400 max-w-[280px]">{s.desc}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+);
+
+export const Security: React.FC = () => (
+  <section
+    id="security"
+    className="px-6 sm:px-10 py-16 sm:py-[72px]"
+    style={{ borderTop: "1px solid rgba(71,85,105,0.25)" }}
+  >
+    <div className="max-w-[1100px] mx-auto grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-14 items-center">
+      <div className="flex flex-col gap-4.5">
+        <span className="text-[11px] font-bold tracking-[0.1em] text-emerald-400">SECURITY</span>
+        <h2 className="m-0 text-3xl sm:text-4xl font-extrabold tracking-[-0.025em] text-slate-100 leading-tight">
+          Every skill is scanned before it ships.
+        </h2>
+        <p className="m-0 text-[15px] leading-relaxed text-slate-400">
+          A skill is code your agent trusts. So GitScape doesn't hand one over until it has checked
+          the source for the things that bite.
+        </p>
+        <div className="flex flex-col gap-3 mt-1">
+          <CheckRow>Secrets and credentials detected and redacted</CheckRow>
+          <CheckRow>Prompt-injection patterns flagged in docs and comments</CheckRow>
+          <CheckRow>License verified and carried into the manifest</CheckRow>
+          <CheckRow>Your GitHub token stays in your browser — never on our servers</CheckRow>
+        </div>
+      </div>
+      <div
+        className="rounded-[14px] overflow-hidden font-mono"
+        style={{ background: "#0b1220", border: "1px solid rgba(71,85,105,0.5)" }}
+      >
+        <div
+          className="flex items-center justify-between px-4.5 py-3"
+          style={{ borderBottom: "1px solid rgba(71,85,105,0.4)", background: "rgba(15,23,42,0.8)" }}
+        >
+          <span className="text-xs text-slate-400">scan_report.json</span>
+          <span
+            className="text-[10px] font-bold px-2.5 py-[3px] rounded-full tracking-[0.06em]"
+            style={{ background: "rgba(16,185,129,0.15)", color: "#34d399" }}
+          >
+            PASSED
+          </span>
+        </div>
+        <div className="p-4.5 flex flex-col gap-2.5 text-[12.5px]">
+          <div className="flex justify-between"><span className="text-slate-400">secrets_found</span><span className="text-emerald-400">0</span></div>
+          <div className="flex justify-between"><span className="text-slate-400">injection_patterns</span><span className="text-emerald-400">0</span></div>
+          <div className="flex justify-between"><span className="text-slate-400">license</span><span className="text-slate-200">"MIT"</span></div>
+          <div className="flex justify-between"><span className="text-slate-400">files_scanned</span><span className="text-slate-200">1,284</span></div>
+          <div className="flex justify-between"><span className="text-slate-400">redactions</span><span className="text-amber-400">2 · .env.example</span></div>
+          <div className="flex justify-between"><span className="text-slate-400">skill_hash</span><span className="text-slate-500">sha256:9f2c…e41a</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+);
+
+const GithubIcon: React.FC<{ size?: number }> = ({ size = 16 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M12 .3a12 12 0 0 0-3.8 23.38c.6.12.83-.26.83-.57L9 21.07c-3.34.72-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.08-.74.09-.73.09-.73 1.2.09 1.83 1.24 1.83 1.24 1.07 1.83 2.8 1.3 3.49 1 .1-.78.42-1.31.76-1.61-2.66-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.13-.3-.54-1.52.12-3.18 0 0 1-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.28-1.55 3.29-1.23 3.29-1.23.66 1.66.25 2.88.12 3.18.77.84 1.23 1.91 1.23 3.22 0 4.61-2.81 5.63-5.49 5.92.43.37.82 1.1.82 2.22l-.01 3.29c0 .32.22.7.83.57A12 12 0 0 0 12 .3z" />
+  </svg>
+);
+
+interface RepoStats {
+  stars: number | null;
+  forks: number | null;
+  license: string;
+}
+
+export const OpenSource: React.FC = () => {
+  const [stats, setStats] = useState<RepoStats>({ stars: null, forks: null, license: "MIT" });
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(REPO_API_URL)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (cancelled || !data) return;
+        setStats({
+          stars: data.stargazers_count ?? null,
+          forks: data.forks_count ?? null,
+          license: data.license?.spdx_id || "MIT",
+        });
+      })
+      .catch(() => { /* stats stay as placeholders */ });
+    return () => { cancelled = true; };
+  }, []);
+
+  const fmt = (n: number | null) => (n === null ? "—" : n.toLocaleString());
+
+  return (
+    <section
+      id="open-source"
+      className="px-6 sm:px-10 py-16 sm:py-[72px]"
+      style={{ borderTop: "1px solid rgba(71,85,105,0.25)", background: "rgba(15,23,42,0.35)" }}
+    >
+      <div className="max-w-[800px] mx-auto flex flex-col items-center gap-6 text-center">
+        <span className="text-[11px] font-bold tracking-[0.1em] text-violet-400">OPEN SOURCE</span>
+        <h2 className="m-0 text-3xl sm:text-4xl font-extrabold tracking-[-0.025em] text-slate-100">
+          Built in the open. Steered by its users.
+        </h2>
+        <div className="flex flex-wrap justify-center gap-8 sm:gap-12">
+          <div className="flex flex-col gap-1">
+            <span className="text-3xl font-extrabold text-slate-100">{fmt(stats.stars)}</span>
+            <span className="text-xs font-semibold tracking-[0.06em] text-slate-500">STARS</span>
+          </div>
+          <div className="flex flex-col gap-1">
+            <span className="text-3xl font-extrabold text-slate-100">{fmt(stats.forks)}</span>
+            <span className="text-xs font-semibold tracking-[0.06em] text-slate-500">FORKS</span>
+          </div>
+          <div className="flex flex-col gap-1">
+            <span className="text-3xl font-extrabold text-slate-100">{stats.license}</span>
+            <span className="text-xs font-semibold tracking-[0.06em] text-slate-500">LICENSE</span>
+          </div>
+        </div>
+        <div className="flex flex-wrap justify-center gap-3">
+          <a
+            href={REPO_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 px-6 py-3 rounded-[10px] text-sm font-bold transition-transform duration-200 hover:-translate-y-0.5"
+            style={{ background: "#f1f5f9", color: "#0f172a" }}
+          >
+            <GithubIcon />
+            Star on GitHub
+          </a>
+          <a
+            href={REPO_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center px-6 py-3 rounded-[10px] text-sm font-bold text-violet-400 transition-colors duration-200 hover:text-violet-300"
+            style={{ border: "1px solid rgba(139,92,246,0.4)" }}
+          >
+            Read the code
+          </a>
+        </div>
+      </div>
+    </section>
+  );
+};
