@@ -36,4 +36,4 @@ EXPOSE 8080
 USER appuser
 
 # Use ENTRYPOINT for flexibility — respects Cloud Run's $PORT injection
-ENTRYPOINT ["sh", "-c", "uv run uvicorn main:app --host 127.0.0.1 --port ${PORT:-8081}"]
+ENTRYPOINT ["sh", "-c", "uv run uvicorn main:app --host 0.0.0.0 --port ${PORT:-8081}"]
