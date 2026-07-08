@@ -8,8 +8,16 @@
 #   .\deploy.ps1 -ImageTag $COMMIT_SHA  - deploy a specific image tag
 
 param (
-    [string]$ImageTag = "latest"
+    [string]$ImageTag = ""
 )
+
+if ([string]::IsNullOrEmpty($ImageTag)) {
+    $ImageTag = (git rev-parse --short HEAD 2>$null)
+    if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrEmpty($ImageTag)) {
+        $ImageTag = "latest"
+    }
+}
+
 
 $ErrorActionPreference = "Stop"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
