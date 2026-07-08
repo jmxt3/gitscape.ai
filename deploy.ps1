@@ -4,8 +4,8 @@
 # then deployed as a single Cloud Run multi-container service named 'gitscape'.
 #
 # Usage:
-#   .\deploy.ps1                        — full build + deploy
-#   .\deploy.ps1 -ImageTag $COMMIT_SHA  — deploy a specific image tag
+#   .\deploy.ps1                        - full build + deploy
+#   .\deploy.ps1 -ImageTag $COMMIT_SHA  - deploy a specific image tag
 
 param (
     [string]$ImageTag = "latest"
@@ -16,7 +16,7 @@ $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "  GitScape — Multi-Container Deploy"     -ForegroundColor Cyan
+Write-Host "  GitScape - Multi-Container Deploy"     -ForegroundColor Cyan
 Write-Host "  Image tag: $ImageTag"                   -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 
