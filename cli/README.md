@@ -21,6 +21,30 @@ The GitScape CLI is a zero-dependency, lightweight Node.js utility. It communica
 
 Once compiled, AI coding agents (such as Claude Code, Cursor, Windsurf, or Gemini CLI) can immediately read these skills to gain deep, instant context of the target repository without needing to read the entire codebase.
 
+### How It Works: CLI vs. MCP
+
+Both workflows call the same backend compiler service to generate skills, but trigger the process differently:
+
+```text
+┌─────────────────────────────────────────────────────────────────────────┐
+│                             LOCAL WORKSPACE                             │
+│                                                                         │
+│  ┌───────────────────┐  npx gitscape <url>   ┌───────────────────────┐  │
+│  │   User Terminal   ├─────────────────────► │  GitScape Cloud API   │  │
+│  └───────────────────┘                       │                       │  │
+│                                              │  • Clones repo        │  │
+│  ┌───────────────────┐  npx gitscape init    │  • Tree-sitter scan   │  │
+│  │     IDE Agent     ├─────────────────────► │  • ScapeGuard audit   │  │
+│  │ (Cursor/Claude)   │  (via .mcp.json)      │  • Generates skills   │  │
+│  └─────────┬─────────┘                       └───────────┬───────────┘  │
+│            │                                             │              │
+│            ▼                                             ▼              │
+│  ┌───────────────────────────────────────────────────────────────────┐  │
+│  │  Writes to: .agents/skills/ & registers in AGENTS.md / CLAUDE.md  │  │
+│  └───────────────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
 ---
 
 ## 🚀 Installation
@@ -38,14 +62,6 @@ If you use GitScape frequently, install it globally:
 ```bash
 npm install -g gitscape
 ```
-
-### 3. Local Development Link
-If you are developing or contributing to the CLI:
-```bash
-cd cli
-npm link
-```
-This maps the global `gitscape` terminal command to your local workspace code.
 
 ---
 
@@ -72,11 +88,6 @@ npx gitscape https://github.com/google/adk-python
 npx gitscape init
 ```
 Creates a local `.mcp.json` file inside your current working directory to register the GitScape Model Context Protocol (MCP) server.
-
-**Example:**
-```bash
-npx gitscape init
-```
 
 ---
 
@@ -119,29 +130,6 @@ GitScape is built with security first:
 * **Token Protection:** Your GitHub access tokens are passed directly to the compiler service in the request payload and are never logged or stored.
 * **Deterministic Sandboxing:** The backend analyzes files in a stateless environment.
 * **ScapeGuard Analysis:** Every compiled skill is scanned for prompt injection, data exfiltration scripts, and hidden text, outputting a clear security grade before writing files.
-
----
-
-## 🧑‍💻 Maintainer: Publishing Updates
-
-To publish updates to the npm registry:
-
-1. **Verify login status**:
-   ```bash
-   npm whoami
-   # Should print 'gitscape'
-   ```
-   *If not logged in, run `npm login` first.*
-
-2. **Bump the package version**:
-   Update the `"version"` field in `cli/package.json` (e.g., from `0.2.0` to `0.2.1`).
-
-3. **Publish to npm**:
-   ```bash
-   cd cli
-   npm publish --access public
-   ```
-   *Provide the 6-digit One-Time Password (OTP) from your authenticator app when prompted.*
 
 ---
 
