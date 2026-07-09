@@ -1,0 +1,91 @@
+{
+  "schema_version": "2.0",
+  "name": "addyosmani-agent-skills",
+  "display_name": "addyosmani/agent-skills",
+  "description": "Specialist knowledge of the addyosmani/agent-skills codebase (Shell, JavaScript). Use when working with, extending, or debugging agent-skills: navigating its modules, calling its 0 documented public symbols across 0 source files, and understanding its architecture, setup, and configuration. Not for general Shell, JavaScript questions unrelated to agent-skills.",
+  "version": "1.0.0",
+  "builder_version": "1.0.0",
+  "digest_hash": "fb64884830cdf0e77713b514b594c33041e5877b4b6f7a95215b574a4e49d45f",
+  "files": [
+    "SKILL.md",
+    "references/architecture.md",
+    "references/examples.md",
+    "references/setup.md",
+    "manifest.json",
+    "scan-report.json",
+    "scan-report.sarif",
+    "exporters/addyosmani_agent_skills_adk_skill.py",
+    "exporters/addyosmani_agent_skills_agno_skill.py",
+    "references/addyosmani_agent_skills_digest.txt"
+  ],
+  "provenance": [
+    {
+      "chunk": "references/architecture.md",
+      "source_paths": []
+    },
+    {
+      "chunk": "references/examples.md",
+      "source_paths": [
+        "references/testing-patterns.md",
+        "references/testing-patterns.md",
+        "references/testing-patterns.md",
+        "references/testing-patterns.md",
+        "references/testing-patterns.md",
+        "references/testing-patterns.md",
+        "references/testing-patterns.md",
+        "references/testing-patterns.md",
+        "skills/api-and-interface-design/SKILL.md",
+        "skills/api-and-interface-design/SKILL.md",
+        "skills/api-and-interface-design/SKILL.md",
+        "skills/code-simplification/SKILL.md"
+      ]
+    },
+    {
+      "chunk": "references/setup.md",
+      "source_paths": [
+        "evals/README.md",
+        "README.md"
+      ]
+    }
+  ],
+  "scan_status": "FAIL",
+  "framework_compatibility": [
+    "claude-skills",
+    "google-adk",
+    "agno",
+    "openai-agents",
+    "langchain",
+    "langgraph"
+  ],
+  "metadata": {
+    "source_repo": "https://github.com/addyosmani/agent-skills",
+    "generated_by": "GitScape.ai",
+    "generated_by_url": "https://gitscape.ai",
+    "generated_at": "2026-07-09T16:11:14Z",
+    "files_analyzed": 75,
+    "primary_languages": [
+      "Shell",
+      "JavaScript"
+    ],
+    "symbols_indexed": 0,
+    "modules_indexed": 0,
+    "scan_engine": "scapeguard",
+    "scan_engine_version": "2.0.0",
+    "skill_hash": "sha256:6efd5b033926e881c73c7c93aae980b082a893eee87f1b4c8ca809d6f6b25452",
+    "license": {
+      "spdx_id": "NOASSERTION",
+      "source_path": "",
+      "confidence": "low"
+    },
+    "summary_title": "Specialist knowledge of the addyosmani/agent-skills codebase (Shell, JavaScript). Use when working with, extending, or debugging agent-skills: navigating its modules, calling its 0 documented public symbols across 0 source files, and understanding its architecture, setup, and configuration. Not for general Shell, JavaScript questions unrelated to agent-skills.",
+    "summary_bullets": [
+      "Specialist guidelines for working with the agent-skills codebase.",
+      "Understanding modules and symbols across 75 source files.",
+      "Adherence to repository setup, structure, and architecture patterns.",
+      "Executing automated tests and verifying codebase changes."
+    ]
+  },
+  "source_git_head": "0e63d8ea962ecac51637421d8fff63702fac766b",
+  "built_at": "2026-07-09T16:11:14Z",
+  "model": "gemini-3.1-flash-lite"
+}

@@ -175,6 +175,8 @@ async def run_install_skill(repo_url: str, github_token: Optional[str]) -> Dict[
         }
 
 
+@mcp_router.post("")
+@mcp_router.post("/")
 @mcp_router.post("/call")
 async def call_tool(request: Request):
     """Handle MCP tool list and tool invocation requests (supports JSON-RPC 2.0 and legacy CLI)."""

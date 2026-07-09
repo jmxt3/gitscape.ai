@@ -99,3 +99,48 @@ def test_call_tool_install_skill_success(monkeypatch):
     manifest_data = json.loads(files[".agents/skills/acme-demo/manifest.json"])
     assert manifest_data["source_git_head"] == "abc123sha"
     assert manifest_data["built_at"] is not None
+
+
+def test_direct_post_initialize():
+    # Test POST /mcp for initialize method
+    resp = client.post(
+        "/mcp",
+        json={
+            "jsonrpc": "2.0",
+            "method": "initialize",
+            "params": {
+                "protocolVersion": "2024-11-05",
+                "capabilities": {},
+                "clientInfo": {"name": "test-client", "version": "1.0.0"}
+            },
+            "id": 1
+        }
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["jsonrpc"] == "2.0"
+    assert data["id"] == 1
+    assert "result" in data
+    assert data["result"]["serverInfo"]["name"] == "gitscape-mcp"
+
+    # Test POST /mcp/ (trailing slash) for initialize method
+    resp = client.post(
+        "/mcp/",
+        json={
+            "jsonrpc": "2.0",
+            "method": "initialize",
+            "params": {
+                "protocolVersion": "2024-11-05",
+                "capabilities": {},
+                "clientInfo": {"name": "test-client", "version": "1.0.0"}
+            },
+            "id": 2
+        }
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["jsonrpc"] == "2.0"
+    assert data["id"] == 2
+    assert "result" in data
+    assert data["result"]["serverInfo"]["name"] == "gitscape-mcp"
+

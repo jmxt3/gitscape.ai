@@ -9,13 +9,77 @@ import { CheckRow } from "./LandingSections";
 
 const MCP_URL = "https://gitscape.ai/api/mcp";
 
-const MCP_JSON = `{
-  "mcpServers": {
-    "gitscape": {
-      "url": "${MCP_URL}"
-    }
-  }
-}`;
+// ─── IDE configuration map ────────────────────────────────────────────────────
+// Each IDE uses a slightly different JSON key for a remote MCP URL.
+// "url"       → Claude Desktop, Claude Code, Cursor, VS Code (Continue), IntelliJ, Zed
+// "serverUrl" → Windsurf, Antigravity (Gemini IDE)
+
+type IDEKey = "claude" | "cursor" | "windsurf" | "antigravity" | "vscode" | "intellij";
+
+interface IDEConfig {
+  label: string;
+  urlKey: "url" | "serverUrl";
+  configFile: string;
+  configFileNote?: string;
+}
+
+const IDE_CONFIGS: Record<IDEKey, IDEConfig> = {
+  claude: {
+    label: "Claude",
+    urlKey: "url",
+    configFile: ".mcp.json",
+    configFileNote: "Place in your project root (Claude Code) or ~/Library/Application Support/Claude/claude_desktop_config.json (Claude Desktop)",
+  },
+  cursor: {
+    label: "Cursor",
+    urlKey: "url",
+    configFile: ".cursor/mcp.json",
+    configFileNote: "Place in your project root",
+  },
+  windsurf: {
+    label: "Windsurf",
+    urlKey: "serverUrl",
+    configFile: "~/.codeium/windsurf/mcp_config.json",
+    configFileNote: "Global config — applies to all Windsurf projects",
+  },
+  antigravity: {
+    label: "Antigravity",
+    urlKey: "serverUrl",
+    configFile: "~/.gemini/config/mcp_config.json",
+    configFileNote: "Global config — applies to all Antigravity (Gemini IDE) projects",
+  },
+  vscode: {
+    label: "VS Code",
+    urlKey: "url",
+    configFile: ".continue/config.json",
+    configFileNote: "Requires the Continue extension. Place in your project root.",
+  },
+  intellij: {
+    label: "IntelliJ",
+    urlKey: "url",
+    configFile: ".mcp.json",
+    configFileNote: "Place in your project root. Requires IntelliJ AI Assistant with MCP support.",
+  },
+};
+
+const IDE_ORDER: IDEKey[] = ["claude", "cursor", "windsurf", "antigravity", "vscode", "intellij"];
+
+function buildMcpSnippet(ideKey: IDEKey): string {
+  const { urlKey } = IDE_CONFIGS[ideKey];
+  return JSON.stringify(
+    {
+      mcpServers: {
+        gitscape: {
+          [urlKey]: MCP_URL,
+        },
+      },
+    },
+    null,
+    2
+  );
+}
+
+// ─── Surface tabs ─────────────────────────────────────────────────────────────
 
 type SurfaceKey = "cli" | "mcp" | "web";
 
@@ -25,7 +89,7 @@ const SURFACES: { key: SurfaceKey; label: string; activeColor: string; underline
   { key: "web", label: "Web", activeColor: "#fcd34d", underline: "#f59e0b" },
 ];
 
-const CliPanel: React.FC = () => (
+export const CliPanel: React.FC = () => (
   <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
     <div className="flex flex-col gap-4">
       <h3 className="m-0 text-xl sm:text-2xl font-bold tracking-[-0.015em] text-slate-100">
@@ -67,38 +131,80 @@ const CliPanel: React.FC = () => (
   </div>
 );
 
-const McpPanel: React.FC = () => (
-  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
-    <div className="flex flex-col gap-4">
-      <h3 className="m-0 text-xl sm:text-2xl font-bold tracking-[-0.015em] text-slate-100">
-        Let your agent install skills for itself.
-      </h3>
-      <p className="m-0 text-[14.5px] leading-relaxed text-slate-400">
-        GitScape ships a hosted MCP server. Connect once, and your agent can compile
-        and install any repository as a skill — mid-conversation, no tab-switching.
-      </p>
-      <div className="flex flex-col gap-3 mt-1">
-        <CheckRow>One MCP tool — <code className="font-mono text-[0.9em] text-slate-200">install_skill</code> — compiles, scans and writes the skill into your workspace</CheckRow>
-        <CheckRow>Works in Claude Code, Cursor, Windsurf and Claude Desktop</CheckRow>
-        <CheckRow>Every skill passes ScapeGuard before it touches your repo</CheckRow>
+export const McpPanel: React.FC = () => {
+  const [activeIDE, setActiveIDE] = useState<IDEKey>("claude");
+  const ide = IDE_CONFIGS[activeIDE];
+  const snippet = buildMcpSnippet(activeIDE);
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
+      <div className="flex flex-col gap-4">
+        <h3 className="m-0 text-xl sm:text-2xl font-bold tracking-[-0.015em] text-slate-100">
+          Let your agent install skills for itself.
+        </h3>
+        <p className="m-0 text-[14.5px] leading-relaxed text-slate-400">
+          GitScape ships a hosted MCP server. Connect once, and your agent can compile
+          and install any repository as a skill — mid-conversation, no tab-switching.
+        </p>
+        <div className="flex flex-col gap-3 mt-1">
+          <CheckRow>One MCP tool — <code className="font-mono text-[0.9em] text-slate-200">install_skill</code> — compiles, scans and writes the skill into your workspace</CheckRow>
+          <CheckRow>Works in Claude, Cursor, Windsurf, Antigravity, VS Code and IntelliJ</CheckRow>
+          <CheckRow>Every skill passes ScapeGuard before it touches your repo</CheckRow>
+          <CheckRow>No API key needed — open to everyone</CheckRow>
+        </div>
+      </div>
+      <div className="flex flex-col gap-3">
+        <CodeSnippet
+          title="1 · point your agent at GitScape"
+          accent="emerald"
+          prompt
+          code="npx gitscape init"
+        />
+
+        {/* IDE selector */}
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-semibold tracking-[0.08em] text-slate-500 uppercase">
+              Your IDE
+            </span>
+            <select
+              value={activeIDE}
+              onChange={(e) => setActiveIDE(e.target.value as IDEKey)}
+              className="text-[12px] font-semibold rounded-md px-2 py-1 transition-colors"
+              style={{
+                background: "rgba(30,41,59,0.9)",
+                border: "1px solid rgba(71,85,105,0.6)",
+                color: "#6ee7b7",
+                outline: "none",
+                cursor: "pointer",
+              }}
+              aria-label="Select your IDE"
+            >
+              {IDE_ORDER.map((key) => (
+                <option key={key} value={key}>
+                  {IDE_CONFIGS[key].label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <CodeSnippet title={ide.configFile} accent="emerald" code={snippet} />
+          {ide.configFileNote && (
+            <p className="m-0 text-[11.5px] leading-relaxed text-slate-500 pl-1">
+              {ide.configFileNote}
+            </p>
+          )}
+        </div>
+
+        <CodeSnippet
+          title="2 · then just ask"
+          accent="emerald"
+          code="Compile and install https://github.com/google/adk-python as an agent skill"
+        />
       </div>
     </div>
-    <div className="flex flex-col gap-3">
-      <CodeSnippet
-        title="1 · point your agent at GitScape"
-        accent="emerald"
-        prompt
-        code="npx gitscape init"
-      />
-      <CodeSnippet title=".mcp.json" accent="emerald" code={MCP_JSON} />
-      <CodeSnippet
-        title="2 · then just ask"
-        accent="emerald"
-        code="Compile and install https://github.com/google/adk-python as an agent skill"
-      />
-    </div>
-  </div>
-);
+  );
+};
+
 
 const WebPanel: React.FC = () => (
   <div className="flex flex-col items-center gap-5 text-center py-4">

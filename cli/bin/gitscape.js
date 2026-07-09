@@ -3,7 +3,129 @@
 import fs from 'fs';
 import path from 'path';
 
-const SERVER_URL = 'https://gitscape-143600285956.us-central1.run.app';
+const MCP_URL = 'https://gitscape.ai/api/mcp';
+
+// ─── IDE detection table ───────────────────────────────────────────────────────
+// Each entry describes where to find the IDE's config and what key to use.
+// "url"       → Claude, Cursor, VS Code Continue, IntelliJ, Zed
+// "serverUrl" → Windsurf, Antigravity (Gemini IDE)
+
+const IDE_TARGETS = [
+  {
+    id: 'antigravity',
+    label: 'Antigravity (Gemini IDE)',
+    urlKey: 'serverUrl',
+    // Global config — relative to HOME
+    configPath: (home) => path.join(home, '.gemini', 'config', 'mcp_config.json'),
+    isGlobal: true,
+  },
+  {
+    id: 'windsurf',
+    label: 'Windsurf',
+    urlKey: 'serverUrl',
+    configPath: (home) => path.join(home, '.codeium', 'windsurf', 'mcp_config.json'),
+    isGlobal: true,
+  },
+  {
+    id: 'cursor',
+    label: 'Cursor',
+    urlKey: 'url',
+    // Project-local config
+    configPath: () => path.join(process.cwd(), '.cursor', 'mcp.json'),
+    isGlobal: false,
+  },
+  {
+    id: 'claude',
+    label: 'Claude (Code / Desktop)',
+    urlKey: 'url',
+    configPath: () => path.join(process.cwd(), '.mcp.json'),
+    isGlobal: false,
+  },
+];
+
+function getHomeDir() {
+  return process.env.HOME || process.env.USERPROFILE || (process.platform === 'win32'
+    ? path.join(process.env.HOMEDRIVE || 'C:', process.env.HOMEPATH || '\\Users\\default')
+    : '/tmp');
+}
+
+/**
+ * Detect which IDEs are present by checking whether their config directories exist.
+ * For global IDEs (Windsurf, Antigravity) we check the parent directory.
+ * For project-local IDEs (Cursor, Claude) we always write them if asked.
+ */
+function detectIDEs(home) {
+  const detected = [];
+  for (const ide of IDE_TARGETS) {
+    const cfgPath = ide.configPath(home);
+    const parentDir = path.dirname(cfgPath);
+    if (ide.isGlobal) {
+      // Only write global configs if the IDE is actually installed (parent dir exists)
+      if (fs.existsSync(parentDir)) {
+        detected.push(ide);
+      }
+    } else {
+      // Project-local — always include
+      detected.push(ide);
+    }
+  }
+  return detected;
+}
+
+/**
+ * Merge the gitscape entry into an existing MCP config JSON object.
+ * Preserves all other servers already configured.
+ */
+function mergeGitscapeEntry(existing, urlKey) {
+  const parsed = existing ? (() => { try { return JSON.parse(existing); } catch { return {}; } })() : {};
+  const servers = parsed.mcpServers || {};
+  servers.gitscape = { [urlKey]: MCP_URL };
+  return JSON.stringify({ ...parsed, mcpServers: servers }, null, 2);
+}
+
+async function handleInit() {
+  const home = getHomeDir();
+  const targets = detectIDEs(home);
+
+  if (targets.length === 0) {
+    // Fallback: write a generic .mcp.json in the project root
+    const fallbackPath = path.join(process.cwd(), '.mcp.json');
+    const content = JSON.stringify({ mcpServers: { gitscape: { url: MCP_URL } } }, null, 2);
+    fs.writeFileSync(fallbackPath, content, 'utf-8');
+    console.log(`✓ Created .mcp.json → ${MCP_URL}`);
+    console.log('  (No supported IDE detected — wrote generic config)');
+    return;
+  }
+
+  let wrote = 0;
+  for (const ide of targets) {
+    const cfgPath = ide.configPath(home);
+    const dir = path.dirname(cfgPath);
+
+    try {
+      // Ensure parent directory exists
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+
+      // Read existing config (if any) and merge
+      const existing = fs.existsSync(cfgPath) ? fs.readFileSync(cfgPath, 'utf-8') : null;
+      const merged = mergeGitscapeEntry(existing, ide.urlKey);
+      fs.writeFileSync(cfgPath, merged, 'utf-8');
+
+      const displayPath = cfgPath.replace(home, '~');
+      console.log(`✓ ${ide.label}: wrote "${ide.urlKey}" → ${displayPath}`);
+      wrote++;
+    } catch (err) {
+      console.warn(`  ⚠ Could not update ${ide.label} config: ${err.message}`);
+    }
+  }
+
+  console.log(`\n${wrote} IDE config${wrote === 1 ? '' : 's'} updated. Reload your IDE to pick up the change.`);
+  console.log('  Private repo? Pass your PAT when asking: "install using token ghp_..."');
+}
+
+
 
 function printHelp() {
   console.log(`
@@ -11,35 +133,13 @@ GitScape CLI — Compile any repository into a local agent skill.
 
 Usage:
   npx gitscape <repo_url> [options]   Compile and install a skill locally
-  npx gitscape init                   Create a local .mcp.json pointing to GitScape
+  npx gitscape init                   Configure your IDE(s) to use the GitScape MCP server
   npx gitscape remove <skill_name>    Uninstall a skill and clean up references
 
 Options:
   --token <pat>       Optional GitHub Personal Access Token for private repos
   -h, --help          Show this help message
 `);
-}
-
-async function handleInit() {
-  const server = SERVER_URL;
-  const mcpConfigPath = path.join(process.cwd(), '.mcp.json');
-  const config = {
-    mcpServers: {
-      gitscape: {
-        url: `${server}/api/mcp`,
-        description: "GitScape — compile any repo into an agent skill"
-      }
-    }
-  };
-
-  try {
-    fs.writeFileSync(mcpConfigPath, JSON.stringify(config, null, 2), 'utf-8');
-    console.log(`✓ Created .mcp.json pointing to ${server}/api/mcp`);
-    console.log('\nTo enable this MCP server in Cursor or Claude Code, add the server in your editor settings.');
-  } catch (err) {
-    console.error(`Error writing .mcp.json: ${err.message}`);
-    process.exit(1);
-  }
 }
 
 async function handleRemove(skillName) {
@@ -148,13 +248,14 @@ function injectIntoAgentsMd(skillName) {
 }
 
 async function handleCompile(repoUrl, options) {
-  const server = SERVER_URL;
   const token = options.token || process.env.GITHUB_TOKEN || null;
 
   console.log(`Compiling skill for ${repoUrl}...`);
-  
-  const isDirectLocal = server.includes(':8081') || server.includes('127.0.0.1:8081') || server.includes('localhost:8081');
-  const mcpCallUrl = isDirectLocal ? `${server}/mcp/call` : `${server}/api/mcp/call`;
+
+  // Support local dev override via env var
+  const serverBase = process.env.GITSCAPE_SERVER || 'https://gitscape.ai';
+  const isLocal = serverBase.includes('localhost') || serverBase.includes('127.0.0.1');
+  const mcpCallUrl = isLocal ? `${serverBase}/mcp/call` : `${serverBase}/api/mcp/call`;
   
   try {
     const response = await fetch(mcpCallUrl, {

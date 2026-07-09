@@ -98,3 +98,6 @@ Quick-reference checklists in `.agents/references/`:
 - `observability-checklist.md` — Logging and alerting standards
 - `accessibility-checklist.md` — WCAG 2.1 AA for the React frontend
 - `orchestration-patterns.md` — How personas and skills compose
+
+## GitScape Skills
+- [addyosmani-agent-skills](.agents/skills/addyosmani-agent-skills/SKILL.md)

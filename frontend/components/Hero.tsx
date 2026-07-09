@@ -36,28 +36,12 @@ export const Hero: React.FC = () => (
       <div className="flex flex-wrap items-center justify-center gap-3">
         <CodeSnippet compact prompt accent="violet" code="npx gitscape <repo-url>" />
         <a
-          href="#developer-tools"
+          href="#digest-generator-input"
           className="text-[12.5px] font-medium text-slate-500 hover:text-slate-300 transition-colors"
         >
           also an MCP server →
         </a>
       </div>
-
-      <a
-        href="#security"
-        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[12px] font-semibold transition-colors duration-200 hover:-translate-y-0.5"
-        style={{
-          border: "1px solid rgba(16,185,129,0.35)",
-          background: "rgba(16,185,129,0.08)",
-          color: "#34d399",
-        }}
-      >
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-          <path d="M9 12l2 2 4-4" />
-        </svg>
-        Every skill scanned by ScapeGuard
-      </a>
     </div>
   </div>
 );
