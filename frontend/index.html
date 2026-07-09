@@ -17,8 +17,8 @@
   <!-- Primary Meta Tags -->
   <title>GitScape AI – Turn GitHub Repos into AI Agent Skills</title>
   <meta name="title" content="GitScape AI – Turn GitHub Repos into AI Agent Skills">
-  <meta name="description" content="Convert GitHub repositories into code digests, interactive diagrams, and structured SKILL.md files. Forge ready-to-load skills for your AI coding agents.">
-  <meta name="keywords" content="github repositories to agent skills, agent skills, openai skills, cloud skills, topic skills, openai agent skills, SKILL.md generator, ai agent skill, repo to llm context, github repository to text, agent knowledge base, git digest, repo ingestion, codebase context, llm code understanding, ai coding agent, repo visualization, github diagram, agentic coding, gitscape, git scape ai">
+  <meta name="description" content="Convert GitHub repositories into code digests, interactive diagrams, and structured SKILL.md files — via web, one-command CLI (npx gitscape), or MCP server. Forge ready-to-load skills for your AI coding agents.">
+  <meta name="keywords" content="github repositories to agent skills, agent skills, openai skills, cloud skills, topic skills, openai agent skills, SKILL.md generator, ai agent skill, repo to llm context, github repository to text, agent knowledge base, git digest, repo ingestion, codebase context, llm code understanding, ai coding agent, repo visualization, github diagram, agentic coding, gitscape, git scape ai, gitscape cli, npx gitscape, mcp server, model context protocol, install agent skill cli">
   <meta name="robots" content="index, follow, max-snippet:160, max-image-preview:large">
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
   <meta name="language" content="English">
@@ -30,7 +30,7 @@
   <meta property="og:site_name" content="GitScape AI">
   <meta property="og:locale" content="en_US">
   <meta property="og:title" content="GitScape AI – Turn GitHub Repos into AI Agent Skills">
-  <meta property="og:description" content="Convert GitHub repositories into code digests, interactive diagrams, and structured SKILL.md files. Forge ready-to-load skills for your AI coding agents.">
+  <meta property="og:description" content="Convert GitHub repositories into code digests, interactive diagrams, and structured SKILL.md files — via web, one-command CLI (npx gitscape), or MCP server. Forge ready-to-load skills for your AI coding agents.">
   <meta property="og:image" content="https://gitscape.ai/og-image.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
@@ -41,7 +41,7 @@
   <meta name="twitter:url" content="https://gitscape.ai/">
   <meta name="twitter:creator" content="@jmachete">
   <meta name="twitter:title" content="GitScape AI – Turn GitHub Repos into AI Agent Skills">
-  <meta name="twitter:description" content="Convert GitHub repositories into code digests, interactive diagrams, and structured SKILL.md files. Forge ready-to-load skills for your AI coding agents.">
+  <meta name="twitter:description" content="Convert GitHub repositories into code digests, interactive diagrams, and structured SKILL.md files — via web, one-command CLI (npx gitscape), or MCP server. Forge ready-to-load skills for your AI coding agents.">
   <meta name="twitter:image" content="https://gitscape.ai/og-image.png">
   <meta name="twitter:image:alt" content="GitScape AI — convert GitHub repos into AI agent skills">
 
@@ -80,7 +80,9 @@
           "Interactive repository structure diagrams",
           "AI agent SKILL.md export",
           "Supports public and private repositories",
-          "LLM-ready context output"
+          "LLM-ready context output",
+          "One-command CLI installer (npx gitscape)",
+          "MCP server for agent-native skill installation"
         ],
         "author": {
           "@type": "Person",
@@ -142,6 +144,22 @@
             "acceptedAnswer": {
               "@type": "Answer",
               "text": "Code Visualization renders an interactive, zoomable diagram of your repository's file and directory structure, making it easy to explore and understand the architecture of any codebase at a glance."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How do I use GitScape from the terminal?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Run npx gitscape <repository_url> — no install or signup needed. The CLI compiles the repo, writes SKILL.md, manifest.json and references into .agents/skills/<owner-repo>/ in your project, and auto-registers the skill in your AGENTS.md and CLAUDE.md. Use --token for private repositories, and npx gitscape remove <name> to uninstall."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Does GitScape have an MCP server?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. Run npx gitscape init to create a .mcp.json pointing at the GitScape MCP server, or add https://gitscape-143600285956.us-central1.run.app/api/mcp to Claude Code, Cursor or Windsurf. Your agent can then call the install_skill tool to compile, scan and install any repository as a skill on its own."
             }
           },
           {

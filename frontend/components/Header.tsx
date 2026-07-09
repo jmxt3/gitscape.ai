@@ -52,6 +52,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleTokenModal, hasToken }) 
         {/* Center nav */}
         <nav className="hidden md:flex items-center gap-7 text-[13px] font-medium text-slate-400">
           <a href="#how-it-works" className="hover:text-slate-200 transition-colors">How it works</a>
+          <a href="#developer-tools" className="hover:text-slate-200 transition-colors">CLI &amp; MCP</a>
           <a href="#security" className="hover:text-slate-200 transition-colors">Security</a>
           <a href="#open-source" className="hover:text-slate-200 transition-colors">Open source</a>
           <a

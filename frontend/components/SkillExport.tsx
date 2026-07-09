@@ -3,6 +3,7 @@ import ReactMarkdown from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
 import "highlight.js/styles/github-dark.css";
 import { CategoryResult, ScanReport, ScanStatus, SkillManifest, SkillReferences } from "../types";
+import { CodeSnippet } from "./CodeSnippet";
 
 interface SkillExportProps {
   skillMd: string;
@@ -716,6 +717,22 @@ export const SkillExport: React.FC<SkillExportProps> = ({
           </label>
         )}
       </div>
+
+      {repoUrl && !hardBlocked && (
+        <div
+          className="rounded-xl px-4 py-3.5 flex flex-col gap-2"
+          style={{ background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.25)" }}
+        >
+          <p className="text-xs font-semibold text-amber-300 m-0">
+            Install this skill straight into your project
+          </p>
+          <CodeSnippet compact prompt accent="amber" code={`npx gitscape ${repoUrl}`} />
+          <p className="text-[11px] text-slate-500 m-0">
+            Runs the same compile + ScapeGuard scan, writes the files into
+            <span className="font-mono text-slate-400"> .agents/skills/</span> and registers them in your AGENTS.md.
+          </p>
+        </div>
+      )}
 
       {hardBlocked && (
         <p className="text-xs text-red-400 bg-red-900/20 border border-red-700/40 px-3 py-2 rounded-lg">

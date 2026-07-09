@@ -8,7 +8,7 @@ import React, { useEffect, useState } from "react";
 const REPO_API_URL = "https://api.github.com/repos/jmxt3/Git-Scape-Web";
 const REPO_URL = "https://github.com/jmxt3/Git-Scape-Web";
 
-const CheckRow: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+export const CheckRow: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <div className="flex items-center gap-3">
     <div
       className="flex items-center justify-center shrink-0 rounded-md"
@@ -100,6 +100,13 @@ export const HowItWorks: React.FC = () => (
           </div>
         ))}
       </div>
+      <p className="m-0 text-center text-[13px] text-slate-500">
+        The same pipeline runs behind the{" "}
+        <a href="#developer-tools" className="text-violet-400 hover:text-violet-300 transition-colors font-medium">
+          CLI and the MCP server
+        </a>
+        .
+      </p>
     </div>
   </section>
 );
@@ -272,6 +279,14 @@ const FAQ_ITEMS = [
   {
     q: "What is Code Visualization?",
     a: "Code Visualization renders an interactive, zoomable diagram of your repository's file and directory structure, making it easy to explore and understand the architecture of any codebase at a glance."
+  },
+  {
+    q: "How do I use GitScape from the terminal?",
+    a: "Run npx gitscape <repository_url> — no install or signup needed. The CLI compiles the repo, writes SKILL.md, manifest.json and references into .agents/skills/<owner-repo>/ in your project, and auto-registers the skill in your AGENTS.md and CLAUDE.md. Use --token for private repositories, and npx gitscape remove <name> to uninstall."
+  },
+  {
+    q: "Does GitScape have an MCP server?",
+    a: "Yes. Run npx gitscape init to create a .mcp.json pointing at the GitScape MCP server, or add https://gitscape-143600285956.us-central1.run.app/api/mcp to Claude Code, Cursor or Windsurf. Your agent can then call the install_skill tool to compile, scan and install any repository as a skill on its own."
   },
   {
     q: "Does GitScape AI support private repositories?",

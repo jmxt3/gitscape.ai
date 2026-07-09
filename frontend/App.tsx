@@ -15,6 +15,7 @@ import { DiagramFullscreenModal } from "./components/DiagramFullscreenModal";
 import { Hero } from "./components/Hero";
 import { FeatureCards } from "./components/FeatureCards";
 import { HowItWorks, Security, OpenSource, FaqSection } from "./components/LandingSections";
+import { DevTools } from "./components/DevToolsSection";
 import {
   GITHUB_TOKEN_LOCAL_STORAGE_KEY,
   REPO_URL_LOCAL_STORAGE_KEY,
@@ -1299,6 +1300,7 @@ const App: React.FC = () => {
         )}
 
         <div className={showOutputArea ? "mt-16 sm:mt-20" : ""}>
+          <DevTools />
           <HowItWorks />
           <Security />
           <OpenSource />
@@ -1329,6 +1331,20 @@ const App: React.FC = () => {
             className="hover:text-slate-300 transition-colors"
           >
             GitHub
+          </a>
+          <a
+            href="https://www.npmjs.com/package/gitscape"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-slate-300 transition-colors"
+          >
+            CLI on npm
+          </a>
+          <a
+            href="#developer-tools"
+            className="hover:text-slate-300 transition-colors"
+          >
+            MCP server
           </a>
           <a
             href="/api/docs"
