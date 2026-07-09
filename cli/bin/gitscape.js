@@ -293,9 +293,28 @@ async function handleCompile(repoUrl, options) {
       throw new Error(payload.message || 'Failed to generate skill');
     }
 
-    const { skill_name, scan_grade, files } = payload;
+    const { skill_name, scan_grade, pre_write_actions, files } = payload;
 
     console.log(`✓ Skill compiled successfully (Scan Grade: ${scan_grade})`);
+
+    // Execute pre-write actions (e.g. delete old version of skill before writing new files).
+    // This ensures stale reference files from a previous install don't linger after an update.
+    if (Array.isArray(pre_write_actions)) {
+      for (const action of pre_write_actions) {
+        if (action.type === 'delete_directory_if_exists') {
+          const targetDir = path.join(process.cwd(), action.path);
+          if (fs.existsSync(targetDir)) {
+            try {
+              fs.rmSync(targetDir, { recursive: true, force: true });
+              console.log(`  clean ${action.path} (previous version removed)`);
+            } catch (err) {
+              console.warn(`  ⚠ Could not remove ${action.path}: ${err.message}`);
+            }
+          }
+        }
+      }
+    }
+
     console.log('Writing files locally...');
 
     for (const [relPath, content] of Object.entries(files)) {

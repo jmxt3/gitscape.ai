@@ -1082,7 +1082,7 @@ const App: React.FC = () => {
 
           <Hero />
           <div className="relative mt-10 sm:mt-12">
-            <section id="digest-generator-input" className="relative w-full max-w-[850px] mx-auto px-4">
+            <section id="digest-generator-input" className="relative w-full max-w-[1100px] mx-auto px-4">
             <div
               className="rounded-2xl p-5 sm:p-7 flex flex-col gap-6"
               style={{

@@ -87,11 +87,31 @@ async def list_tools():
                             "type": "string",
                             "description": "Optional GitHub Personal Access Token for private repositories."
                         },
-
                     },
                     "required": ["repo_url"]
                 }
-            }
+            },
+            {
+                "name": "uninstall_skill",
+                "description": (
+                    "Returns the exact file paths and AGENTS.md references to delete in order to "
+                    "completely remove a previously installed GitScape skill from .agents/skills/. "
+                    "The agent must execute the deletions locally after receiving this response."
+                ),
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "skill_name": {
+                            "type": "string",
+                            "description": (
+                                "The kebab-case skill name as it appears in .agents/skills/, e.g. \"google-adk-python\". "
+                                "Alternatively, pass the full GitHub repo URL and the name will be derived from it."
+                            )
+                        },
+                    },
+                    "required": ["skill_name"]
+                }
+            },
         ]
     }
 
@@ -148,10 +168,25 @@ async def run_install_skill(repo_url: str, github_token: Optional[str]) -> Dict[
             for ref_name, ref_content in pkg.references.items():
                 files_to_write[f"{base_path}/{ref_name}"] = ref_content
 
+            # Include the full code digest as a reference file so the agent has
+            # complete source-code context — mirrors what the web zip export does.
+            if pkg.digest_filename and pkg.digest_content:
+                files_to_write[f"{base_path}/{pkg.digest_filename}"] = pkg.digest_content
+
             result_payload = {
                 "status": "success",
                 "skill_name": pkg.name,
                 "scan_grade": pkg.scan_report.status.value,
+                "pre_write_actions": [
+                    {
+                        "type": "delete_directory_if_exists",
+                        "path": base_path,
+                        "description": (
+                            f"Remove the previous version of '{pkg.name}' before writing new files. "
+                            "This ensures stale reference files from an older install don't linger."
+                        )
+                    }
+                ],
                 "files": files_to_write
             }
 
@@ -173,6 +208,68 @@ async def run_install_skill(repo_url: str, github_token: Optional[str]) -> Dict[
             "content": [{"type": "text", "text": f"Error during skill generation: {str(e)}"}],
             "isError": True
         }
+
+
+def run_uninstall_skill(skill_name: str) -> Dict[str, Any]:
+    """Build the uninstall manifest for a previously installed skill.
+
+    The MCP server has no access to the agent's local filesystem, so this
+    returns a structured action list the agent must execute locally.
+    """
+    import re
+
+    # Derive the kebab-case skill directory name from a URL if one was passed.
+    raw = skill_name.strip()
+    if raw.startswith("http://") or raw.startswith("https://"):
+        try:
+            from urllib.parse import urlparse
+            parts = urlparse(raw).path.rstrip("/").split("/")
+            raw = f"{parts[-2]}-{parts[-1]}" if len(parts) >= 2 else parts[-1]
+        except Exception:
+            pass
+    # Normalise to kebab-case (mirrors generate_skill_name in skill_builder.py)
+    name = re.sub(r"[^a-z0-9]+", "-", raw.lower()).strip("-")
+    if not name:
+        return {
+            "content": [{"type": "text", "text": "Error: could not derive a valid skill name."}],
+            "isError": True
+        }
+
+    skill_dir = f".agents/skills/{name}"
+    agents_md_files = ["AGENTS.md", ".agents/AGENTS.md", "CLAUDE.md", ".gemini/config/AGENTS.md"]
+    skill_line = f"- [{name}](.agents/skills/{name}/SKILL.md)"
+
+    payload = {
+        "status": "success",
+        "skill_name": name,
+        "actions": [
+            {
+                "type": "delete_directory",
+                "path": skill_dir,
+                "description": f"Delete the skill directory and all its contents"
+            },
+            {
+                "type": "remove_line_from_files",
+                "line": skill_line,
+                "files": agents_md_files,
+                "description": (
+                    f"Remove the skill reference line from each file if present. "
+                    f"Also remove the '## GitScape Skills' section header if it becomes empty."
+                )
+            }
+        ],
+        "instructions": (
+            f"To completely uninstall '{name}':\n"
+            f"1. Delete the directory: {skill_dir}\n"
+            f"2. Remove this line from AGENTS.md / CLAUDE.md if present:\n   {skill_line}\n"
+            f"3. If the '## GitScape Skills' section in those files is now empty, remove the header too."
+        )
+    }
+    return {
+        "content": [{"type": "text", "text": json.dumps(payload, indent=2)}],
+        "isError": False
+    }
+
 
 
 @mcp_router.post("")
@@ -205,7 +302,34 @@ async def call_tool(request: Request):
             name = params.get("name")
             arguments = params.get("arguments", {})
 
-            if name != "install_skill":
+            if name == "install_skill":
+                repo_url = arguments.get("repo_url")
+                if not repo_url:
+                    return {
+                        "jsonrpc": jsonrpc,
+                        "id": req_id,
+                        "error": {
+                            "code": -32602,
+                            "message": "repo_url argument is required"
+                        }
+                    }
+                github_token = arguments.get("github_token")
+                res = await run_install_skill(repo_url, github_token)
+
+            elif name == "uninstall_skill":
+                skill_name = arguments.get("skill_name")
+                if not skill_name:
+                    return {
+                        "jsonrpc": jsonrpc,
+                        "id": req_id,
+                        "error": {
+                            "code": -32602,
+                            "message": "skill_name argument is required"
+                        }
+                    }
+                res = run_uninstall_skill(skill_name)
+
+            else:
                 return {
                     "jsonrpc": jsonrpc,
                     "id": req_id,
@@ -215,20 +339,6 @@ async def call_tool(request: Request):
                     }
                 }
 
-            repo_url = arguments.get("repo_url")
-            if not repo_url:
-                return {
-                    "jsonrpc": jsonrpc,
-                    "id": req_id,
-                    "error": {
-                        "code": -32602,
-                        "message": "repo_url argument is required"
-                    }
-                }
-
-            github_token = arguments.get("github_token")
-
-            res = await run_install_skill(repo_url, github_token)
             if res.get("isError"):
                 return {
                     "jsonrpc": jsonrpc,
@@ -273,16 +383,24 @@ async def call_tool(request: Request):
     # 2. Otherwise handle as legacy CLI request:
     name = body.get("name")
     arguments = body.get("arguments", {})
-    if name != "install_skill":
-        raise HTTPException(status_code=404, detail=f"Tool {name} not found")
 
-    repo_url = arguments.get("repo_url")
-    if not repo_url:
-        return {
-            "content": [{"type": "text", "text": "Error: repo_url is required."}],
-            "isError": True
-        }
+    if name == "install_skill":
+        repo_url = arguments.get("repo_url")
+        if not repo_url:
+            return {
+                "content": [{"type": "text", "text": "Error: repo_url is required."}],
+                "isError": True
+            }
+        github_token = arguments.get("github_token")
+        return await run_install_skill(repo_url, github_token)
 
-    github_token = arguments.get("github_token")
+    if name == "uninstall_skill":
+        skill_name = arguments.get("skill_name")
+        if not skill_name:
+            return {
+                "content": [{"type": "text", "text": "Error: skill_name is required."}],
+                "isError": True
+            }
+        return run_uninstall_skill(skill_name)
 
-    return await run_install_skill(repo_url, github_token)
+    raise HTTPException(status_code=404, detail=f"Tool {name!r} not found")

@@ -240,6 +240,27 @@ The CLI is a fast, zero-dependency Node.js utility that calls the compiler API a
    - `--type <type>`: Skill type: `code` or `framework` (default: `code`).
    - `--server <url>`: Override the compiler server (default: `https://gitscape-143600285956.us-central1.run.app`).
 
+4. **Update an Already-Installed Skill**:
+   Re-running the install command on the same repo is all you need — **there is no separate update command**:
+   ```bash
+   npx gitscape https://github.com/owner/repo
+   ```
+   The CLI automatically removes the previous skill directory before writing the new files, so renamed or deleted reference files never accumulate. Your `AGENTS.md` / `CLAUDE.md` registration is untouched (idempotent).
+
+   Via MCP, tell your agent:
+   > *"Update the google/adk-python skill"*
+   
+   The agent calls `install_skill` with the same URL — same result.
+
+5. **Uninstall a Skill**:
+   ```bash
+   npx gitscape remove <skill_name>
+   ```
+   Deletes `.agents/skills/<skill_name>/` and removes its registration from `AGENTS.md` and `CLAUDE.md`.
+
+   Via MCP, tell your agent:
+   > *"Uninstall the google-adk-python skill"*
+
 ---
 
 ### 🔌 Model Context Protocol (MCP) Server

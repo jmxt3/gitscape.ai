@@ -289,6 +289,14 @@ const FAQ_ITEMS = [
     a: "Yes. Run npx gitscape init to create a .mcp.json pointing at the GitScape MCP server, or add https://gitscape.ai/api/mcp to Claude Code, Cursor or Windsurf. Your agent can then call the install_skill tool to compile, scan and install any repository as a skill on its own."
   },
   {
+    q: "How do I update an installed skill?",
+    a: "Just run the same install command again — there is no separate update command. For example: npx gitscape https://github.com/google/adk-python. The CLI (and MCP tool) automatically removes the previous skill directory before writing the fresh files, so renamed or deleted references never accumulate. Your AGENTS.md registration is left untouched. Via MCP, simply tell your agent to re-install the skill with the same repository URL."
+  },
+  {
+    q: "How do I uninstall a skill?",
+    a: "Run npx gitscape remove <skill_name> from your terminal — it deletes .agents/skills/<name>/ and removes the skill reference from AGENTS.md and CLAUDE.md. Via MCP, tell your agent: 'Uninstall the <skill_name> skill' and it will call the uninstall_skill tool, which returns the exact paths to delete."
+  },
+  {
     q: "Does GitScape AI support private repositories?",
     a: "Yes. You can add a GitHub Personal Access Token (PAT) via the token button in the top-right corner. This also raises your API rate limit from 60 to 5,000 requests per hour."
   },

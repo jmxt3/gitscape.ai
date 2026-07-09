@@ -172,6 +172,22 @@
           },
           {
             "@type": "Question",
+            "name": "How do I update an installed skill?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Just run the same install command again — there is no separate update command. For example: npx gitscape https://github.com/google/adk-python. The CLI and MCP tool automatically remove the previous skill directory before writing the fresh files, so renamed or deleted references never accumulate. Your AGENTS.md registration is preserved. Via MCP, tell your agent to re-install the skill with the same repository URL."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How do I uninstall a skill?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Run npx gitscape remove <skill_name> from your terminal — it deletes .agents/skills/<name>/ and removes the skill reference from AGENTS.md and CLAUDE.md. Via MCP, tell your agent: 'Uninstall the <skill_name> skill' and it will call the uninstall_skill tool, which returns the exact paths to delete."
+            }
+          },
+          {
+            "@type": "Question",
             "name": "Is GitScape AI free to use?",
             "acceptedAnswer": {
               "@type": "Answer",

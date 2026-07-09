@@ -106,6 +106,32 @@ npx gitscape remove adk-python
 
 ---
 
+### 4. Update an Already-Installed Skill
+```bash
+npx gitscape <repository_url>
+```
+Running the install command again on the same repository is all you need to do — **there is no separate `update` command**. GitScape follows the same pattern as `npm install`: the install is the update.
+
+Before writing the new files the CLI will automatically delete the previous skill directory (`delete_directory_if_exists`), so stale reference files that were renamed or removed upstream never linger. Your `AGENTS.md` / `CLAUDE.md` registration is preserved (it is idempotent).
+
+**Example — re-compile a skill after the upstream repo has changed:**
+```bash
+npx gitscape https://github.com/google/adk-python
+# Output:
+#   clean .agents/skills/google-adk-python (previous version removed)
+#   write .agents/skills/google-adk-python/SKILL.md
+#   write .agents/skills/google-adk-python/references/api.md
+#   ...
+#   ✓ Skill google-adk-python installed to .agents/skills/google-adk-python
+```
+
+> **Tip:** Pin to the latest CLI before updating to ensure you get any pipeline improvements:
+> ```bash
+> npx gitscape@latest https://github.com/owner/repo
+> ```
+
+---
+
 ## 🔄 Updating the CLI
 
 ### Bypass Cache (`npx`)
