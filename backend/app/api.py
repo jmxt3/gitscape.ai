@@ -108,7 +108,8 @@ def get_digest(
                 )
                 units = skillforge.units_from_clone(Path(clone_path))
                 pkg = skillforge.build_skill(
-                    units, meta, digest_hash=skillforge.content_hash(digest_str)
+                    units, meta, digest_hash=skillforge.content_hash(digest_str),
+                    digest_content=digest_str
                 )
                 skillforge.skill_cache.set(skillforge.cache_key(digest_str), pkg)
                 skill_fields = {
@@ -191,6 +192,7 @@ def _build_from_digest(body: "SkillZipRequest", repo_url: str, *, hd: bool = Fal
         hd=hd,
         skill_type=skill_type,
         prebuilt_references=prebuilt_references,
+        digest_content=body.digest_md,
     )
     skillforge.skill_cache.set(key, pkg)
     return pkg

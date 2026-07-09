@@ -91,6 +91,8 @@ def build_zip(pkg: SkillPackage, *, allow_warn: bool = True, bypass_scan_gate: b
             zf.writestr(f"{root}/{relpath}", content)
         for relpath, content in pkg.exporters.items():
             zf.writestr(f"{root}/{relpath}", content)
+        if pkg.digest_filename and pkg.digest_content:
+            zf.writestr(f"{root}/{pkg.digest_filename}", pkg.digest_content)
         zf.writestr(f"{root}/manifest.json", manifest_json)
         zf.writestr(f"{root}/scan-report.json", scan_report_json)
         zf.writestr(f"{root}/scan-report.sarif", sarif_json)

@@ -467,6 +467,7 @@ const App: React.FC = () => {
 
   // Per-stage completion flags (drives the flip animation on each card icon)
   const [stageComplete, setStageComplete] = useState({ digest: false, visualization: false, skill: false });
+  const [hideCards, setHideCards] = useState<boolean>(false);
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -598,6 +599,7 @@ const App: React.FC = () => {
           if (cachedData.framework_manifest) setFrameworkManifest(cachedData.framework_manifest);
           if (cachedData.framework_scan_report) setFrameworkScanReport(cachedData.framework_scan_report);
           if (cachedData.framework_references) setFrameworkReferences(cachedData.framework_references);
+          setHideCards(true);
         } catch (e) {
           console.warn(`Failed to restore cached data for ${repoUrl}:`, e);
           deleteCachedRepo(repoUrl);
@@ -752,6 +754,7 @@ const App: React.FC = () => {
       return;
     }
 
+    setHideCards(true);
     storeInLocalStorage("gitScapeDigestContent", null);
 
     setIsLoading(true);
@@ -1070,6 +1073,7 @@ const App: React.FC = () => {
     // Reset all stage completion flags AND session guard
     hasGeneratedThisSessionRef.current = false;
     setStageComplete({ digest: false, visualization: false, skill: false });
+    setHideCards(false);
   }, [repoUrl]);
 
   // Drive stage completion flags from data availability.
@@ -1251,7 +1255,19 @@ const App: React.FC = () => {
             </p>
           </section>
 
-          <FeatureCards stageComplete={stageComplete} />
+          <div
+            style={{
+              transition: "opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), max-height 0.6s cubic-bezier(0.16, 1, 0.3, 1), margin-top 0.6s cubic-bezier(0.16, 1, 0.3, 1)",
+              opacity: hideCards ? 0 : 1,
+              transform: hideCards ? "translateY(24px) scale(0.97)" : "translateY(0) scale(1)",
+              maxHeight: hideCards ? "0px" : "1000px",
+              marginTop: hideCards ? "0px" : "3rem",
+              overflow: "hidden",
+              pointerEvents: hideCards ? "none" : "auto",
+            }}
+          >
+            <FeatureCards stageComplete={stageComplete} />
+          </div>
 
           </div>{/* end relative space-y-12 */}
         </div>{/* end aurora wrapper */}
@@ -1282,7 +1298,7 @@ const App: React.FC = () => {
           </section>
         )}
 
-        <div className="mt-16 sm:mt-20">
+        <div className={showOutputArea ? "mt-16 sm:mt-20" : ""}>
           <HowItWorks />
           <Security />
           <OpenSource />

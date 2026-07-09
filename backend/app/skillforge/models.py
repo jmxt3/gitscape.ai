@@ -267,3 +267,5 @@ class SkillPackage(BaseModel):
     manifest: Manifest
     scan_report: ScanReport = Field(default_factory=ScanReport)
     exporters: dict[str, str] = Field(default_factory=dict)  # filename -> content
+    digest_filename: Optional[str] = None
+    digest_content: Optional[str] = None

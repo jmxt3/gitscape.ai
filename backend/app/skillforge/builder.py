@@ -34,6 +34,7 @@ def build_skill(
     hd: bool = False,
     skill_type: str = "code",
     prebuilt_references: dict | None = None,
+    digest_content: str | None = None,
 ) -> SkillPackage:
     """Build a SkillPackage from content units and repo metadata.
 
@@ -45,6 +46,7 @@ def build_skill(
     skill_type="code" (default) preserves the existing deterministic path with
     optional LLM prose glue when hd=True.
     """
+    digest_filename = f"references/{meta.owner}_{meta.repo}_digest.txt".lower().replace("-", "_") if digest_content else None
     extract = build_extract(units, readme=meta.readme)
 
     if skill_type == "framework":
@@ -57,13 +59,14 @@ def build_skill(
             token_budget=FRAMEWORK_TOKEN_BUDGET,
             framework_prose=framework_prose,
             prebuilt_references=prebuilt_references,
+            digest_filename=digest_filename,
         )
     else:
         # Code Skill path — deterministic + optional prose glue.
         if prose is None and hd:
             from .hd import generate_prose  # lazy
             prose = generate_prose(meta, extract)
-        assembled = assemble(meta, extract, units, token_budget=token_budget, prose=prose)
+        assembled = assemble(meta, extract, units, token_budget=token_budget, prose=prose, digest_filename=digest_filename)
     scan_report: ScanReport = scan_skill(
         assembled.skill_md, assembled.references, units=units,
         extract=extract, repo_url=meta.repo_url,
@@ -81,13 +84,17 @@ def build_skill(
     generated_at = meta.generated_at or datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     exporters = render_exporters(meta.owner, meta.repo)
 
+    manifest_files = ["SKILL.md", *assembled.references.keys(), "manifest.json", "scan-report.json", "scan-report.sarif", *exporters.keys()]
+    if digest_filename:
+        manifest_files.append(digest_filename)
+
     manifest = Manifest(
         name=assembled.name,
         display_name=f"{meta.owner}/{meta.repo}",
         description=assembled.description,
         builder_version=BUILDER_VERSION,
         digest_hash=digest_hash,
-        files=["SKILL.md", *assembled.references.keys(), "manifest.json", "scan-report.json", "scan-report.sarif", *exporters.keys()],
+        files=manifest_files,
         provenance=assembled.provenance,
         scan_status=scan_report.status,
         framework_compatibility=_FRAMEWORKS,
@@ -129,4 +136,6 @@ def build_skill(
         manifest=manifest,
         scan_report=scan_report,
         exporters=exporters,
+        digest_filename=digest_filename,
+        digest_content=digest_content,
     )

@@ -267,6 +267,7 @@ def _render_skill_md(
     quickref_n: int,
     include_concepts: bool,
     prose: ProseFields | None = None,
+    digest_filename: str | None = None,
 ) -> str:
     langs = ", ".join(meta.primary_languages) or "multiple languages"
     what = sanitize_prose(prose.what_this_is) if (prose and prose.what_this_is) else _what_this_is(meta, extract)
@@ -327,6 +328,16 @@ def _render_skill_md(
             lines.append(f"- [{labels.get(rf, rf)}]({rf})")
         lines.append("")
 
+    if digest_filename:
+        lines += [
+            "## Code Access",
+            "",
+            "The full source digest for this repository is available locally:",
+            "",
+            f"- [Full Code Digest]({digest_filename})",
+            "",
+        ]
+
     return "\n".join(lines).strip() + "\n"
 
 
@@ -335,6 +346,7 @@ def _render_framework_skill_md(
     name: str,
     description: str,
     fw: FrameworkProseFields,
+    digest_filename: str | None = None,
 ) -> str:
     """Render the canonical 6-section engineering skill anatomy.
 
@@ -432,10 +444,17 @@ def _render_framework_skill_md(
 
     # ─── Code Access ────────────────────────────────────────────────────────────
     lines += ["## Code Access", ""]
+    if digest_filename:
+        lines += [
+            "The full source digest for this repository is available locally:",
+            "",
+            f"- [Full Code Digest]({digest_filename})",
+            "",
+        ]
     if meta.repo_url:
         encoded_url = quote(meta.repo_url, safe="")
         lines += [
-            f"The full source digest for **{meta.owner}/{meta.repo}** is available via the GitScape API:",
+            f"The full source digest for **{meta.owner}/{meta.repo}** is also available via the GitScape API:",
             "",
             "```",
             f"GET https://gitscape.ai/api/converter?repo_url={meta.repo_url}",
@@ -460,6 +479,7 @@ def assemble(
     prose: ProseFields | None = None,
     framework_prose: FrameworkProseFields | None = None,
     prebuilt_references: dict[str, str] | None = None,
+    digest_filename: str | None = None,
 ) -> AssembledSkill:
     """Assemble a SkillPackage.
 
@@ -474,7 +494,7 @@ def assemble(
         # Engineering Skill path — HD only, no budget trimming
         if framework_prose.description:
             description = sanitize_prose(framework_prose.description)[:1024]
-        skill_md = _render_framework_skill_md(meta, name, description, framework_prose)
+        skill_md = _render_framework_skill_md(meta, name, description, framework_prose, digest_filename=digest_filename)
         # Use caller-supplied references (live-clone quality) when available;
         # fall back to digest-reconstructed references on a cold cache miss.
         if prebuilt_references is not None:
@@ -500,7 +520,7 @@ def assemble(
     include_concepts = True
     while True:
         skill_md = _render_skill_md(
-            meta, extract, name, description, ref_files, quickref_n, include_concepts, prose
+            meta, extract, name, description, ref_files, quickref_n, include_concepts, prose, digest_filename=digest_filename
         )
         if estimate_tokens(skill_md) <= token_budget:
             break

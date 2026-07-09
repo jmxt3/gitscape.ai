@@ -90,7 +90,7 @@ cd '$Backend'
 . '$Venv'
 Write-Host '▶ ScapeGuard backend  →  http://127.0.0.1:8081' -ForegroundColor Cyan
 Write-Host '  Docs: http://127.0.0.1:8081/docs' -ForegroundColor DarkCyan
-uvicorn main:app --host 127.0.0.1 --port 8081 --reload
+python -m uvicorn main:app --host 127.0.0.1 --port 8081 --reload
 "@
     Start-Pane -Title "GitScape — backend :8081" -Command $backendCmd
     Write-Host "✓ Backend window opened  (http://127.0.0.1:8081)" -ForegroundColor Green

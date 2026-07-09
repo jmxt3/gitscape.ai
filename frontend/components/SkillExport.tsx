@@ -733,9 +733,8 @@ export const SkillExport: React.FC<SkillExportProps> = ({
         <p className="text-xs text-red-400 bg-red-900/20 border border-red-700/40 px-3 py-2 rounded-lg">{downloadError}</p>
       )}
 
-      {/* Zip content hint */}
       <p className="text-[11px] text-slate-500">
-        The <span className="text-slate-400 font-medium">.zip</span> contains a slim <span className="text-slate-400 font-medium">SKILL.md</span>, a <span className="text-slate-400 font-medium">references/</span> folder, ADK/Agno exporters, a provenance-stamped <span className="text-slate-400 font-medium">manifest.json</span>, and its full ScapeGuard audit as <span className="text-slate-400 font-medium">scan-report.json</span> + <span className="text-slate-400 font-medium">scan-report.sarif</span>.
+        The <span className="text-slate-400 font-medium">.zip</span> contains a slim <span className="text-slate-400 font-medium">SKILL.md</span>, the full source code digest, a <span className="text-slate-400 font-medium">references/</span> folder, ADK/Agno exporters, a provenance-stamped <span className="text-slate-400 font-medium">manifest.json</span>, and its full ScapeGuard audit as <span className="text-slate-400 font-medium">scan-report.json</span> + <span className="text-slate-400 font-medium">scan-report.sarif</span>.
       </p>
 
       {/* File selector */}

@@ -42,6 +42,7 @@ def test_skill_zip_clean_returns_zip():
     assert "acme-demo/SKILL.md" in names
     assert "acme-demo/references/api.md" in names
     assert "acme-demo/manifest.json" in names
+    assert "acme-demo/references/acme_demo_digest.txt" in names
 
 
 def test_skill_zip_injection_blocked_422():

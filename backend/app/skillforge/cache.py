@@ -33,10 +33,11 @@ _MAX_BYTES = 200 * 1024 * 1024      # 200 MB total heap cap across all entries
 
 
 def _estimate_bytes(pkg: SkillPackage) -> int:
-    """Fast byte-size approximation of the two largest fields in a package."""
+    """Fast byte-size approximation of the largest fields in a package."""
+    digest_sz = len(pkg.digest_content.encode("utf-8", errors="replace")) if pkg.digest_content else 0
     return len(pkg.skill_md.encode("utf-8", errors="replace")) + sum(
         len(v.encode("utf-8", errors="replace")) for v in pkg.references.values()
-    )
+    ) + digest_sz
 
 
 class SkillCache:

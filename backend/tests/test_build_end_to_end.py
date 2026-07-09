@@ -43,7 +43,11 @@ def _build_repo(tmp_path, readme_body="A clean demo project."):
 def test_clean_build_passes_and_zips(tmp_path):
     digest = _build_repo(tmp_path)
     units = parse_digest(digest).units
-    pkg = build_skill(units, _meta(readme="A clean demo project."), digest_hash=content_hash(digest))
+    pkg = build_skill(
+        units, _meta(readme="A clean demo project."),
+        digest_hash=content_hash(digest),
+        digest_content=digest
+    )
 
     assert pkg.scan_report.status == ScanStatus.PASS
     assert pkg.manifest.builder_version == BUILDER_VERSION
@@ -51,18 +55,25 @@ def test_clean_build_passes_and_zips(tmp_path):
     assert "serve" in pkg.skill_md
     assert "references/api.md" in pkg.references
     assert pkg.exporters  # adk + agno wrappers present
+    assert "references/acme_demo_digest.txt" in pkg.manifest.files
+    assert "[Full Code Digest](references/acme_demo_digest.txt)" in pkg.skill_md
 
     buf = build_zip(pkg)
     names = zipfile.ZipFile(buf).namelist()
     assert "acme-demo/SKILL.md" in names
     assert "acme-demo/references/api.md" in names
     assert "acme-demo/manifest.json" in names
+    assert "acme-demo/references/acme_demo_digest.txt" in names
     assert any(n.endswith("_adk_skill.py") for n in names)
 
     # manifest.json is valid and carries provenance
     manifest = json.loads(zipfile.ZipFile(buf).read("acme-demo/manifest.json"))
     assert manifest["scan_status"] == "PASS"
     assert any(p["chunk"] == "references/api.md" for p in manifest["provenance"])
+    assert "references/acme_demo_digest.txt" in manifest["files"]
+
+    zip_digest = zipfile.ZipFile(buf).read("acme-demo/references/acme_demo_digest.txt").decode("utf-8")
+    assert zip_digest == digest
 
 
 def test_injected_readme_fails_build_and_blocks_zip(tmp_path):
