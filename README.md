@@ -114,7 +114,7 @@ flowchart TD
     Start["npx gitscape &lt;repo_url&gt;"] --> ParseURL["Parse Repo URL & Options"]
     ParseURL --> APIRequest["Call Backend install_skill Tool"]
     
-    subgraph Backend Pipeline (SkillForge)
+    subgraph BackendPipeline ["Backend Pipeline (SkillForge)"]
         APIRequest --> SparseClone["Sparse clone repository with depth=1"]
         SparseClone --> GetSHA["Retrieve git HEAD commit SHA"]
         GetSHA --> DigestGen["Generate Markdown codebase digest"]
