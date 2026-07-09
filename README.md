@@ -6,6 +6,8 @@
 
 **Understand any GitHub repository in seconds.**
 
+[![NPM Version](https://img.shields.io/npm/v/gitscape.svg?style=for-the-badge&color=CB3837&logo=npm)](https://www.npmjs.com/package/gitscape)
+[![NPM Downloads](https://img.shields.io/npm/dm/gitscape.svg?style=for-the-badge&color=CB3837)](https://www.npmjs.com/package/gitscape)
 ![React](https://img.shields.io/badge/React-61DAFB.svg?style=for-the-badge&logo=React&logoColor=black)
 ![FastAPI](https://img.shields.io/badge/FastAPI-009688.svg?style=for-the-badge&logo=FastAPI&logoColor=white)
 ![Google Cloud](https://img.shields.io/badge/Google%20Cloud-4285F4.svg?style=for-the-badge&logo=Google-Cloud&logoColor=white)
