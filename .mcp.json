@@ -1,8 +1,0 @@
-{
-  "mcpServers": {
-    "gitscape": {
-      "url": "https://gitscape-143600285956.us-central1.run.app/api/mcp",
-      "description": "GitScape — compile any repo into an agent skill"
-    }
-  }
-}
