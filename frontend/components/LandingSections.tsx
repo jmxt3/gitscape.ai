@@ -286,7 +286,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "Does GitScape have an MCP server?",
-    a: "Yes. Run npx gitscape init to create a .mcp.json pointing at the GitScape MCP server, or add https://gitscape-143600285956.us-central1.run.app/api/mcp to Claude Code, Cursor or Windsurf. Your agent can then call the install_skill tool to compile, scan and install any repository as a skill on its own."
+    a: "Yes. Run npx gitscape init to create a .mcp.json pointing at the GitScape MCP server, or add https://gitscape.ai/api/mcp to Claude Code, Cursor or Windsurf. Your agent can then call the install_skill tool to compile, scan and install any repository as a skill on its own."
   },
   {
     q: "Does GitScape AI support private repositories?",
