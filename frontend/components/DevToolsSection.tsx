@@ -7,7 +7,7 @@ import { CheckRow } from "./LandingSections";
  * Web = try it now, CLI = adopt it in your repo, MCP = agent-native.
  */
 
-const MCP_URL = "https://gitscape-143600285956.us-central1.run.app/api/mcp";
+const MCP_URL = "https://gitscape.ai/api/mcp";
 
 const MCP_JSON = `{
   "mcpServers": {
