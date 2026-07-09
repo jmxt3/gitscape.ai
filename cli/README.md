@@ -7,7 +7,7 @@
 <p align="center">
   <a href="https://www.npmjs.com/package/gitscape"><img src="https://img.shields.io/npm/v/gitscape.svg?style=flat-square" alt="NPM Version"/></a>
   <a href="https://www.npmjs.com/package/gitscape"><img src="https://img.shields.io/npm/dm/gitscape.svg?style=flat-square" alt="NPM Downloads"/></a>
-  <a href="https://github.com/jmxt3/GitScape-AI/blob/main/LICENSE"><img src="https://img.shields.io/npm/l/gitscape.svg?style=flat-square" alt="License"/></a>
+  <a href="https://github.com/jmxt3/GitScape-AI/blob/main/LICENSE"><img src="https://img.shields.io/github/license/jmxt3/GitScape-AI.svg?style=flat-square" alt="License"/></a>
   <a href="https://github.com/jmxt3/GitScape-AI"><img src="https://img.shields.io/github/stars/jmxt3/GitScape-AI.svg?style=flat-square&color=blue" alt="GitHub Stars"/></a>
 </p>
 
