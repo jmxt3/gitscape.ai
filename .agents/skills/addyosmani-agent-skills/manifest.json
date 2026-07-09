@@ -5,7 +5,7 @@
   "description": "Specialist knowledge of the addyosmani/agent-skills codebase (Shell, JavaScript). Use when working with, extending, or debugging agent-skills: navigating its modules, calling its 0 documented public symbols across 0 source files, and understanding its architecture, setup, and configuration. Not for general Shell, JavaScript questions unrelated to agent-skills.",
   "version": "1.0.0",
   "builder_version": "1.0.0",
-  "digest_hash": "fb64884830cdf0e77713b514b594c33041e5877b4b6f7a95215b574a4e49d45f",
+  "digest_hash": "21d383ebf2052bab72db1d61706c585813e3115d7375a839dfa7f4979b426ff2",
   "files": [
     "SKILL.md",
     "references/architecture.md",
@@ -43,8 +43,8 @@
     {
       "chunk": "references/setup.md",
       "source_paths": [
-        "evals/README.md",
-        "README.md"
+        "README.md",
+        "evals/README.md"
       ]
     }
   ],
@@ -61,7 +61,7 @@
     "source_repo": "https://github.com/addyosmani/agent-skills",
     "generated_by": "GitScape.ai",
     "generated_by_url": "https://gitscape.ai",
-    "generated_at": "2026-07-09T16:11:14Z",
+    "generated_at": "2026-07-09T17:55:46Z",
     "files_analyzed": 75,
     "primary_languages": [
       "Shell",
@@ -71,7 +71,7 @@
     "modules_indexed": 0,
     "scan_engine": "scapeguard",
     "scan_engine_version": "2.0.0",
-    "skill_hash": "sha256:6efd5b033926e881c73c7c93aae980b082a893eee87f1b4c8ca809d6f6b25452",
+    "skill_hash": "sha256:2e2504288fab7406752a696b8f7af89229f5eed45a1bca03d32363925df70140",
     "license": {
       "spdx_id": "NOASSERTION",
       "source_path": "",
@@ -85,7 +85,7 @@
       "Executing automated tests and verifying codebase changes."
     ]
   },
-  "source_git_head": "0e63d8ea962ecac51637421d8fff63702fac766b",
-  "built_at": "2026-07-09T16:11:14Z",
+  "source_git_head": "edaa28a2293fc51e30df835453a89282f4ff0079",
+  "built_at": "2026-07-09T17:55:46Z",
   "model": "gemini-3.1-flash-lite"
 }
