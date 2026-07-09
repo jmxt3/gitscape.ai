@@ -1083,53 +1083,50 @@ const App: React.FC = () => {
           <Hero onSelectMcp={() => setActiveMainTab('mcp')} />
           <div className="relative mt-10 sm:mt-12">
             <section id="digest-generator-input" className="relative w-full max-w-[1100px] mx-auto px-4">
-            <div
-              className="rounded-2xl p-5 sm:p-7 flex flex-col gap-6"
-              style={{
-                background: "rgba(15,23,42,0.75)",
-                border: activeMainTab === 'web'
-                  ? "1px solid rgba(245,158,11,0.35)"
-                  : activeMainTab === 'cli'
-                  ? "1px solid rgba(124,58,237,0.35)"
-                  : "1px solid rgba(16,185,129,0.35)",
-                boxShadow: "0 12px 48px -12px rgba(0,0,0,0.6), 0 0 0 1px rgba(139,92,246,0.08)",
-              }}
-            >
-              {/* Tab Header Row */}
-              <div className="pb-1">
-                <div
-                  className="flex gap-1 overflow-x-auto"
-                  style={{ borderBottom: "1px solid rgba(71,85,105,0.4)" }}
-                  role="tablist"
-                  aria-label="GitScape platforms"
-                >
-                  {[
-                    { key: "web", label: "Web", activeColor: "#fcd34d", underline: "#f59e0b" },
-                    { key: "cli", label: "CLI", activeColor: "#c4b5fd", underline: "#7c3aed" },
-                    { key: "mcp", label: "MCP", activeColor: "#6ee7b7", underline: "#10b981" },
-                  ].map((tab) => {
-                    const isActive = activeMainTab === tab.key;
-                    return (
-                      <button
-                        key={tab.key}
-                        role="tab"
-                        aria-selected={isActive}
-                        onClick={() => setActiveMainTab(tab.key as 'web' | 'cli' | 'mcp')}
-                        className={`px-4.5 py-2.5 text-[13px] whitespace-nowrap transition-colors duration-200 ${
-                          isActive ? "font-bold" : "font-semibold text-slate-400 hover:text-slate-200"
-                        }`}
-                        style={
-                          isActive
-                            ? { color: tab.activeColor, borderBottom: `2px solid ${tab.underline}`, marginBottom: -1 }
-                            : { borderBottom: "2px solid transparent", marginBottom: -1 }
-                        }
-                      >
-                        {tab.label}
-                      </button>
-                    );
-                  })}
-                </div>
+              <div
+                className="flex gap-1 overflow-x-auto no-scrollbar mb-3.5 pl-5 sm:pl-7"
+                role="tablist"
+                aria-label="GitScape platforms"
+              >
+                {[
+                  { key: "web", label: "Web", activeColor: "#fcd34d", underline: "#f59e0b" },
+                  { key: "cli", label: "CLI", activeColor: "#c4b5fd", underline: "#7c3aed" },
+                  { key: "mcp", label: "MCP", activeColor: "#6ee7b7", underline: "#10b981" },
+                ].map((tab) => {
+                  const isActive = activeMainTab === tab.key;
+                  return (
+                    <button
+                      key={tab.key}
+                      role="tab"
+                      aria-selected={isActive}
+                      onClick={() => setActiveMainTab(tab.key as 'web' | 'cli' | 'mcp')}
+                      className={`px-4.5 py-2.5 text-[13px] whitespace-nowrap transition-colors duration-200 ${
+                        isActive ? "font-bold" : "font-semibold text-slate-400 hover:text-slate-200"
+                      }`}
+                      style={
+                        isActive
+                          ? { color: tab.activeColor, borderBottom: `2px solid ${tab.underline}`, marginBottom: -1 }
+                          : { borderBottom: "2px solid transparent", marginBottom: -1 }
+                      }
+                    >
+                      {tab.label}
+                    </button>
+                  );
+                })}
               </div>
+
+              <div
+                className="rounded-2xl p-5 sm:p-7 flex flex-col gap-6"
+                style={{
+                  background: "rgba(15,23,42,0.75)",
+                  border: activeMainTab === 'web'
+                    ? "1px solid rgba(245,158,11,0.35)"
+                    : activeMainTab === 'cli'
+                    ? "1px solid rgba(124,58,237,0.35)"
+                    : "1px solid rgba(16,185,129,0.35)",
+                  boxShadow: "0 12px 48px -12px rgba(0,0,0,0.6), 0 0 0 1px rgba(139,92,246,0.08)",
+                }}
+              >
 
               {activeMainTab === 'web' ? (
                 <div className="flex flex-col gap-3">

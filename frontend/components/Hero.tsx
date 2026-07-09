@@ -20,7 +20,7 @@ export const Hero: React.FC<HeroProps> = ({ onSelectMcp }) => (
           color: "#a78bfa",
         }}
       >
-        OPEN SOURCE · MIT · NO SIGNUP
+        FREE · OPEN SOURCE · NO SIGNUP
       </div>
 
       <h1 className="m-0 text-5xl sm:text-6xl lg:text-[62px] font-extrabold tracking-[-0.035em] leading-[1.04] text-slate-100 lg:whitespace-nowrap">
