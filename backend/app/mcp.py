@@ -35,10 +35,10 @@ async def sse_handshake(request: Request):
     async def event_generator():
         # Retrieve incoming host and protocol to build absolute callback URL
         host = request.headers.get("host", "localhost:8081")
-        scheme = "https" if request.headers.get("x-forwarded-proto") == "https" else "http"
+        is_local = "localhost" in host or "127.0.0.1" in host
+        scheme = "http" if is_local else "https"
         # Nginx routes /api/mcp to FastAPI /mcp, so client POSTs to /api/mcp/call in prod,
         # or /mcp/call in local dev. We can check if host is local to determine prefix.
-        is_local = "localhost" in host or "127.0.0.1" in host
         prefix = "/mcp" if is_local else "/api/mcp"
         post_url = f"{scheme}://{host}{prefix}/call"
 
