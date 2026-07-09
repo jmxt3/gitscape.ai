@@ -8,8 +8,10 @@
 
 [![NPM Version](https://img.shields.io/npm/v/gitscape.svg?style=for-the-badge&color=CB3837&logo=npm)](https://www.npmjs.com/package/gitscape)
 [![NPM Downloads](https://img.shields.io/npm/dm/gitscape.svg?style=for-the-badge&color=CB3837)](https://www.npmjs.com/package/gitscape)
+[![License](https://img.shields.io/github/license/jmxt3/GitScape-AI.svg?style=for-the-badge)](https://github.com/jmxt3/GitScape-AI/blob/main/LICENSE)
 ![Google Cloud](https://img.shields.io/badge/Google%20Cloud-4285F4.svg?style=for-the-badge&logo=Google-Cloud&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-2496ED.svg?style=for-the-badge&logo=Docker&logoColor=white)
+
 
 ---
 
