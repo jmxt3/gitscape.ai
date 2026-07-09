@@ -37,10 +37,13 @@ export default defineConfig(({ mode }) => {
       server: {
         proxy: {
           // In dev, forward /api/* to the local FastAPI instance on port 8081.
-          // Run the API with: cd api && uv run uvicorn main:app --port 8081
+          // The backend serves bare paths (/converter, /skill-zip, …); strip the
+          // /api prefix here to mirror the production nginx ingress.
+          // Run the API with: cd backend && uv run uvicorn main:app --port 8081
           '/api': {
             target: 'http://127.0.0.1:8081',
             changeOrigin: true,
+            rewrite: (path) => path.replace(/^\/api/, ''),
           },
         },
       },

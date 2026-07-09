@@ -66,9 +66,17 @@ def build_skill(
         assembled = assemble(meta, extract, units, token_budget=token_budget, prose=prose)
     scan_report: ScanReport = scan_skill(
         assembled.skill_md, assembled.references, units=units,
+        extract=extract, repo_url=meta.repo_url,
         enable_semgrep=enable_semgrep,
         is_framework_skill=(skill_type == "framework"),
     )
+
+    # Optional, env-gated LLM adjudication (advisory only; never changes the
+    # deterministic gate). Lazy import keeps the default path network-free.
+    from .scan.judge import judge_enabled
+    if judge_enabled():
+        from .scan.judge import maybe_adjudicate
+        scan_report = maybe_adjudicate(scan_report, skill_md=assembled.skill_md)
 
     generated_at = meta.generated_at or datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     exporters = render_exporters(meta.owner, meta.repo)
@@ -79,7 +87,7 @@ def build_skill(
         description=assembled.description,
         builder_version=BUILDER_VERSION,
         digest_hash=digest_hash,
-        files=["SKILL.md", *assembled.references.keys(), "manifest.json", *exporters.keys()],
+        files=["SKILL.md", *assembled.references.keys(), "manifest.json", "scan-report.json", "scan-report.sarif", *exporters.keys()],
         provenance=assembled.provenance,
         scan_status=scan_report.status,
         framework_compatibility=_FRAMEWORKS,
@@ -92,6 +100,10 @@ def build_skill(
             "primary_languages": meta.primary_languages,
             "symbols_indexed": extract.api_index.total,
             "modules_indexed": len(extract.api_index.modules),
+            "scan_engine": scan_report.engine,
+            "scan_engine_version": scan_report.engine_version,
+            "skill_hash": scan_report.skill_hash,
+            "license": scan_report.license.model_dump(mode="json"),
             "summary_title": (
                 framework_prose.summary_title
                 if (framework_prose and getattr(framework_prose, "summary_title", None))

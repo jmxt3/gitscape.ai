@@ -176,19 +176,65 @@ class Severity(str, Enum):
     CRITICAL = "critical"
 
 
+class Confidence(str, Enum):
+    """How sure ScapeGuard is that a finding is a true positive.
+
+    Load-bearing for the gate: a CRITICAL finding only hard-blocks export when
+    its confidence is not LOW (see package.build_zip), so low-confidence regex
+    hits can still be accepted by the user without weakening the strong claim.
+    """
+
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+
+
 class ScanFinding(BaseModel):
-    rule: str
+    rule: str  # legacy dotted name (e.g. "injection.ignore_previous"); kept for back-compat
     severity: Severity
     file: str  # skill file the finding lives in, e.g. "SKILL.md"
     line: int = 0
     source_path: Optional[str] = None  # originating repo path, if resolvable
     snippet: str = ""
     message: str = ""
+    # ── ScapeGuard v2 (additive; defaults keep old cached packages valid) ──
+    id: str = ""  # stable issue code, e.g. "GS-SEC-001"
+    category: str = ""  # taxonomy slug, e.g. "secrets"
+    confidence: Confidence = Confidence.MEDIUM
+    owasp_ast: list[str] = Field(default_factory=list)  # OWASP Agentic Skills Top 10
+    owasp_llm: list[str] = Field(default_factory=list)  # OWASP LLM Top 10
+    remediation: str = ""  # optional one-line fix hint
+
+
+class CategoryResult(BaseModel):
+    """Per-category verdict, Socket-style (one row per taxonomy category)."""
+
+    category: str
+    status: ScanStatus
+    findings: int = 0
+
+
+class LicenseInfo(BaseModel):
+    """Detected repository license, carried into the report and manifest."""
+
+    spdx_id: str = "NOASSERTION"
+    source_path: str = ""
+    confidence: str = "low"
 
 
 class ScanReport(BaseModel):
     status: ScanStatus = ScanStatus.PASS
     findings: list[ScanFinding] = Field(default_factory=list)
+    # ── ScapeGuard v2 (additive) ──
+    engine: str = "scapeguard"
+    engine_version: str = ""
+    generated_at: str = ""  # ISO-8601 UTC
+    skill_hash: str = ""  # sha256 over canonical SKILL.md + sorted references
+    files_scanned: int = 0
+    categories: list[CategoryResult] = Field(default_factory=list)
+    counts: dict[str, int] = Field(default_factory=dict)  # severity -> count
+    license: LicenseInfo = Field(default_factory=LicenseInfo)
+    summary: str = ""  # optional LLM-written behavioral summary (Phase 3)
 
 
 # ─── Package / manifest (Phase 3+) ─────────────────────────────────────────
