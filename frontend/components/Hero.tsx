@@ -37,13 +37,20 @@ export const Hero: React.FC<HeroProps> = ({ onSelectMcp }) => (
         — so your agents act like they wrote it.
       </p>
 
-      <div className="flex flex-wrap items-center justify-center gap-3">
+      <div className="flex flex-wrap items-center justify-center gap-3 mt-3">
         <CodeSnippet compact prompt accent="violet" code="npx gitscape <repo-url>" />
         <a
           href="#digest-generator-input"
           onClick={(e) => {
+            e.preventDefault();
             if (onSelectMcp) {
               onSelectMcp();
+            }
+            const element = document.getElementById("digest-generator-input");
+            if (element) {
+              const yOffset = -200;
+              const y = element.getBoundingClientRect().top + window.scrollY + yOffset;
+              window.scrollTo({ top: y, behavior: "smooth" });
             }
           }}
           className="text-[12.5px] font-medium text-slate-500 hover:text-slate-300 transition-colors"

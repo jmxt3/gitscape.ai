@@ -1072,7 +1072,7 @@ const App: React.FC = () => {
       />
       <main className="flex-grow">
         {/* ── First-screen hero section with shared aurora background ── */}
-        <div className="relative overflow-hidden pt-16 sm:pt-[72px] pb-16 sm:pb-[72px]">
+        <div className="relative overflow-hidden pt-16 sm:pt-[72px] pb-8 sm:pb-10">
           {/* Aurora blobs */}
           <div className="hero-blob-1" />
           <div className="hero-blob-2" />
@@ -1271,24 +1271,25 @@ const App: React.FC = () => {
                 <McpPanel />
               )}
 
-              {/* ScapeGuard badge at the bottom of the container */}
-              <div className="flex justify-center mt-2">
-                <a
-                  href="#security"
-                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[12px] font-semibold transition-colors duration-200 hover:-translate-y-0.5"
-                  style={{
-                    border: "1px solid rgba(16,185,129,0.35)",
-                    background: "rgba(16,185,129,0.08)",
-                    color: "#34d399",
-                  }}
-                >
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                    <path d="M9 12l2 2 4-4" />
-                  </svg>
-                  Every skill scanned by ScapeGuard
-                </a>
-              </div>
+            </div>
+
+            {/* ScapeGuard badge below the container */}
+            <div className="flex justify-center mt-8 sm:mt-10">
+              <a
+                href="#security"
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[12px] font-semibold transition-colors duration-200 hover:-translate-y-0.5"
+                style={{
+                  border: "1px solid rgba(16,185,129,0.35)",
+                  background: "rgba(16,185,129,0.08)",
+                  color: "#34d399",
+                }}
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                  <path d="M9 12l2 2 4-4" />
+                </svg>
+                Every skill scanned by ScapeGuard
+              </a>
             </div>
           </section>
 
