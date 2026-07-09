@@ -252,6 +252,21 @@ def clone_repository(
         )
 
 
+def get_git_sha(repo_path: str) -> Optional[str]:
+    """Retrieve the current HEAD commit hash of the cloned repository."""
+    try:
+        res = subprocess.run(
+            ["git", "-C", repo_path, "rev-parse", "HEAD"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        return res.stdout.strip()
+    except Exception as e:
+        logger.warning(f"Could not retrieve git HEAD SHA: {e}")
+        return None
+
+
 def is_ignored_file(path: Path) -> bool:
     if path.name in IGNORED_FILES:
         return True

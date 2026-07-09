@@ -11,6 +11,7 @@ Author: GitScape.ai
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from app.config import settings
 
 from .assemble import FRAMEWORK_TOKEN_BUDGET, TOKEN_BUDGET, assemble
 from .exporters import render_exporters
@@ -98,6 +99,9 @@ def build_skill(
         provenance=assembled.provenance,
         scan_status=scan_report.status,
         framework_compatibility=_FRAMEWORKS,
+        source_git_head=meta.git_sha,
+        built_at=generated_at,
+        model=settings.HD_MODEL if (hd or skill_type == "framework") else None,
         metadata={
             "source_repo": meta.repo_url,
             "generated_by": "GitScape.ai",

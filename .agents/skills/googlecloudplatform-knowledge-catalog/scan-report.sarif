@@ -1,0 +1,1182 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "ScapeGuard",
+          "version": "2.0.0",
+          "informationUri": "https://gitscape.ai",
+          "rules": [
+            {
+              "id": "GS-INJ-001",
+              "name": "injection.ignore_previous",
+              "shortDescription": {
+                "text": "Prompt-injection: attempt to override prior instructions."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "category": "prompt_injection",
+                "owasp-ast": [
+                  "AST01"
+                ],
+                "owasp-llm": [
+                  "LLM01"
+                ],
+                "tags": [
+                  "prompt_injection",
+                  "AST01",
+                  "LLM01"
+                ]
+              }
+            },
+            {
+              "id": "GS-INJ-002",
+              "name": "injection.reveal_system_prompt",
+              "shortDescription": {
+                "text": "Prompt-injection: attempt to exfiltrate the system prompt."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "category": "prompt_injection",
+                "owasp-ast": [
+                  "AST01"
+                ],
+                "owasp-llm": [
+                  "LLM01"
+                ],
+                "tags": [
+                  "prompt_injection",
+                  "AST01",
+                  "LLM01"
+                ]
+              }
+            },
+            {
+              "id": "GS-INJ-003",
+              "name": "injection.persona_override",
+              "shortDescription": {
+                "text": "Prompt-injection: hidden persona/role override."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "category": "prompt_injection",
+                "owasp-ast": [
+                  "AST01"
+                ],
+                "owasp-llm": [
+                  "LLM01"
+                ],
+                "tags": [
+                  "prompt_injection",
+                  "AST01",
+                  "LLM01"
+                ]
+              }
+            },
+            {
+              "id": "GS-INJ-004",
+              "name": "injection.role_tags",
+              "shortDescription": {
+                "text": "Prompt-injection: embedded chat role/control tags."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "category": "prompt_injection",
+                "owasp-ast": [
+                  "AST01"
+                ],
+                "owasp-llm": [
+                  "LLM01"
+                ],
+                "tags": [
+                  "prompt_injection",
+                  "AST01",
+                  "LLM01"
+                ]
+              }
+            },
+            {
+              "id": "GS-INJ-005",
+              "name": "injection.execute_the_following",
+              "shortDescription": {
+                "text": "Prompt-injection: instruction to execute the following commands."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "category": "prompt_injection",
+                "owasp-ast": [
+                  "AST01"
+                ],
+                "owasp-llm": [
+                  "LLM01"
+                ],
+                "tags": [
+                  "prompt_injection",
+                  "AST01",
+                  "LLM01"
+                ]
+              }
+            },
+            {
+              "id": "GS-SEC-001",
+              "name": "secrets.aws_access_key",
+              "shortDescription": {
+                "text": "Hardcoded AWS access key ID."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "category": "secrets",
+                "owasp-ast": [
+                  "AST05"
+                ],
+                "owasp-llm": [
+                  "LLM02",
+                  "LLM06"
+                ],
+                "tags": [
+                  "secrets",
+                  "AST05",
+                  "LLM02",
+                  "LLM06"
+                ]
+              }
+            },
+            {
+              "id": "GS-SEC-002",
+              "name": "secrets.github_token",
+              "shortDescription": {
+                "text": "Hardcoded GitHub token."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "category": "secrets",
+                "owasp-ast": [
+                  "AST05"
+                ],
+                "owasp-llm": [
+                  "LLM02",
+                  "LLM06"
+                ],
+                "tags": [
+                  "secrets",
+                  "AST05",
+                  "LLM02",
+                  "LLM06"
+                ]
+              }
+            },
+            {
+              "id": "GS-SEC-003",
+              "name": "secrets.openai_key",
+              "shortDescription": {
+                "text": "Hardcoded OpenAI API key."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "category": "secrets",
+                "owasp-ast": [
+                  "AST05"
+                ],
+                "owasp-llm": [
+                  "LLM02",
+                  "LLM06"
+                ],
+                "tags": [
+                  "secrets",
+                  "AST05",
+                  "LLM02",
+                  "LLM06"
+                ]
+              }
+            },
+            {
+              "id": "GS-SEC-004",
+              "name": "secrets.anthropic_key",
+              "shortDescription": {
+                "text": "Hardcoded Anthropic API key."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "category": "secrets",
+                "owasp-ast": [
+                  "AST05"
+                ],
+                "owasp-llm": [
+                  "LLM02",
+                  "LLM06"
+                ],
+                "tags": [
+                  "secrets",
+                  "AST05",
+                  "LLM02",
+                  "LLM06"
+                ]
+              }
+            },
+            {
+              "id": "GS-SEC-005",
+              "name": "secrets.google_key",
+              "shortDescription": {
+                "text": "Hardcoded Google API key."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "category": "secrets",
+                "owasp-ast": [
+                  "AST05"
+                ],
+                "owasp-llm": [
+                  "LLM02",
+                  "LLM06"
+                ],
+                "tags": [
+                  "secrets",
+                  "AST05",
+                  "LLM02",
+                  "LLM06"
+                ]
+              }
+            },
+            {
+              "id": "GS-SEC-006",
+              "name": "secrets.slack_token",
+              "shortDescription": {
+                "text": "Hardcoded Slack token."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "category": "secrets",
+                "owasp-ast": [
+                  "AST05"
+                ],
+                "owasp-llm": [
+                  "LLM02",
+                  "LLM06"
+                ],
+                "tags": [
+                  "secrets",
+                  "AST05",
+                  "LLM02",
+                  "LLM06"
+                ]
+              }
+            },
+            {
+              "id": "GS-SEC-007",
+              "name": "secrets.stripe_live_key",
+              "shortDescription": {
+                "text": "Hardcoded Stripe live secret key."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "category": "secrets",
+                "owasp-ast": [
+                  "AST05"
+                ],
+                "owasp-llm": [
+                  "LLM02",
+                  "LLM06"
+                ],
+                "tags": [
+                  "secrets",
+                  "AST05",
+                  "LLM02",
+                  "LLM06"
+                ]
+              }
+            },
+            {
+              "id": "GS-SEC-008",
+              "name": "secrets.private_key",
+              "shortDescription": {
+                "text": "Embedded PEM private key."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "category": "secrets",
+                "owasp-ast": [
+                  "AST05"
+                ],
+                "owasp-llm": [
+                  "LLM02",
+                  "LLM06"
+                ],
+                "tags": [
+                  "secrets",
+                  "AST05",
+                  "LLM02",
+                  "LLM06"
+                ]
+              }
+            },
+            {
+              "id": "GS-SEC-009",
+              "name": "secrets.jwt",
+              "shortDescription": {
+                "text": "JSON Web Token (JWT) in shipped text."
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "category": "secrets",
+                "owasp-ast": [
+                  "AST05"
+                ],
+                "owasp-llm": [
+                  "LLM02",
+                  "LLM06"
+                ],
+                "tags": [
+                  "secrets",
+                  "AST05",
+                  "LLM02",
+                  "LLM06"
+                ]
+              }
+            },
+            {
+              "id": "GS-SEC-010",
+              "name": "secrets.generic_assignment",
+              "shortDescription": {
+                "text": "Hardcoded secret assigned to a credential-named variable."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "category": "secrets",
+                "owasp-ast": [
+                  "AST05"
+                ],
+                "owasp-llm": [
+                  "LLM02",
+                  "LLM06"
+                ],
+                "tags": [
+                  "secrets",
+                  "AST05",
+                  "LLM02",
+                  "LLM06"
+                ]
+              }
+            },
+            {
+              "id": "GS-EXE-001",
+              "name": "execution.pipe_to_shell",
+              "shortDescription": {
+                "text": "Remote code execution: downloads and pipes a script straight into a shell."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "category": "malicious_execution",
+                "owasp-ast": [
+                  "AST02"
+                ],
+                "owasp-llm": [
+                  "LLM05"
+                ],
+                "tags": [
+                  "malicious_execution",
+                  "AST02",
+                  "LLM05"
+                ]
+              }
+            },
+            {
+              "id": "GS-EXE-002",
+              "name": "execution.fetch_then_eval",
+              "shortDescription": {
+                "text": "Remote code execution: fetches a URL and evaluates the response."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "category": "malicious_execution",
+                "owasp-ast": [
+                  "AST02"
+                ],
+                "owasp-llm": [
+                  "LLM05"
+                ],
+                "tags": [
+                  "malicious_execution",
+                  "AST02",
+                  "LLM05"
+                ]
+              }
+            },
+            {
+              "id": "GS-EXE-003",
+              "name": "execution.decode_then_exec",
+              "shortDescription": {
+                "text": "Obfuscated execution: decodes an encoded blob and executes it."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "category": "malicious_execution",
+                "owasp-ast": [
+                  "AST02"
+                ],
+                "owasp-llm": [
+                  "LLM05"
+                ],
+                "tags": [
+                  "malicious_execution",
+                  "AST02",
+                  "LLM05"
+                ]
+              }
+            },
+            {
+              "id": "GS-EXE-004",
+              "name": "execution.destructive_command",
+              "shortDescription": {
+                "text": "Destructive command that can delete files, disks, or databases."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "category": "malicious_execution",
+                "owasp-ast": [
+                  "AST02"
+                ],
+                "owasp-llm": [
+                  "LLM05"
+                ],
+                "tags": [
+                  "malicious_execution",
+                  "AST02",
+                  "LLM05"
+                ]
+              }
+            },
+            {
+              "id": "GS-EXE-005",
+              "name": "execution.reverse_shell",
+              "shortDescription": {
+                "text": "Reverse shell: opens an outbound interactive shell to a remote host."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "category": "malicious_execution",
+                "owasp-ast": [
+                  "AST02"
+                ],
+                "owasp-llm": [
+                  "LLM05"
+                ],
+                "tags": [
+                  "malicious_execution",
+                  "AST02",
+                  "LLM05"
+                ]
+              }
+            },
+            {
+              "id": "GS-EXE-006",
+              "name": "execution.dynamic_eval",
+              "shortDescription": {
+                "text": "Dynamic code evaluation in a shipped script."
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "category": "malicious_execution",
+                "owasp-ast": [
+                  "AST02"
+                ],
+                "owasp-llm": [
+                  "LLM05"
+                ],
+                "tags": [
+                  "malicious_execution",
+                  "AST02",
+                  "LLM05"
+                ]
+              }
+            },
+            {
+              "id": "GS-EXE-007",
+              "name": "execution.chmod_downloaded",
+              "shortDescription": {
+                "text": "Downloads a file and immediately makes it executable / runs it."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "category": "malicious_execution",
+                "owasp-ast": [
+                  "AST02"
+                ],
+                "owasp-llm": [
+                  "LLM05"
+                ],
+                "tags": [
+                  "malicious_execution",
+                  "AST02",
+                  "LLM05"
+                ]
+              }
+            },
+            {
+              "id": "GS-EXF-001",
+              "name": "exfil.send_secrets",
+              "shortDescription": {
+                "text": "Exfiltration: instruction to send secrets/credentials outward."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "category": "data_exfiltration",
+                "owasp-ast": [
+                  "AST04"
+                ],
+                "owasp-llm": [
+                  "LLM02"
+                ],
+                "tags": [
+                  "data_exfiltration",
+                  "AST04",
+                  "LLM02"
+                ]
+              }
+            },
+            {
+              "id": "GS-EXF-002",
+              "name": "exfil.raw_ip_url",
+              "shortDescription": {
+                "text": "Suspicious URL pointing at a raw IP address."
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "category": "data_exfiltration",
+                "owasp-ast": [
+                  "AST04"
+                ],
+                "owasp-llm": [
+                  "LLM02"
+                ],
+                "tags": [
+                  "data_exfiltration",
+                  "AST04",
+                  "LLM02"
+                ]
+              }
+            },
+            {
+              "id": "GS-EXF-003",
+              "name": "exfil.known_endpoint",
+              "shortDescription": {
+                "text": "Reference to a known data-exfiltration / drop endpoint."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "category": "data_exfiltration",
+                "owasp-ast": [
+                  "AST04"
+                ],
+                "owasp-llm": [
+                  "LLM02"
+                ],
+                "tags": [
+                  "data_exfiltration",
+                  "AST04",
+                  "LLM02"
+                ]
+              }
+            },
+            {
+              "id": "GS-EXF-004",
+              "name": "exfil.env_harvest",
+              "shortDescription": {
+                "text": "Environment-variable harvesting piped to a network call."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "category": "data_exfiltration",
+                "owasp-ast": [
+                  "AST04"
+                ],
+                "owasp-llm": [
+                  "LLM02"
+                ],
+                "tags": [
+                  "data_exfiltration",
+                  "AST04",
+                  "LLM02"
+                ]
+              }
+            },
+            {
+              "id": "GS-EXF-005",
+              "name": "exfil.sensitive_path",
+              "shortDescription": {
+                "text": "Reads a sensitive credential file (SSH keys, AWS creds, .npmrc)."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "category": "data_exfiltration",
+                "owasp-ast": [
+                  "AST04"
+                ],
+                "owasp-llm": [
+                  "LLM02"
+                ],
+                "tags": [
+                  "data_exfiltration",
+                  "AST04",
+                  "LLM02"
+                ]
+              }
+            },
+            {
+              "id": "GS-DEP-001",
+              "name": "supply_chain.unpinned",
+              "shortDescription": {
+                "text": "Unpinned dependencies (version drift / substitution risk)."
+              },
+              "defaultConfiguration": {
+                "level": "note"
+              },
+              "properties": {
+                "category": "supply_chain",
+                "owasp-ast": [
+                  "AST03"
+                ],
+                "owasp-llm": [
+                  "LLM03"
+                ],
+                "tags": [
+                  "supply_chain",
+                  "AST03",
+                  "LLM03"
+                ]
+              }
+            },
+            {
+              "id": "GS-DEP-002",
+              "name": "supply_chain.unverifiable",
+              "shortDescription": {
+                "text": "Install instruction for a package the repo never declares or imports."
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "category": "supply_chain",
+                "owasp-ast": [
+                  "AST03"
+                ],
+                "owasp-llm": [
+                  "LLM03"
+                ],
+                "tags": [
+                  "supply_chain",
+                  "AST03",
+                  "LLM03"
+                ]
+              }
+            },
+            {
+              "id": "GS-DEP-003",
+              "name": "supply_chain.install_from_url",
+              "shortDescription": {
+                "text": "Installs a dependency directly from a URL / VCS (bypasses the registry)."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "category": "supply_chain",
+                "owasp-ast": [
+                  "AST03"
+                ],
+                "owasp-llm": [
+                  "LLM03"
+                ],
+                "tags": [
+                  "supply_chain",
+                  "AST03",
+                  "LLM03"
+                ]
+              }
+            },
+            {
+              "id": "GS-DEP-004",
+              "name": "supply_chain.install_scripts",
+              "shortDescription": {
+                "text": "Package lifecycle install scripts present."
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "category": "supply_chain",
+                "owasp-ast": [
+                  "AST03"
+                ],
+                "owasp-llm": [
+                  "LLM03"
+                ],
+                "tags": [
+                  "supply_chain",
+                  "AST03",
+                  "LLM03"
+                ]
+              }
+            },
+            {
+              "id": "GS-DEP-005",
+              "name": "supply_chain.typosquat",
+              "shortDescription": {
+                "text": "Dependency name resembles a popular package (possible typosquat)."
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "category": "supply_chain",
+                "owasp-ast": [
+                  "AST03"
+                ],
+                "owasp-llm": [
+                  "LLM03"
+                ],
+                "tags": [
+                  "supply_chain",
+                  "AST03",
+                  "LLM03"
+                ]
+              }
+            },
+            {
+              "id": "GS-OBF-001",
+              "name": "hidden.invisible_char",
+              "shortDescription": {
+                "text": "Hidden text: zero-width or bidirectional control character."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "category": "obfuscation",
+                "owasp-ast": [
+                  "AST06"
+                ],
+                "owasp-llm": [
+                  "LLM01"
+                ],
+                "tags": [
+                  "obfuscation",
+                  "AST06",
+                  "LLM01"
+                ]
+              }
+            },
+            {
+              "id": "GS-OBF-002",
+              "name": "exfil.high_entropy_blob",
+              "shortDescription": {
+                "text": "High-entropy base64-like blob (possible hidden payload)."
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "category": "obfuscation",
+                "owasp-ast": [
+                  "AST06"
+                ],
+                "owasp-llm": [
+                  "LLM01"
+                ],
+                "tags": [
+                  "obfuscation",
+                  "AST06",
+                  "LLM01"
+                ]
+              }
+            },
+            {
+              "id": "GS-OBF-003",
+              "name": "obfuscation.escape_run",
+              "shortDescription": {
+                "text": "Dense hex/unicode escape run (encoded string, likely obfuscation)."
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "category": "obfuscation",
+                "owasp-ast": [
+                  "AST06"
+                ],
+                "owasp-llm": [
+                  "LLM01"
+                ],
+                "tags": [
+                  "obfuscation",
+                  "AST06",
+                  "LLM01"
+                ]
+              }
+            },
+            {
+              "id": "GS-OBF-004",
+              "name": "obfuscation.char_chain_exec",
+              "shortDescription": {
+                "text": "String-reversal / chr() chain feeding an exec/eval (obfuscated code)."
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "category": "obfuscation",
+                "owasp-ast": [
+                  "AST06"
+                ],
+                "owasp-llm": [
+                  "LLM01"
+                ],
+                "tags": [
+                  "obfuscation",
+                  "AST06",
+                  "LLM01"
+                ]
+              }
+            },
+            {
+              "id": "GS-OBF-005",
+              "name": "obfuscation.homoglyph",
+              "shortDescription": {
+                "text": "Mixed-script homoglyph token (Latin + Cyrillic/Greek) — visual spoofing."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "category": "obfuscation",
+                "owasp-ast": [
+                  "AST06"
+                ],
+                "owasp-llm": [
+                  "LLM01"
+                ],
+                "tags": [
+                  "obfuscation",
+                  "AST06",
+                  "LLM01"
+                ]
+              }
+            },
+            {
+              "id": "GS-CNT-001",
+              "name": "content.fetch_and_obey",
+              "shortDescription": {
+                "text": "Fetches remote content and treats it as instructions (indirect injection risk)."
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "category": "content_exposure",
+                "owasp-ast": [
+                  "AST07"
+                ],
+                "owasp-llm": [
+                  "LLM08"
+                ],
+                "tags": [
+                  "content_exposure",
+                  "AST07",
+                  "LLM08"
+                ]
+              }
+            },
+            {
+              "id": "GS-CNT-002",
+              "name": "content.external_domains",
+              "shortDescription": {
+                "text": "External domains referenced by the skill."
+              },
+              "defaultConfiguration": {
+                "level": "note"
+              },
+              "properties": {
+                "category": "content_exposure",
+                "owasp-ast": [
+                  "AST07"
+                ],
+                "owasp-llm": [
+                  "LLM08"
+                ],
+                "tags": [
+                  "content_exposure",
+                  "AST07",
+                  "LLM08"
+                ]
+              }
+            },
+            {
+              "id": "GS-CNT-003",
+              "name": "content.html_comment",
+              "shortDescription": {
+                "text": "HTML comment survived into the shipped skill (should be stripped by sanitize)."
+              },
+              "defaultConfiguration": {
+                "level": "note"
+              },
+              "properties": {
+                "category": "content_exposure",
+                "owasp-ast": [
+                  "AST07"
+                ],
+                "owasp-llm": [
+                  "LLM08"
+                ],
+                "tags": [
+                  "content_exposure",
+                  "AST07",
+                  "LLM08"
+                ]
+              }
+            },
+            {
+              "id": "GS-AGY-001",
+              "name": "agency.privilege_escalation",
+              "shortDescription": {
+                "text": "Privilege escalation (sudo / RunAs) requested by the skill."
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "category": "excessive_agency",
+                "owasp-ast": [
+                  "AST08"
+                ],
+                "owasp-llm": [
+                  "LLM06"
+                ],
+                "tags": [
+                  "excessive_agency",
+                  "AST08",
+                  "LLM06"
+                ]
+              }
+            },
+            {
+              "id": "GS-AGY-002",
+              "name": "agency.safety_bypass",
+              "shortDescription": {
+                "text": "Instructs the agent to bypass its own safety / confirmation checks."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "category": "excessive_agency",
+                "owasp-ast": [
+                  "AST08"
+                ],
+                "owasp-llm": [
+                  "LLM06"
+                ],
+                "tags": [
+                  "excessive_agency",
+                  "AST08",
+                  "LLM06"
+                ]
+              }
+            },
+            {
+              "id": "GS-AGY-003",
+              "name": "agency.config_tampering",
+              "shortDescription": {
+                "text": "Modifies agent / shell configuration files (persistence or hijack risk)."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "category": "excessive_agency",
+                "owasp-ast": [
+                  "AST08"
+                ],
+                "owasp-llm": [
+                  "LLM06"
+                ],
+                "tags": [
+                  "excessive_agency",
+                  "AST08",
+                  "LLM06"
+                ]
+              }
+            },
+            {
+              "id": "GS-AGY-004",
+              "name": "agency.direct_money_access",
+              "shortDescription": {
+                "text": "Direct money movement: crypto wallet address or payment-charge call."
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "category": "excessive_agency",
+                "owasp-ast": [
+                  "AST08"
+                ],
+                "owasp-llm": [
+                  "LLM06"
+                ],
+                "tags": [
+                  "excessive_agency",
+                  "AST08",
+                  "LLM06"
+                ]
+              }
+            },
+            {
+              "id": "GS-STR-000",
+              "name": "framework.structure",
+              "shortDescription": {
+                "text": "Engineering Skill structural completeness."
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "category": "structure",
+                "owasp-ast": [],
+                "owasp-llm": [],
+                "tags": [
+                  "structure"
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "GS-DEP-001",
+          "level": "note",
+          "message": {
+            "text": "9 unpinned dependency spec(s): google-adk, google-cloud-dataplex, google-api-core, google-adk, google-auth, google-cloud-bigquery, google-cloud-dataplex, mcp[cli], pyyaml"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "manifest"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "category": "supply_chain",
+            "confidence": "medium",
+            "severity": "low",
+            "owasp-ast": [
+              "AST03"
+            ],
+            "owasp-llm": [
+              "LLM03"
+            ],
+            "skillFile": "manifest"
+          },
+          "ruleIndex": 27
+        },
+        {
+          "ruleId": "GS-CNT-002",
+          "level": "note",
+          "message": {
+            "text": "Skill references 1 external domain(s): gitscape.ai"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "SKILL.md"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "category": "content_exposure",
+            "confidence": "low",
+            "severity": "info",
+            "owasp-ast": [
+              "AST07"
+            ],
+            "owasp-llm": [
+              "LLM08"
+            ],
+            "skillFile": "SKILL.md"
+          },
+          "ruleIndex": 38
+        }
+      ],
+      "properties": {
+        "skillHash": "sha256:278d63dd100a7692d4d1a4152279c87ed74e429304177ee866e95c301ca83d5c",
+        "status": "WARN",
+        "filesScanned": 6
+      }
+    }
+  ]
+}

@@ -1,0 +1,62 @@
+{
+  "schema_version": "2.0",
+  "name": "googlecloudplatform-knowledge-catalog",
+  "display_name": "GoogleCloudPlatform/knowledge-catalog",
+  "description": "Use this skill when interacting with the knowledge-catalog repository to ensure all modifications strictly adhere to the Open Knowledge Format (OKF) specification.",
+  "version": "1.0.0",
+  "builder_version": "1.0.0",
+  "digest_hash": "f2d814d035dbff80ae68fdc5774e8389d8ee42023addee809fcf09a869c48a4b",
+  "files": [
+    "SKILL.md",
+    "references/api.md",
+    "references/architecture.md",
+    "references/examples.md",
+    "references/setup.md",
+    "references/config.md",
+    "manifest.json",
+    "scan-report.json",
+    "scan-report.sarif",
+    "exporters/googlecloudplatform_knowledge_catalog_adk_skill.py",
+    "exporters/googlecloudplatform_knowledge_catalog_agno_skill.py",
+    "googlecloudplatform_knowledge_catalog_digest.txt"
+  ],
+  "provenance": [],
+  "scan_status": "WARN",
+  "framework_compatibility": [
+    "claude-skills",
+    "google-adk",
+    "agno",
+    "openai-agents",
+    "langchain",
+    "langgraph"
+  ],
+  "metadata": {
+    "source_repo": "https://github.com/GoogleCloudPlatform/knowledge-catalog",
+    "generated_by": "GitScape.ai",
+    "generated_by_url": "https://gitscape.ai",
+    "generated_at": "2026-07-09T01:24:57Z",
+    "files_analyzed": 230,
+    "primary_languages": [
+      "Python",
+      "TypeScript",
+      "HTML"
+    ],
+    "symbols_indexed": 203,
+    "modules_indexed": 51,
+    "scan_engine": "scapeguard",
+    "scan_engine_version": "2.0.0",
+    "skill_hash": "sha256:278d63dd100a7692d4d1a4152279c87ed74e429304177ee866e95c301ca83d5c",
+    "license": {
+      "spdx_id": "Apache-2.0",
+      "source_path": "LICENSE.md",
+      "confidence": "high"
+    },
+    "summary_title": "A vendor-neutral, markdown-based knowledge representation system designed for universal interoperability.",
+    "summary_bullets": [
+      "Prioritize the OKF specification (SPEC.md) as the single source of truth for all data structures.",
+      "Maintain strict separation between the OKF format definition and the agentic tools used to generate it.",
+      "Ensure all knowledge bundles are human-readable, plain markdown files with YAML frontmatter.",
+      "Use provided helper functions for path-to-concept mapping to maintain index integrity."
+    ]
+  }
+}

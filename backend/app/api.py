@@ -47,6 +47,9 @@ logger.setLevel(logging.INFO)
 
 router = APIRouter()
 
+from app.mcp import mcp_router
+router.include_router(mcp_router, prefix="/mcp")
+
 
 @router.get("/")
 def read_root(request: Request):
@@ -98,6 +101,7 @@ def get_digest(
             file_structure = metadata.get("file_structure", "")
             structure_overview = metadata.get("structure_overview", "")
             generated_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+            git_sha = converter.get_git_sha(clone_path)
 
             try:
                 meta = RepoMeta(
@@ -105,6 +109,7 @@ def get_digest(
                     primary_languages=languages, files_analyzed=files_analyzed,
                     readme=readme, file_structure=file_structure,
                     structure_overview=structure_overview, generated_at=generated_at,
+                    git_sha=git_sha,
                 )
                 units = skillforge.units_from_clone(Path(clone_path))
                 pkg = skillforge.build_skill(

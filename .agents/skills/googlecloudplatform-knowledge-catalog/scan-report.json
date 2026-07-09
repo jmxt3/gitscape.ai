@@ -1,0 +1,105 @@
+{
+  "status": "WARN",
+  "findings": [
+    {
+      "rule": "supply_chain.unpinned",
+      "severity": "low",
+      "file": "manifest",
+      "line": 0,
+      "source_path": null,
+      "snippet": "google-adk, google-cloud-dataplex, google-api-core, google-adk, google-auth, google-cloud-bigquery, google-cloud-dataplex, mcp[cli], pyyaml",
+      "message": "9 unpinned dependency spec(s): google-adk, google-cloud-dataplex, google-api-core, google-adk, google-auth, google-cloud-bigquery, google-cloud-dataplex, mcp[cli], pyyaml",
+      "id": "GS-DEP-001",
+      "category": "supply_chain",
+      "confidence": "medium",
+      "owasp_ast": [
+        "AST03"
+      ],
+      "owasp_llm": [
+        "LLM03"
+      ],
+      "remediation": "Pin dependencies to exact versions or lockfile hashes."
+    },
+    {
+      "rule": "content.external_domains",
+      "severity": "info",
+      "file": "SKILL.md",
+      "line": 0,
+      "source_path": null,
+      "snippet": "gitscape.ai",
+      "message": "Skill references 1 external domain(s): gitscape.ai",
+      "id": "GS-CNT-002",
+      "category": "content_exposure",
+      "confidence": "low",
+      "owasp_ast": [
+        "AST07"
+      ],
+      "owasp_llm": [
+        "LLM08"
+      ],
+      "remediation": ""
+    }
+  ],
+  "engine": "scapeguard",
+  "engine_version": "2.0.0",
+  "generated_at": "2026-07-09T01:24:57Z",
+  "skill_hash": "sha256:278d63dd100a7692d4d1a4152279c87ed74e429304177ee866e95c301ca83d5c",
+  "files_scanned": 6,
+  "categories": [
+    {
+      "category": "prompt_injection",
+      "status": "PASS",
+      "findings": 0
+    },
+    {
+      "category": "secrets",
+      "status": "PASS",
+      "findings": 0
+    },
+    {
+      "category": "data_exfiltration",
+      "status": "PASS",
+      "findings": 0
+    },
+    {
+      "category": "malicious_execution",
+      "status": "PASS",
+      "findings": 0
+    },
+    {
+      "category": "supply_chain",
+      "status": "WARN",
+      "findings": 1
+    },
+    {
+      "category": "obfuscation",
+      "status": "PASS",
+      "findings": 0
+    },
+    {
+      "category": "content_exposure",
+      "status": "PASS",
+      "findings": 1
+    },
+    {
+      "category": "excessive_agency",
+      "status": "PASS",
+      "findings": 0
+    },
+    {
+      "category": "structure",
+      "status": "PASS",
+      "findings": 0
+    }
+  ],
+  "counts": {
+    "low": 1,
+    "info": 1
+  },
+  "license": {
+    "spdx_id": "Apache-2.0",
+    "source_path": "LICENSE.md",
+    "confidence": "high"
+  },
+  "summary": ""
+}

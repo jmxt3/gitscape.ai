@@ -55,6 +55,7 @@ class RepoMeta(BaseModel):
     structure_overview: str = ""  # shallow, dirs-only tree
     file_structure: str = ""  # full tree
     generated_at: str = ""
+    git_sha: Optional[str] = None
 
 
 class DigestDoc(BaseModel):
@@ -258,6 +259,9 @@ class Manifest(BaseModel):
     scan_status: ScanStatus = ScanStatus.PASS
     framework_compatibility: list[str] = Field(default_factory=list)
     metadata: dict = Field(default_factory=dict)
+    source_git_head: Optional[str] = None
+    built_at: Optional[str] = None
+    model: Optional[str] = None
 
 
 class SkillPackage(BaseModel):
