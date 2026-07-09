@@ -1080,7 +1080,7 @@ const App: React.FC = () => {
           {/* Subtle dot/grid overlay */}
           <div className="grid-pattern" />
 
-          <Hero />
+          <Hero onSelectMcp={() => setActiveMainTab('mcp')} />
           <div className="relative mt-10 sm:mt-12">
             <section id="digest-generator-input" className="relative w-full max-w-[1100px] mx-auto px-4">
             <div
@@ -1368,20 +1368,12 @@ const App: React.FC = () => {
             MCP server
           </a>
           <a
-            href="/api/docs"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:text-slate-300 transition-colors"
-          >
-            API docs
-          </a>
-          <a
             href="https://github.com/jmxt3/Git-Scape-Web/blob/main/LICENSE"
             target="_blank"
             rel="noopener noreferrer"
             className="hover:text-slate-300 transition-colors"
           >
-            MIT license
+            Apache 2.0 license
           </a>
         </div>
       </footer>

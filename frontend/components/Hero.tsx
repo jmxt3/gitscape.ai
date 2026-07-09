@@ -5,7 +5,11 @@ import { CodeSnippet } from "./CodeSnippet";
  * Aurora hero — replaces the old centered h1/p block in App.tsx.
  * Static/presentational. Blobs + grid use existing classes from index.css.
  */
-export const Hero: React.FC = () => (
+interface HeroProps {
+  onSelectMcp?: () => void;
+}
+
+export const Hero: React.FC<HeroProps> = ({ onSelectMcp }) => (
   <div className="px-6 text-center">
     <div className="relative flex flex-col items-center gap-5 max-w-6xl mx-auto">
       <div
@@ -37,6 +41,11 @@ export const Hero: React.FC = () => (
         <CodeSnippet compact prompt accent="violet" code="npx gitscape <repo-url>" />
         <a
           href="#digest-generator-input"
+          onClick={(e) => {
+            if (onSelectMcp) {
+              onSelectMcp();
+            }
+          }}
           className="text-[12.5px] font-medium text-slate-500 hover:text-slate-300 transition-colors"
         >
           also an MCP server →
