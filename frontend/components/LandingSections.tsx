@@ -131,10 +131,10 @@ export const Security: React.FC = () => (
       <div className="flex flex-col gap-4.5">
         <span className="text-[11px] font-bold tracking-[0.1em] text-emerald-400">SECURITY · SCAPEGUARD</span>
         <h2 className="m-0 text-3xl sm:text-4xl font-extrabold tracking-[-0.025em] text-slate-100 leading-tight">
-          Every skill is scanned by our own engine.
+          Every skill is scanned by <span className="text-emerald-400">ScapeGuard</span>.
         </h2>
         <p className="m-0 text-[15px] leading-relaxed text-slate-400">
-          A skill is code your agent trusts. So GitScape runs each one through <span className="text-slate-200 font-semibold">ScapeGuard</span> —
+          A skill is code your agent trusts. So GitScape runs each one through <span className="text-emerald-400 font-semibold">ScapeGuard</span> —
           our deterministic scanner with 45+ rules across 9 threat categories — before it ever
           leaves the page. Live credentials and remote-code-execution payloads never ship.
         </p>

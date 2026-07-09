@@ -14,7 +14,7 @@ import { transformGithubTreeToD3Hierarchy } from "./components/diagramUtils";
 import { DiagramFullscreenModal } from "./components/DiagramFullscreenModal";
 import { Hero } from "./components/Hero";
 import { HowItWorks, Security, OpenSource, FaqSection } from "./components/LandingSections";
-import { CliPanel, McpPanel } from "./components/DevToolsSection";
+import { CliPanel, McpPanel, DevTools } from "./components/DevToolsSection";
 import {
   GITHUB_TOKEN_LOCAL_STORAGE_KEY,
   REPO_URL_LOCAL_STORAGE_KEY,
@@ -1321,6 +1321,7 @@ const App: React.FC = () => {
 
         <div className={showOutputArea ? "mt-16 sm:mt-20" : ""}>
           <HowItWorks />
+          <DevTools />
           <Security />
           <OpenSource />
           <FaqSection />

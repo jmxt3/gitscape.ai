@@ -90,7 +90,7 @@ const SURFACES: { key: SurfaceKey; label: string; activeColor: string; underline
 ];
 
 export const CliPanel: React.FC = () => (
-  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
+  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-start">
     <div className="flex flex-col gap-4">
       <h3 className="m-0 text-xl sm:text-2xl font-bold tracking-[-0.015em] text-slate-100">
         One command. No install, no signup.
@@ -137,7 +137,7 @@ export const McpPanel: React.FC = () => {
   const snippet = buildMcpSnippet(activeIDE);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-start">
       <div className="flex flex-col gap-4">
         <h3 className="m-0 text-xl sm:text-2xl font-bold tracking-[-0.015em] text-slate-100">
           Let your agent install skills for itself.
@@ -226,67 +226,78 @@ const WebPanel: React.FC = () => (
 );
 
 export const DevTools: React.FC = () => {
-  const [active, setActive] = useState<SurfaceKey>("cli");
-
   return (
     <section
       id="developer-tools"
       className="px-6 sm:px-10 py-16 sm:py-[72px]"
       style={{ borderTop: "1px solid rgba(71,85,105,0.25)" }}
     >
-      <div className="max-w-[1100px] mx-auto flex flex-col gap-10">
+      <div className="max-w-[1100px] mx-auto flex flex-col gap-12">
+        {/* Header Block */}
         <div className="flex flex-col items-center gap-2.5 text-center">
-          <span className="text-[11px] font-bold tracking-[0.1em] text-violet-400">CLI · MCP SERVER</span>
+          <span className="text-[11px] font-bold tracking-[0.1em] text-violet-400">DEVELOPER TOOLS</span>
           <h2 className="m-0 text-3xl sm:text-[38px] font-extrabold tracking-[-0.025em] text-slate-100">
-            Take GitScape into your workflow.
+            CLI &amp; MCP Server
           </h2>
           <p className="m-0 text-[15px] text-slate-400 max-w-[640px]">
-            The web app is the demo. The CLI and MCP server are how you ship — compile any
-            repo into a skill from your terminal, or let your agent do it for you.
+            Bring GitScape directly into your local development environment. Run it in your terminal, or connect it as an agent-native server.
           </p>
         </div>
 
-        <div
-          className="rounded-2xl p-5 sm:p-7 flex flex-col gap-6"
-          style={{
-            background: "rgba(15,23,42,0.75)",
-            border: "1px solid rgba(71,85,105,0.5)",
-            boxShadow: "0 12px 48px -12px rgba(0,0,0,0.6)",
-          }}
-        >
+        {/* Side-by-side grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-14 items-start">
+          {/* Left Column: CLI */}
           <div
-            className="flex gap-1 overflow-x-auto"
-            style={{ borderBottom: "1px solid rgba(71,85,105,0.4)" }}
-            role="tablist"
-            aria-label="Ways to use GitScape"
+            className="rounded-2xl p-6 sm:p-8 flex flex-col gap-5"
+            style={{
+              background: "rgba(15,23,42,0.6)",
+              border: "1px solid rgba(124,58,237,0.25)",
+              boxShadow: "0 10px 30px rgba(0,0,0,0.5)",
+            }}
           >
-            {SURFACES.map((tab) => {
-              const isActive = active === tab.key;
-              return (
-                <button
-                  key={tab.key}
-                  role="tab"
-                  aria-selected={isActive}
-                  onClick={() => setActive(tab.key)}
-                  className={`px-4.5 py-2.5 text-[13px] whitespace-nowrap transition-colors duration-200 ${
-                    isActive ? "font-bold" : "font-semibold text-slate-400 hover:text-slate-200"
-                  }`}
-                  style={
-                    isActive
-                      ? { color: tab.activeColor, borderBottom: `2px solid ${tab.underline}`, marginBottom: -1 }
-                      : { borderBottom: "2px solid transparent", marginBottom: -1 }
-                  }
-                >
-                  {tab.label}
-                </button>
-              );
-            })}
+            <span className="text-[11px] font-bold tracking-[0.1em] text-violet-400">LOCAL COMPILER</span>
+            <h3 className="m-0 text-2xl font-bold tracking-[-0.015em] text-slate-100">
+              GitScape CLI
+            </h3>
+            <p className="m-0 text-[14.5px] leading-relaxed text-slate-400">
+              Compile skills straight from your terminal. Point the CLI at any repository (public or private) and it will download, scan, and output the SKILL.md and manifest files directly into your project's configuration directory.
+            </p>
+            <div className="flex flex-col gap-3 mt-1">
+              <CheckRow>Zero install, runs via <code className="font-mono text-[0.85em] text-slate-200">npx gitscape</code></CheckRow>
+              <CheckRow>Auto-registers skills in your rules registry files</CheckRow>
+              <CheckRow>Supports private repositories using your custom PAT token</CheckRow>
+              <CheckRow>Stateless and runs entirely client-side</CheckRow>
+            </div>
+            <div className="mt-3 flex flex-col gap-2">
+              <CodeSnippet title="install a skill" accent="violet" prompt code="npx gitscape https://github.com/owner/repo" />
+            </div>
           </div>
 
-          <div role="tabpanel">
-            {active === "cli" && <CliPanel />}
-            {active === "mcp" && <McpPanel />}
-            {active === "web" && <WebPanel />}
+          {/* Right Column: MCP */}
+          <div
+            className="rounded-2xl p-6 sm:p-8 flex flex-col gap-5"
+            style={{
+              background: "rgba(15,23,42,0.6)",
+              border: "1px solid rgba(16,185,129,0.25)",
+              boxShadow: "0 10px 30px rgba(0,0,0,0.5)",
+            }}
+          >
+            <span className="text-[11px] font-bold tracking-[0.1em] text-emerald-400">AGENT-NATIVE</span>
+            <h3 className="m-0 text-2xl font-bold tracking-[-0.015em] text-slate-100">
+              Hosted MCP Server
+            </h3>
+            <p className="m-0 text-[14.5px] leading-relaxed text-slate-400">
+              Let your agent manage its own skill dependencies. Integrate GitScape into Cursor, Windsurf, or Claude Desktop. Your agent can call `install_skill` to compile, audit, and install skills on-the-fly mid-conversation.
+            </p>
+            <div className="flex flex-col gap-3 mt-1">
+              <CheckRow>Allows agents to download repositories on demand</CheckRow>
+              <CheckRow>Supports Claude, Cursor, Windsurf, Antigravity, and VS Code</CheckRow>
+              <CheckRow>Deterministic safety scanner checks code before writing</CheckRow>
+              <CheckRow>No API keys required, open to everyone</CheckRow>
+            </div>
+            <div className="mt-3 flex flex-col gap-2">
+              <CodeSnippet title="initialize mcp server" accent="emerald" prompt code="npx gitscape init" />
+            </div>
           </div>
         </div>
       </div>
