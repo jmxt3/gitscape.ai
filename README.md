@@ -1,7 +1,7 @@
 # Git Scape AI
 
 <p align="center">
-  <img src="docs/gitscape_readme_banner.png" alt="GitScape Header Banner" width="100%">
+  <img src="assets/gitscape_readme_banner.png" alt="GitScape Header Banner" width="100%">
 </p>
 
 **Understand any GitHub repository in seconds.**
