@@ -36,13 +36,13 @@ function Stop-Port {
             ForEach-Object { ($_ -split '\s+')[-1] } |
             Sort-Object -Unique
 
-    foreach ($pid in $pids) {
+    foreach ($portPid in $pids) {
         try {
-            $proc = Get-Process -Id $pid -ErrorAction Stop
-            Write-Host "  port $Port  killing PID $pid ($($proc.Name))" -ForegroundColor Yellow
-            Stop-Process -Id $pid -Force -ErrorAction Stop
+            $proc = Get-Process -Id $portPid -ErrorAction Stop
+            Write-Host "  port $Port  killing PID $portPid ($($proc.Name))" -ForegroundColor Yellow
+            Stop-Process -Id $portPid -Force -ErrorAction Stop
         } catch {
-            Write-Host "  port $Port  PID $pid already gone" -ForegroundColor DarkGray
+            Write-Host "  port $Port  PID $portPid already gone" -ForegroundColor DarkGray
         }
     }
 

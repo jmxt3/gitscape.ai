@@ -13,7 +13,6 @@ import { OutputTabs } from "./components/OutputTabs";
 import { transformGithubTreeToD3Hierarchy } from "./components/diagramUtils";
 import { DiagramFullscreenModal } from "./components/DiagramFullscreenModal";
 import { Hero } from "./components/Hero";
-import { FeatureCards } from "./components/FeatureCards";
 import { HowItWorks, Security, OpenSource, FaqSection } from "./components/LandingSections";
 import {
   GITHUB_TOKEN_LOCAL_STORAGE_KEY,
@@ -465,10 +464,6 @@ const App: React.FC = () => {
   const [digest, setDigest] = useState<string>("");
   const [showConfetti, setShowConfetti] = useState<boolean>(false);
 
-  // Per-stage completion flags (drives the flip animation on each card icon)
-  const [stageComplete, setStageComplete] = useState({ digest: false, visualization: false, skill: false });
-  const [hideCards, setHideCards] = useState<boolean>(false);
-
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [retryAfterSeconds, setRetryAfterSeconds] = useState<number | null>(null);
@@ -477,9 +472,6 @@ const App: React.FC = () => {
   const [progressVisible, setProgressVisible] = useState<boolean>(false);
   const [progressFading, setProgressFading] = useState<boolean>(false);
   const progressTickerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  // Tracks whether the user has actively generated at least once this session.
-  // Prevents cached-data restores on mount from prematurely showing checkmarks.
-  const hasGeneratedThisSessionRef = useRef(false);
 
   // Typewriter effect: animate displayedProgressMessage character-by-character
   const [displayedProgressMessage, setDisplayedProgressMessage] = useState("");
@@ -599,7 +591,6 @@ const App: React.FC = () => {
           if (cachedData.framework_manifest) setFrameworkManifest(cachedData.framework_manifest);
           if (cachedData.framework_scan_report) setFrameworkScanReport(cachedData.framework_scan_report);
           if (cachedData.framework_references) setFrameworkReferences(cachedData.framework_references);
-          setHideCards(true);
         } catch (e) {
           console.warn(`Failed to restore cached data for ${repoUrl}:`, e);
           deleteCachedRepo(repoUrl);
@@ -754,13 +745,11 @@ const App: React.FC = () => {
       return;
     }
 
-    setHideCards(true);
     storeInLocalStorage("gitScapeDigestContent", null);
 
     setIsLoading(true);
     setError(null);
     setDigest("");
-    hasGeneratedThisSessionRef.current = true; // mark session as active
     setProgressMessage("🚀 Igniting the engines...");
     setProgressPercent(0);
     setProgressVisible(true);
@@ -1070,27 +1059,7 @@ const App: React.FC = () => {
     setSkillReferences(null);
     setDiagramData(null);
     setRetryAfterSeconds(null);
-    // Reset all stage completion flags AND session guard
-    hasGeneratedThisSessionRef.current = false;
-    setStageComplete({ digest: false, visualization: false, skill: false });
-    setHideCards(false);
   }, [repoUrl]);
-
-  // Drive stage completion flags from data availability.
-  // Only activate AFTER the user has triggered an active generation this session
-  // (prevents cached data restored on mount from showing checkmarks prematurely).
-  useEffect(() => {
-    if (!hasGeneratedThisSessionRef.current) return;
-    setStageComplete(prev => ({ ...prev, digest: !!digest }));
-  }, [digest]);
-  useEffect(() => {
-    if (!hasGeneratedThisSessionRef.current) return;
-    setStageComplete(prev => ({ ...prev, visualization: !!diagramData }));
-  }, [diagramData]);
-  useEffect(() => {
-    if (!hasGeneratedThisSessionRef.current) return;
-    setStageComplete(prev => ({ ...prev, skill: !!skillMd }));
-  }, [skillMd]);
 
   return (
     <div className="min-h-screen text-slate-200 flex flex-col">
@@ -1254,20 +1223,6 @@ const App: React.FC = () => {
               Public repos free, no account. Private repos with your token — it never leaves your browser.
             </p>
           </section>
-
-          <div
-            style={{
-              transition: "opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), max-height 0.6s cubic-bezier(0.16, 1, 0.3, 1), margin-top 0.6s cubic-bezier(0.16, 1, 0.3, 1)",
-              opacity: hideCards ? 0 : 1,
-              transform: hideCards ? "translateY(24px) scale(0.97)" : "translateY(0) scale(1)",
-              maxHeight: hideCards ? "0px" : "1000px",
-              marginTop: hideCards ? "0px" : "3rem",
-              overflow: "hidden",
-              pointerEvents: hideCards ? "none" : "auto",
-            }}
-          >
-            <FeatureCards stageComplete={stageComplete} />
-          </div>
 
           </div>{/* end relative space-y-12 */}
         </div>{/* end aurora wrapper */}
