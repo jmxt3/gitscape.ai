@@ -1,13 +1,13 @@
 {
   "name": "gitscape",
-  "version": "0.2.8",
+  "version": "0.2.9",
   "description": "GitScape CLI — compile any Git repository into a local agent skill in one command",
   "main": "bin/gitscape.js",
   "bin": {
     "gitscape": "bin/gitscape.js"
   },
   "type": "module",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "scripts": {
     "test": "node bin/gitscape.js --help"
   },
