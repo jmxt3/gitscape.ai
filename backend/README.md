@@ -1,4 +1,4 @@
-# Git Scape AI — API
+# Git Scape AI — Backend API
 
 **The FastAPI backend for [Git Scape AI](https://gitscape.ai/).**
 
@@ -7,37 +7,40 @@
 ![Google Cloud](https://img.shields.io/badge/Google%20Cloud-4285F4.svg?style=for-the-badge&logo=Google-Cloud&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-2496ED.svg?style=for-the-badge&logo=Docker&logoColor=white)
 
-> Part of the [GitScape monorepo](../README.md). See also: [`web/`](../web/README.md).
+> Part of the [GitScape monorepo](../README.md). See also: [`frontend/`](../frontend/README.md).
 
 ---
 
 ## 🚀 Overview
 
-The `api/` workspace is the backend service that powers Git Scape AI. It clones any public or private GitHub repository, analyzes its structure, streams a Markdown digest back to the client, and packages the repo into a downloadable **Agent Skill** via the **SkillForge** pipeline.
+The `backend/` workspace is the backend service that powers Git Scape AI. It clones any public or private GitHub repository, analyzes its structure, streams a Markdown digest back to the client, and packages the repo into a downloadable **Agent Skill** via the **SkillForge** pipeline.
 
 ### Key Features
 
 - **REST endpoint** — HTTP digest generation that also returns the skill preview (`GET /converter`).
 - **WebSocket endpoint** — Real-time streaming with live progress (`WS /ws/converter`).
-- **SkillForge** — Deterministic Agent Skill generation (tree-sitter), with an optional Gemini "HD" prose tier. See [SkillForge](#-skillforge--agent-skill-generation).
+- **MCP Server Endpoints** — Exposes `/mcp/tools` and `/mcp/call` supporting the `install_skill` tool for agent integrations.
+- **SkillForge** — Deterministic Agent Skill generation (tree-sitter), with an optional Gemini "HD" prose tier.
+- **Freshness Stamping** — Injects git HEAD SHA (`source_git_head`) and creation timestamps (`built_at`) into manifest metadata to allow automatic drift detection.
 - **Security scanner** — Pure-Python, zero-LLM gate over every generated skill (prompt injection, exfiltration, hidden text). `FAIL` blocks export.
 - **Rate limiting** — Per-IP throttling via SlowAPI to protect the service.
 - **Request timing** — `X-Process-Time-Sec` header on every response for observability.
-- **Cloud Run ready** — Listens on the `PORT` env variable, defaults to `8080`.
+- **Cloud Run ready** — Listens on the `PORT` env variable, defaults to `8081`.
 
 ---
 
 ## 🏗️ Architecture
 
 ```
-api/
+backend/
 ├── main.py               # FastAPI entrypoint: middleware, rate limiter, router mounting
 ├── app/
-│   ├── api.py            # App factory (CORS), all HTTP & WebSocket routes
+│   ├── api.py            # App factory (CORS), all HTTP, WebSocket and MCP routes
+│   ├── mcp.py            # MCP server tool definitions and call handlers
 │   ├── converter.py      # Core logic: clone → analyze → build digest
 │   ├── config.py         # Pydantic Settings (env-based configuration)
 │   ├── skill_builder.py  # Shared helpers: language detection, skill naming
-│   └── skillforge/       # Agent Skill pipeline (see below)
+│   └── skillforge/       # Agent Skill pipeline
 │       ├── parse.py      #   digest/clone → ContentUnit[]
 │       ├── classify.py   #   docs | source | config | test | other
 │       ├── extract/      #   tree-sitter symbols, import graph, setup, examples
@@ -46,9 +49,9 @@ api/
 │       ├── hd.py         #   optional Gemini Flash prose
 │       ├── exporters.py  #   Google ADK + Agno wrappers
 │       └── package.py    #   zip the package, enforce the gate
-├── tests/                # pytest suite (parser, extractor, scanner, API)
-├── pyproject.toml        # Project metadata & dependencies
-├── requirements.txt      # Pinned pip requirements
+├── tests/                # pytest suite (parser, extractor, scanner, API, MCP)
+├── pyproject.toml        # Project metadata & dependencies managed by uv
+├── uv.lock               # Fast, locked dependencies file
 ├── Dockerfile            # Production container (Python + uvicorn)
 └── .env.example          # Environment variable template
 ```
@@ -56,19 +59,21 @@ api/
 ### Request Flow
 
 ```
-Client
+Client / CLI / MCP Client
   │
   ├─ GET /converter?repo_url=...
   │      └─ converter.py → digest  ┐
   │         skillforge.build_skill ┴→ digest + skill_md + references + scan_report + manifest
-  │         (skill build is try/except-wrapped — a skill failure never breaks the digest)
   │
   ├─ WS /ws/converter?repo_url=...
   │      └─ converter.py → streaming progress + final digest
   │
   ├─ POST /skill-zip          → cached/rebuilt skill .zip  (422 + report if scan FAILs)
   ├─ POST /skill/hd-prose     → skill rebuilt with Gemini prose (503 if no key)
-  └─ GET  /export/{framework} → ADK / Agno wrapper (.py)
+  ├─ GET  /export/{framework} → ADK / Agno wrapper (.py)
+  │
+  ├─ GET  /mcp/tools          → lists install_skill tool definition
+  └─ POST /mcp/call           → executes install_skill (clones, scans, returns file payload JSON)
 ```
 
 ### Technology Stack
@@ -98,14 +103,17 @@ Client
 # macOS / Linux
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# or via pip
+# Windows (PowerShell)
+irm https://astral.sh/uv/install.ps1 | iex
+
+# Or via pip
 pip install uv
 ```
 
 ### 1. Create Environment & Install Dependencies
 
 ```bash
-cd api
+cd backend
 uv venv
 source .venv/bin/activate      # Windows: .venv\Scripts\activate
 uv sync
@@ -131,40 +139,52 @@ GEMINI_API_KEY=""
 HD_MODEL="gemini-3.1-flash-lite"
 ```
 
-> **HD mode** is optional. With no `GEMINI_API_KEY`, `POST /skill/hd-prose` returns `503`
-> and the deterministic Standard skill is unaffected.
-
 ### 3. Run the API
 
 ```bash
-# Development (with hot reload)
-uvicorn main:app --host 0.0.0.0 --port 8080 --reload
-# or
-fastapi dev
+# Development (with hot reload enabled)
+uv run uvicorn main:app --host 127.0.0.1 --port 8081 --reload
 
 # Production
-uvicorn main:app --host 0.0.0.0 --port 8080 --workers 4
+uv run uvicorn main:app --host 0.0.0.0 --port 8081 --workers 4
 ```
 
-> Use port **8080** locally so the frontend's `VITE_API_HOST=localhost:8080` lines up
-> (see [`web/README.md`](../web/README.md)).
+> The local backend runs on port **8081** so that the frontend's Vite proxy (`localhost:5173`) maps correctly.
 
 ### 4. Explore the Docs
 
 | Interface | URL |
 |---|---|
-| Swagger UI | http://localhost:8080/docs |
-| ReDoc | http://localhost:8080/redoc |
+| Swagger UI | http://localhost:8081/docs |
+| ReDoc | http://localhost:8081/redoc |
 
-### 5. Run the Tests
+---
+
+## 🧪 Testing
+
+The backend is backed by an extensive pytest suite. Always run tests using the `uv` toolchain:
 
 ```bash
-uv run pytest -q          # parser, classifier, extractor, assembler, scanner, API
+# Activate virtual environment
+source .venv/bin/activate    # Windows: .venv\Scripts\activate
+
+# Run tests silently
+uv run pytest -q
+
+# Run verbose with coverage
+uv run pytest -v
 ```
+
+Testing coverage details:
+- **Parser & Extractor**: `test_parse.py`, `test_extract.py`, `test_assemble.py`.
+- **Security Scanner**: `test_scan_obfuscation.py`, `test_scan_secrets.py`, `test_scan_supply_chain.py`.
+- **MCP routes**: `test_mcp.py` mocks repository cloning and asserts the tool structure response.
 
 ---
 
 ## 📡 API Reference
+
+### Standard Endpoints
 
 | Method | Path | Description |
 |---|---|---|
@@ -175,51 +195,27 @@ uv run pytest -q          # parser, classifier, extractor, assembler, scanner, A
 | `POST` | `/skill/hd-prose` | Rebuild the skill with Gemini-written prose. `503` if no server key |
 | `GET` | `/export/{framework}` | Download an `adk` or `agno` framework wrapper (`.py`) |
 
-`GET`/`WS` take query strings; `POST` bodies are JSON. See `/docs` for the full schema.
+### MCP Server Endpoints
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/mcp/tools` | List all available MCP tools (including `install_skill`) |
+| `POST` | `/mcp/call` | Invoke an MCP tool with name and arguments |
 
 ---
 
 ## 🧠 SkillForge — Agent Skill generation
 
 SkillForge (`app/skillforge/`) converts a repository into a progressively-disclosed
-[Agent Skill](https://agentskills.io). Core principle: **invert the labor** — do ~90%
-deterministically, use an LLM only for short prose glue.
+[Agent Skill](https://agentskills.io).
 
 ```
 ingest → parse → classify → extract → sanitize → assemble → scan (GATE) → package
 ```
 
-- **extract** (the quality lever, zero-LLM): tree-sitter builds a public API/symbol index
-  (signatures + one-line purpose), an import/dependency graph, mined setup commands, and
-  deduped code examples.
-- **assemble**: a slim, token-budgeted `SKILL.md` + a `references/` folder
-  (`api.md`, `architecture.md`, `examples.md`, `setup.md`, `config.md`), each chunk stamped
-  with its source path. The full digest is **not** bundled.
-- **package**: zips `SKILL.md` + `references/` + ADK/Agno `exporters/` + a provenance-stamped
-  `manifest.json` (digest hash + per-chunk provenance + scan status).
-
-**Caching:** keyed on the digest's SHA-256 + builder version. `GET /converter` populates the
-cache; `POST /skill-zip` reuses it, so an identical digest never recomputes.
-
-### Tiers
-
-| Tier | Behavior | Key |
-|---|---|---|
-| **Standard** (default) | Complete, valid skill built deterministically — zero LLM calls | none |
-| **HD** | Adds Gemini Flash prose (the "what / when / description") over the same structure | `GEMINI_API_KEY` |
-
-### 🛡️ Security scanner (`scan.py`)
-
-Pure-Python, deterministic, **no LLM**. Runs over `SKILL.md` + `references/*.md` (+ any shipped
-script) and detects prompt injection, exfiltration patterns, hidden/invisible unicode, and
-high-entropy blobs. Findings are attributed back to the originating repo file.
-
-- **PASS** → export allowed · **WARN** → needs explicit acceptance · **FAIL** → export blocked.
-- The gate is enforced in `package.py`; `POST /skill-zip` surfaces a `FAIL` as HTTP `422` with the report.
-
-> Adding a language: install the `tree-sitter-<lang>` grammar and extend `SUFFIX_TO_LANG` in
-> `app/skillforge/extract/symbols.py`. (Use the individual grammar packages, **not**
-> `tree-sitter-language-pack`, which has an ABI mismatch with the installed core.)
+- **Metadata tracking**: Automatically extracts `git_sha` from sparse-clones to map the `source_git_head` in the manifest.
+- **scan** (`scan.py`): Pure-Python, deterministic, **no LLM**. Scans `SKILL.md` + `references/*.md` (+ any shipped script) and detects prompt injection, exfiltration patterns, hidden/invisible unicode, and high-entropy blobs.
+- **package** (`package.py`): Zips `SKILL.md` + `references/` + ADK/Agno `exporters/` + a provenance-stamped `manifest.json`.
 
 ---
 
@@ -230,11 +226,8 @@ high-entropy blobs. Findings are attributed back to the originating repo file.
 docker build -t git_scape_api .
 
 # Run locally
-docker run -d -p 8080:8080 --name git_scape_api_local git_scape_api
-# → http://localhost:8080/docs
-
-# Cleanup
-docker stop git_scape_api_local && docker rm git_scape_api_local && docker rmi git_scape_api
+docker run -d -p 8081:8081 --name git_scape_api_local git_scape_api
+# → http://localhost:8081/docs
 ```
 
 ### Deploy to Google Cloud Run
@@ -256,19 +249,16 @@ gcloud run deploy git-scape-api \
   --project PROJECT_ID
 ```
 
-> **Cloud Run note:** The container reads the `PORT` env variable injected by Cloud Run and defaults to `8080` if absent. Keep your service stateless — any persistent state should live in Cloud SQL, Firestore, or Cloud Storage.
-
 ---
 
 ## 🧑‍💻 Contributing
 
 1. Fork the repo and create a feature branch.
-2. Make your changes inside `api/`.
-3. Ensure code is formatted (`black`) and type-checked.
-4. Open a Pull Request with a clear description.
-5. For bugs or feature requests, open a [GitHub Issue](https://github.com/jmxt3/Git-Scape-API/issues).
+2. Make your changes inside `backend/`.
+3. Ensure code is formatted (`black` or `ruff`) and pytest passes.
+4. Open a Pull Request.
 
-**Code style:** PEP8, `black` formatting, type hints + docstrings on all public functions. Keep API routing (`api.py`) and business logic (`converter.py`) separate.
+**Code style:** PEP8, black formatting, type hints + docstrings on all public functions.
 
 ---
 
@@ -278,18 +268,10 @@ gcloud run deploy git-scape-api \
 - [FastAPI Docs](https://fastapi.tiangolo.com/)
 - [uv Docs](https://docs.astral.sh/uv/)
 - [Google Cloud Run Docs](https://cloud.google.com/run/docs)
-- [Git Scape Web (Frontend)](../web/README.md)
+- [Git Scape Web (Frontend)](../frontend/README.md)
 
 ---
 
 ## 📝 License
 
 This project is licensed under the [MIT License](LICENSE).
-
----
-
-## 🙏 Acknowledgements
-
-Created by [João Machete](https://github.com/jmxt3) and contributors.
-
-If you like this project, please ⭐️ the repo and share your feedback!
