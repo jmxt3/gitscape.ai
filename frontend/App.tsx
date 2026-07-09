@@ -1321,7 +1321,17 @@ const App: React.FC = () => {
 
         <div className={showOutputArea ? "mt-16 sm:mt-20" : ""}>
           <HowItWorks />
-          <DevTools />
+          <DevTools
+            onSelectTab={(tab) => {
+              setActiveMainTab(tab);
+              const element = document.getElementById("digest-generator-input");
+              if (element) {
+                const yOffset = -200;
+                const y = element.getBoundingClientRect().top + window.scrollY + yOffset;
+                window.scrollTo({ top: y, behavior: "smooth" });
+              }
+            }}
+          />
           <Security />
           <OpenSource />
           <FaqSection />

@@ -225,7 +225,11 @@ const WebPanel: React.FC = () => (
   </div>
 );
 
-export const DevTools: React.FC = () => {
+interface DevToolsProps {
+  onSelectTab?: (tab: "web" | "cli" | "mcp") => void;
+}
+
+export const DevTools: React.FC<DevToolsProps> = ({ onSelectTab }) => {
   return (
     <section
       id="developer-tools"
@@ -271,6 +275,14 @@ export const DevTools: React.FC = () => {
             <div className="mt-3 flex flex-col gap-2">
               <CodeSnippet title="install a skill" accent="violet" prompt code="npx gitscape https://github.com/owner/repo" />
             </div>
+            <div className="flex justify-start mt-1 pl-1">
+              <button
+                onClick={() => onSelectTab?.("cli")}
+                className="text-[13px] font-bold text-violet-400 hover:text-violet-300 transition-colors cursor-pointer flex items-center gap-1 focus:outline-none"
+              >
+                Know More →
+              </button>
+            </div>
           </div>
 
           {/* Right Column: MCP */}
@@ -297,6 +309,14 @@ export const DevTools: React.FC = () => {
             </div>
             <div className="mt-3 flex flex-col gap-2">
               <CodeSnippet title="initialize mcp server" accent="emerald" prompt code="npx gitscape init" />
+            </div>
+            <div className="flex justify-start mt-1 pl-1">
+              <button
+                onClick={() => onSelectTab?.("mcp")}
+                className="text-[13px] font-bold text-emerald-400 hover:text-emerald-300 transition-colors cursor-pointer flex items-center gap-1 focus:outline-none"
+              >
+                Know More →
+              </button>
             </div>
           </div>
         </div>
