@@ -3,7 +3,7 @@
 import fs from 'fs';
 import path from 'path';
 
-const DEFAULT_SERVER = process.env.GITSCAPE_SERVER_URL || 'https://gitscape-410919026990.us-central1.run.app';
+const DEFAULT_SERVER = process.env.GITSCAPE_SERVER_URL || 'https://gitscape-143600285956.us-central1.run.app';
 
 function printHelp() {
   console.log(`
@@ -12,6 +12,7 @@ GitScape CLI — Compile any repository into a local agent skill.
 Usage:
   npx gitscape <repo_url> [options]   Compile and install a skill locally
   npx gitscape init                   Create a local .mcp.json pointing to GitScape
+  npx gitscape remove <skill_name>    Uninstall a skill and clean up references
 
 Options:
   --token <pat>       Optional GitHub Personal Access Token for private repos
@@ -41,6 +42,66 @@ async function handleInit(options = {}) {
     console.error(`Error writing .mcp.json: ${err.message}`);
     process.exit(1);
   }
+}
+
+async function handleRemove(skillName) {
+  let name = skillName.trim();
+  if (name.startsWith('http://') || name.startsWith('https://')) {
+    try {
+      const urlParts = new URL(name).pathname.split('/');
+      name = urlParts[urlParts.length - 1];
+      if (name.endsWith('.git')) name = name.slice(0, -4);
+    } catch (e) {
+      // fallback
+    }
+  }
+
+  const skillDir = path.join(process.cwd(), '.agents', 'skills', name);
+  console.log(`Removing skill ${name}...`);
+
+  if (fs.existsSync(skillDir)) {
+    try {
+      fs.rmSync(skillDir, { recursive: true, force: true });
+      console.log(`✓ Deleted directory .agents/skills/${name}`);
+    } catch (err) {
+      console.error(`Error deleting directory: ${err.message}`);
+    }
+  } else {
+    console.log(`Note: Directory .agents/skills/${name} did not exist.`);
+  }
+
+  const targetFiles = ['AGENTS.md', '.agents/AGENTS.md', 'CLAUDE.md', '.gemini/config/AGENTS.md'];
+  const skillLine = `- [${name}](.agents/skills/${name}/SKILL.md)`;
+  const escapedLine = skillLine.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+  for (const filename of targetFiles) {
+    const filePath = path.join(process.cwd(), filename);
+    if (!fs.existsSync(filePath)) continue;
+
+    try {
+      let content = fs.readFileSync(filePath, 'utf-8');
+      if (content.includes(skillLine)) {
+        content = content.replace(new RegExp(`\\n?\\s*${escapedLine}\\s*\\n?`, 'g'), '\n');
+        
+        // Cleanup empty GitScape Skills section
+        const marker = '## GitScape Skills';
+        if (content.includes(marker)) {
+          const parts = content.split(marker);
+          const afterMarker = parts[1].trim();
+          if (!afterMarker || afterMarker.startsWith('#') || !afterMarker.includes('- [')) {
+            content = parts[0].trim() + '\n\n' + afterMarker;
+          }
+        }
+
+        fs.writeFileSync(filePath, content.trim() + '\n', 'utf-8');
+        console.log(`✓ Removed reference from ${filename}`);
+      }
+    } catch (err) {
+      console.warn(`Warning: Could not update ${filename}: ${err.message}`);
+    }
+  }
+
+  console.log(`✓ Skill ${name} completely uninstalled.`);
 }
 
 
@@ -189,6 +250,16 @@ async function main() {
 
   if (cleanArgs[0] === 'init') {
     await handleInit(options);
+    process.exit(0);
+  }
+
+  if (cleanArgs[0] === 'remove' || cleanArgs[0] === 'uninstall') {
+    const targetSkill = cleanArgs[1];
+    if (!targetSkill) {
+      console.error('Error: Please specify the name of the skill to remove.');
+      process.exit(1);
+    }
+    await handleRemove(targetSkill);
     process.exit(0);
   }
 

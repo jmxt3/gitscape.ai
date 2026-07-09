@@ -15,6 +15,7 @@ spec:
         # Set the ingress container name (nginx) so Cloud Run knows which port to expose
         run.googleapis.com/container-dependencies: '{"nginx":["api"]}'
     spec:
+      serviceAccountName: gitscape-sa@gitscape-501903.iam.gserviceaccount.com
       # 5 concurrent requests per instance (matching previous API setting)
       containerConcurrency: 5
       # Max 300s — matches the long-running /converter endpoint

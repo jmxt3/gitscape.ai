@@ -237,7 +237,7 @@ The CLI is a fast, zero-dependency Node.js utility that calls the compiler API a
 3. **CLI Options**:
    - `--token <pat>`: Optional GitHub Personal Access Token for private repositories.
    - `--type <type>`: Skill type: `code` or `framework` (default: `code`).
-   - `--server <url>`: Override the compiler server (default: `https://gitscape-410919026990.us-central1.run.app`).
+   - `--server <url>`: Override the compiler server (default: `https://gitscape-143600285956.us-central1.run.app`).
 
 ---
 
@@ -253,7 +253,7 @@ The MCP Server exposes the `install_skill` tool, allowing AI agents (Cursor, Cla
 3. Configure the settings:
    - **Name**: `GitScape`
    - **Type**: `sse`
-   - **URL**: `https://gitscape-410919026990.us-central1.run.app/api/mcp` *(or `http://127.0.0.1:8081/mcp` for local dev)*
+   - **URL**: `https://gitscape-143600285956.us-central1.run.app/api/mcp` *(or `http://127.0.0.1:8081/mcp` for local dev)*
 
 ##### 2. In Claude Desktop
 Add the following config to your `claude_desktop_config.json` (typically located in `%APPDATA%\Claude\claude_desktop_config.json` on Windows or `~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
