@@ -1072,7 +1072,7 @@ const App: React.FC = () => {
       />
       <main className="flex-grow">
         {/* ── First-screen hero section with shared aurora background ── */}
-        <div className="relative overflow-hidden pb-12">
+        <div className="relative overflow-hidden pt-16 sm:pt-[72px] pb-16 sm:pb-[72px]">
           {/* Aurora blobs */}
           <div className="hero-blob-1" />
           <div className="hero-blob-2" />
@@ -1081,7 +1081,7 @@ const App: React.FC = () => {
           <div className="grid-pattern" />
 
           <Hero />
-          <div className="relative space-y-12">
+          <div className="relative mt-10 sm:mt-12">
             <section id="digest-generator-input" className="relative w-full max-w-[850px] mx-auto px-4">
             <div
               className="rounded-2xl p-5 sm:p-7 flex flex-col gap-6"
@@ -1096,17 +1096,17 @@ const App: React.FC = () => {
               }}
             >
               {/* Tab Header Row */}
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-1">
+              <div className="pb-1">
                 <div
-                  className="flex gap-1 overflow-x-auto flex-1"
+                  className="flex gap-1 overflow-x-auto"
                   style={{ borderBottom: "1px solid rgba(71,85,105,0.4)" }}
                   role="tablist"
                   aria-label="GitScape platforms"
                 >
                   {[
                     { key: "web", label: "Web", activeColor: "#fcd34d", underline: "#f59e0b" },
-                    { key: "cli", label: "Terminal", activeColor: "#c4b5fd", underline: "#7c3aed" },
-                    { key: "mcp", label: "Your agent", activeColor: "#6ee7b7", underline: "#10b981" },
+                    { key: "cli", label: "CLI", activeColor: "#c4b5fd", underline: "#7c3aed" },
+                    { key: "mcp", label: "MCP", activeColor: "#6ee7b7", underline: "#10b981" },
                   ].map((tab) => {
                     const isActive = activeMainTab === tab.key;
                     return (
@@ -1129,23 +1129,6 @@ const App: React.FC = () => {
                     );
                   })}
                 </div>
-
-                {/* ScapeGuard badge on the right */}
-                <a
-                  href="#security"
-                  className="self-start sm:self-auto inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[12px] font-semibold transition-colors duration-200 hover:-translate-y-0.5 mb-1 sm:mb-0"
-                  style={{
-                    border: "1px solid rgba(16,185,129,0.35)",
-                    background: "rgba(16,185,129,0.08)",
-                    color: "#34d399",
-                  }}
-                >
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                    <path d="M9 12l2 2 4-4" />
-                  </svg>
-                  Every skill scanned by ScapeGuard
-                </a>
               </div>
 
               {activeMainTab === 'web' ? (
@@ -1287,10 +1270,29 @@ const App: React.FC = () => {
               ) : (
                 <McpPanel />
               )}
+
+              {/* ScapeGuard badge at the bottom of the container */}
+              <div className="flex justify-center mt-2">
+                <a
+                  href="#security"
+                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[12px] font-semibold transition-colors duration-200 hover:-translate-y-0.5"
+                  style={{
+                    border: "1px solid rgba(16,185,129,0.35)",
+                    background: "rgba(16,185,129,0.08)",
+                    color: "#34d399",
+                  }}
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                    <path d="M9 12l2 2 4-4" />
+                  </svg>
+                  Every skill scanned by ScapeGuard
+                </a>
+              </div>
             </div>
           </section>
 
-          </div>{/* end relative space-y-12 */}
+          </div>{/* end relative mt-10 sm:mt-12 */}
         </div>{/* end aurora wrapper */}
 
         {showOutputArea && (

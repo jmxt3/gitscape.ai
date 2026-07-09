@@ -6,7 +6,7 @@ import { CodeSnippet } from "./CodeSnippet";
  * Static/presentational. Blobs + grid use existing classes from index.css.
  */
 export const Hero: React.FC = () => (
-  <div className="px-6 pt-20 pb-4 text-center">
+  <div className="px-6 text-center">
     <div className="relative flex flex-col items-center gap-5 max-w-6xl mx-auto">
       <div
         className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-[11px] font-bold tracking-[0.08em]"

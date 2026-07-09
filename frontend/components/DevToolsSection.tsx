@@ -84,8 +84,8 @@ function buildMcpSnippet(ideKey: IDEKey): string {
 type SurfaceKey = "cli" | "mcp" | "web";
 
 const SURFACES: { key: SurfaceKey; label: string; activeColor: string; underline: string }[] = [
-  { key: "cli", label: "Terminal", activeColor: "#c4b5fd", underline: "#7c3aed" },
-  { key: "mcp", label: "Your agent", activeColor: "#6ee7b7", underline: "#10b981" },
+  { key: "cli", label: "CLI", activeColor: "#c4b5fd", underline: "#7c3aed" },
+  { key: "mcp", label: "MCP", activeColor: "#6ee7b7", underline: "#10b981" },
   { key: "web", label: "Web", activeColor: "#fcd34d", underline: "#f59e0b" },
 ];
 
