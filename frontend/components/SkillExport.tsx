@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
 import "highlight.js/styles/github-dark.css";
-import { ScanReport, ScanStatus, SkillManifest, SkillReferences } from "../types";
+import { CategoryResult, ScanReport, ScanStatus, SkillManifest, SkillReferences } from "../types";
 
 interface SkillExportProps {
   skillMd: string;
@@ -48,30 +48,60 @@ const STATUS_STYLES: Record<ScanStatus, { label: string; chip: string; dot: stri
   FAIL: { label: "Scan Failed",         chip: "bg-red-900/30 border-red-600/40 text-red-300",         dot: "bg-red-400" },
 };
 
-// ─── Category chip map — sourced from api/app/skillforge/scan.py ─────────────
+// ─── ScapeGuard taxonomy — must mirror backend scan/taxonomy.py ──────────────
 
-const RULE_CATEGORY: Record<string, { label: string; color: "red" | "amber" | "slate" }> = {
-  "injection.ignore_previous":      { label: "Prompt Injection",  color: "red" },
-  "injection.reveal_system_prompt": { label: "Prompt Injection",  color: "red" },
-  "injection.persona_override":     { label: "Prompt Injection",  color: "red" },
-  "injection.role_tags":            { label: "Prompt Injection",  color: "red" },
-  "injection.tool_abuse":           { label: "Tool Abuse",        color: "red" },
-  "exfil.send_secrets":             { label: "Exfiltration",      color: "red" },
-  "exfil.raw_ip_url":               { label: "Suspicious URL",   color: "amber" },
-  "exfil.high_entropy_blob":        { label: "Hidden Payload",   color: "amber" },
-  "hidden.invisible_char":          { label: "Hidden Characters", color: "red" },
+const CATEGORY_META: Record<string, { label: string }> = {
+  prompt_injection:    { label: "Prompt Injection" },
+  secrets:             { label: "Secrets & Credentials" },
+  data_exfiltration:   { label: "Data Exfiltration" },
+  malicious_execution: { label: "Malicious Execution" },
+  supply_chain:        { label: "Supply Chain" },
+  obfuscation:         { label: "Obfuscation" },
+  content_exposure:    { label: "Untrusted Content" },
+  excessive_agency:    { label: "Excessive Agency" },
+  structure:           { label: "Structure & Quality" },
 };
 
-function resolveCategory(rule: string): { label: string; color: "red" | "amber" | "slate" } {
-  if (RULE_CATEGORY[rule]) return RULE_CATEGORY[rule];
-  if (rule.startsWith("framework.")) return { label: "Structure Gap", color: "amber" };
-  return { label: rule, color: "slate" };
+// The order the category grid renders in.
+const CATEGORY_ORDER = [
+  "prompt_injection", "secrets", "data_exfiltration", "malicious_execution",
+  "supply_chain", "obfuscation", "content_exposure", "excessive_agency", "structure",
+];
+
+// Legacy fallback for reports cached before ScapeGuard v2 tagged findings with a category.
+const LEGACY_RULE_CATEGORY: Record<string, string> = {
+  "injection.ignore_previous": "prompt_injection",
+  "injection.reveal_system_prompt": "prompt_injection",
+  "injection.persona_override": "prompt_injection",
+  "injection.role_tags": "prompt_injection",
+  "injection.tool_abuse": "malicious_execution",
+  "exfil.send_secrets": "data_exfiltration",
+  "exfil.raw_ip_url": "data_exfiltration",
+  "exfil.high_entropy_blob": "obfuscation",
+  "hidden.invisible_char": "obfuscation",
+};
+
+function categoryOf(finding: { rule: string; category?: string }): string {
+  if (finding.category) return finding.category;
+  if (LEGACY_RULE_CATEGORY[finding.rule]) return LEGACY_RULE_CATEGORY[finding.rule];
+  if (finding.rule?.startsWith("framework.")) return "structure";
+  return "other";
 }
 
-const CATEGORY_CHIP_CLASSES: Record<"red" | "amber" | "slate", string> = {
-  red:   "bg-red-900/30 border border-red-700/50 text-red-300",
-  amber: "bg-amber-900/30 border border-amber-700/50 text-amber-300",
-  slate: "bg-slate-800/50 border border-slate-700/50 text-slate-400",
+function categoryLabel(slug: string): string {
+  return CATEGORY_META[slug]?.label ?? slug;
+}
+
+const STATUS_CHIP: Record<ScanStatus, string> = {
+  PASS: "bg-emerald-900/20 border-emerald-700/40 text-emerald-300",
+  WARN: "bg-amber-900/20 border-amber-700/40 text-amber-300",
+  FAIL: "bg-red-900/25 border-red-700/50 text-red-300",
+};
+
+const STATUS_DOT: Record<ScanStatus, string> = {
+  PASS: "bg-emerald-400",
+  WARN: "bg-amber-400",
+  FAIL: "bg-red-400",
 };
 
 const SEVERITY_COLOR: Record<string, string> = {
@@ -81,6 +111,41 @@ const SEVERITY_COLOR: Record<string, string> = {
   low: "text-amber-300",
   info: "text-slate-400",
 };
+
+// Categories whose CRITICAL findings can never be shipped — mirrors the backend
+// gate in scan/package.py so the UI can show the hard-block state immediately,
+// before a download round-trip. The server remains the source of truth (its
+// `bypassable` flag overrides this once a 422 comes back).
+const UNBYPASSABLE_CATEGORIES = new Set(["secrets", "malicious_execution", "data_exfiltration"]);
+
+function computeBypassable(report: ScanReport | null | undefined): boolean {
+  if (!report) return true;
+  return !report.findings.some(
+    (f) =>
+      f.severity === "critical" &&
+      (f.confidence ?? "high") !== "low" &&
+      UNBYPASSABLE_CATEGORIES.has(categoryOf(f))
+  );
+}
+
+// Derive per-category verdicts from findings when the server didn't send them
+// (older cached reports). Only categories present in findings appear here.
+function deriveCategories(report: ScanReport): CategoryResult[] {
+  if (report.categories && report.categories.length) return report.categories;
+  const worst: Record<string, ScanStatus> = {};
+  const counts: Record<string, number> = {};
+  const rank: Record<ScanStatus, number> = { PASS: 0, WARN: 1, FAIL: 2 };
+  for (const f of report.findings) {
+    const slug = categoryOf(f);
+    counts[slug] = (counts[slug] ?? 0) + 1;
+    const s: ScanStatus = ["critical", "high"].includes(f.severity)
+      ? "FAIL" : ["medium", "low"].includes(f.severity) ? "WARN" : "PASS";
+    if (!worst[slug] || rank[s] > rank[worst[slug]]) worst[slug] = s;
+  }
+  return Object.keys(counts).map((slug) => ({
+    category: slug, status: worst[slug] ?? "PASS", findings: counts[slug],
+  }));
+}
 
 // Status icons — one per ScanStatus
 const ScanStatusIcon: React.FC<{ status: ScanStatus }> = ({ status }) => {
@@ -102,15 +167,37 @@ const ScanStatusIcon: React.FC<{ status: ScanStatus }> = ({ status }) => {
   );
 };
 
+// A single category tile in the coverage grid.
+const CategoryTile: React.FC<{ result: CategoryResult }> = ({ result }) => (
+  <div className={`flex items-center gap-1.5 rounded-lg border px-2 py-1.5 ${STATUS_CHIP[result.status]}`}>
+    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${STATUS_DOT[result.status]}`} />
+    <span className="text-[10px] font-medium leading-tight truncate">{categoryLabel(result.category)}</span>
+    {result.findings > 0 && (
+      <span className="ml-auto text-[9px] font-mono opacity-70 shrink-0">{result.findings}</span>
+    )}
+  </div>
+);
+
 const ScanBadge: React.FC<{ report: ScanReport }> = ({ report }) => {
   const [open, setOpen] = useState(report.status !== "PASS");
   const style = STATUS_STYLES[report.status];
+  const categories = useMemo(() => {
+    const cats = deriveCategories(report);
+    return [...cats].sort(
+      (a, b) => CATEGORY_ORDER.indexOf(a.category) - CATEGORY_ORDER.indexOf(b.category)
+    );
+  }, [report]);
+  const version = report.engine_version ? `v${report.engine_version}` : "";
+  const shortHash = report.skill_hash
+    ? report.skill_hash.replace("sha256:", "sha256:").slice(0, 17) + "…"
+    : null;
+  const scannedAt = report.generated_at
+    ? new Date(report.generated_at).toLocaleString()
+    : null;
+
   return (
-    <div className={`rounded-xl border px-3 py-2 ${style.chip}`}>
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-2 w-full text-left"
-      >
+    <div className={`rounded-xl border px-3 py-2.5 ${style.chip}`}>
+      <button onClick={() => setOpen((v) => !v)} className="flex items-center gap-2 w-full text-left">
         <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${style.dot}`} />
         <span className="text-xs font-semibold tracking-wide flex items-center gap-1.5">
           <ScanStatusIcon status={report.status} />
@@ -118,40 +205,79 @@ const ScanBadge: React.FC<{ report: ScanReport }> = ({ report }) => {
         </span>
         <span className="ml-auto text-[10px] font-mono opacity-70">
           {report.findings.length} finding{report.findings.length === 1 ? "" : "s"}
-          {report.findings.length > 0 && (open ? " ▲" : " ▼")}
+          {(open ? " ▲" : " ▼")}
         </span>
       </button>
+
+      {/* Behavioral summary (LLM judge, when enabled) */}
+      {report.summary && (
+        <p className="mt-2 text-[11px] text-slate-300 leading-relaxed italic">{report.summary}</p>
+      )}
+
+      {/* Category coverage grid — shows what ScapeGuard checked, green included */}
+      {open && categories.length > 0 && (
+        <div className="mt-2.5 grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+          {categories.map((c) => <CategoryTile key={c.category} result={c} />)}
+        </div>
+      )}
+
+      {/* Findings detail */}
       {open && report.findings.length > 0 && (
-        <ul className="mt-2 flex flex-col gap-1.5 max-h-56 overflow-auto">
-          {report.findings.map((f, i) => {
-            const category = resolveCategory(f.rule);
-            return (
-              <li key={i} className="text-[11px] bg-slate-900/50 rounded-md px-2.5 py-2 border border-slate-700/60">
-                {/* Row 1: category chip + severity + rule */}
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold tracking-wide ${CATEGORY_CHIP_CLASSES[category.color]}`}>
-                    {category.label}
-                  </span>
-                  <span className={`font-bold text-[10px] ${SEVERITY_COLOR[f.severity] ?? "text-slate-300"}`}>
-                    {f.severity.toUpperCase()}
-                  </span>
-                  <span className="font-mono text-slate-500 text-[10px]">{f.rule}</span>
-                </div>
-                {/* Row 2: message */}
-                <div className="text-slate-300 mt-1 leading-relaxed">{f.message}</div>
-                {/* Row 3: file location + source attribution */}
-                <div className="text-slate-500 mt-0.5 font-mono text-[10px]">
-                  {f.file}{f.line ? `:${f.line}` : ""}
-                  {f.source_path ? <span className="text-slate-600"> · from {f.source_path}</span> : null}
-                </div>
-                {/* Row 4: offending snippet */}
-                {f.snippet && (
-                  <div className="text-slate-500 mt-0.5 font-mono text-[10px] truncate italic">"{f.snippet}"</div>
+        <ul className="mt-2.5 flex flex-col gap-1.5 max-h-72 overflow-auto">
+          {report.findings.map((f, i) => (
+            <li key={i} className="text-[11px] bg-slate-900/50 rounded-md px-2.5 py-2 border border-slate-700/60">
+              {/* Row 1: issue code + category + severity + confidence */}
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {f.id && (
+                  <span className="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-600/60 text-slate-300 font-mono text-[10px]">{f.id}</span>
                 )}
-              </li>
-            );
-          })}
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold tracking-wide bg-slate-800/60 border border-slate-700/60 text-slate-300">
+                  {categoryLabel(categoryOf(f))}
+                </span>
+                <span className={`font-bold text-[10px] ${SEVERITY_COLOR[f.severity] ?? "text-slate-300"}`}>
+                  {f.severity.toUpperCase()}
+                </span>
+                {f.confidence && (
+                  <span className="text-[9px] text-slate-500 font-mono">conf: {f.confidence}</span>
+                )}
+                {/* OWASP mapping chips */}
+                {[...(f.owasp_ast ?? []), ...(f.owasp_llm ?? [])].map((tag) => (
+                  <span key={tag} className="px-1 py-0.5 rounded bg-violet-900/30 border border-violet-700/40 text-violet-300 text-[9px] font-mono">{tag}</span>
+                ))}
+              </div>
+              {/* Row 2: message */}
+              <div className="text-slate-300 mt-1 leading-relaxed">{f.message}</div>
+              {/* Row 3: file location + source attribution */}
+              <div className="text-slate-500 mt-0.5 font-mono text-[10px]">
+                {f.file}{f.line ? `:${f.line}` : ""}
+                {f.source_path ? <span className="text-slate-600"> · from {f.source_path}</span> : null}
+              </div>
+              {/* Row 4: offending snippet */}
+              {f.snippet && (
+                <div className="text-slate-500 mt-0.5 font-mono text-[10px] truncate italic">"{f.snippet}"</div>
+              )}
+              {/* Row 5: remediation hint */}
+              {f.remediation && (
+                <div className="text-emerald-400/80 mt-0.5 text-[10px]">↳ {f.remediation}</div>
+              )}
+            </li>
+          ))}
         </ul>
+      )}
+
+      {/* Provenance footer */}
+      {open && (
+        <div className="mt-2.5 pt-2 border-t border-slate-700/40 flex flex-wrap items-center gap-x-2 gap-y-1 text-[9px] font-mono text-slate-500">
+          <span className="text-slate-400">Scanned by ScapeGuard{version ? ` ${version}` : ""}</span>
+          {report.license?.spdx_id && report.license.spdx_id !== "NOASSERTION" && (
+            <span className="px-1.5 py-0.5 rounded bg-slate-800/60 border border-slate-700/60 text-slate-300">{report.license.spdx_id}</span>
+          )}
+          {typeof report.files_scanned === "number" && report.files_scanned > 0 && (
+            <span>· {report.files_scanned} file{report.files_scanned === 1 ? "" : "s"}</span>
+          )}
+          {shortHash && <span className="truncate">· {shortHash}</span>}
+          {scannedAt && <span>· {scannedAt}</span>}
+        </div>
       )}
     </div>
   );
@@ -248,6 +374,9 @@ export const SkillExport: React.FC<SkillExportProps> = ({
 
   // A report attached when a download is rejected by the server gate (422)
   const [blockedReport, setBlockedReport] = useState<ScanReport | null>(null);
+  // Server's authoritative bypassable verdict (null until a 422 tells us)
+  const [serverBypassable, setServerBypassable] = useState<boolean | null>(null);
+  const [copyBadgeState, setCopyBadgeState] = useState<"idle" | "copied">("idle");
 
   // Engineering Skill is always the display — falls back to the initial Code Skill preview while generating
   const displaySkillMd = frameworkSkillMd ?? skillMd;
@@ -272,7 +401,9 @@ export const SkillExport: React.FC<SkillExportProps> = ({
       : [];
 
   const status: ScanStatus | null = displayScan?.status ?? null;
-  const showAcceptCheckbox = status === "WARN" || status === "FAIL";
+  const bypassable = serverBypassable !== null ? serverBypassable : computeBypassable(displayScan);
+  const hardBlocked = status === "FAIL" && !bypassable;
+  const showAcceptCheckbox = status === "WARN" || (status === "FAIL" && bypassable);
   const needsAccept = showAcceptCheckbox && !warnAccepted;
 
   const fileNames = useMemo(() => ["SKILL.md", ...Object.keys(displayReferences)], [displayReferences]);
@@ -346,15 +477,17 @@ export const SkillExport: React.FC<SkillExportProps> = ({
       digest_md: digest,
       languages: manifestJson?.metadata?.primary_languages ?? [],
       files_analyzed: manifestJson?.metadata?.files_analyzed ?? 0,
-      bypass_scan_gate: status === "FAIL" && warnAccepted,
+      // Only ever request a bypass for a genuinely bypassable FAIL. An
+      // unbypassable critical is blocked server-side regardless.
+      bypass_scan_gate: status === "FAIL" && warnAccepted && bypassable,
       skill_type: "framework",
     };
-  }, [repoUrl, repoNameForFilename, digest, manifestJson, status, warnAccepted]);
+  }, [repoUrl, repoNameForFilename, digest, manifestJson, status, warnAccepted, bypassable]);
 
   // ── Handlers ──────────────────────────────────────────────────────────────────────────────
 
   const handleDownloadZip = useCallback(async () => {
-    if (!repoUrl || !digest || needsAccept) return;
+    if (!repoUrl || !digest || needsAccept || hardBlocked) return;
     setIsDownloading(true);
     setDownloadError(null);
     setBlockedReport(null);
@@ -368,7 +501,12 @@ export const SkillExport: React.FC<SkillExportProps> = ({
       if (response.status === 422) {
         const detail = (await response.json())?.detail;
         if (detail?.scan_report) setBlockedReport(detail.scan_report);
-        throw new Error("Export blocked by the security scan.");
+        if (typeof detail?.bypassable === "boolean") setServerBypassable(detail.bypassable);
+        throw new Error(
+          detail?.bypassable === false
+            ? "Export blocked: critical security findings. This skill cannot be packaged."
+            : "Export blocked by the security scan."
+        );
       }
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const blob = await response.blob();
@@ -384,7 +522,7 @@ export const SkillExport: React.FC<SkillExportProps> = ({
     } finally {
       setIsDownloading(false);
     }
-  }, [repoUrl, repoNameForFilename, digest, needsAccept, requestBody]);
+  }, [repoUrl, repoNameForFilename, digest, needsAccept, hardBlocked, requestBody]);
 
   const handleGenerateFramework = useCallback(async () => {
     if (!digest) return;
@@ -409,6 +547,7 @@ export const SkillExport: React.FC<SkillExportProps> = ({
       }
       setWarnAccepted(false);
       setBlockedReport(null);
+      setServerBypassable(null);
     } catch (err: any) {
       setFrameworkError(err.message ?? "Engineering Skill generation failed.");
     } finally {
@@ -431,6 +570,20 @@ export const SkillExport: React.FC<SkillExportProps> = ({
       setTimeout(() => setCopyState("idle"), 2000);
     } catch (_) { /* clipboard unavailable */ }
   }, [selectedContent]);
+
+  const handleCopyBadge = useCallback(async () => {
+    // A static shields.io badge linking back to GitScape — no storage infra needed.
+    const label = status === "PASS" ? "passed" : status === "WARN" ? "warnings" : "review";
+    const color = status === "PASS" ? "brightgreen" : status === "WARN" ? "yellow" : "red";
+    const badge =
+      `[![Scanned by ScapeGuard](https://img.shields.io/badge/ScapeGuard-${label}-${color}?logo=shield)]` +
+      `(https://gitscape.ai)`;
+    try {
+      await navigator.clipboard.writeText(badge);
+      setCopyBadgeState("copied");
+      setTimeout(() => setCopyBadgeState("idle"), 2000);
+    } catch (_) { /* clipboard unavailable */ }
+  }, [status]);
 
 
   // ── Render ──────────────────────────────────────────────────────────────────
@@ -512,8 +665,14 @@ export const SkillExport: React.FC<SkillExportProps> = ({
         <button
           id="skill-download-zip-btn"
           onClick={handleDownloadZip}
-          disabled={isDownloading || needsAccept}
-          title={needsAccept ? "Accept the security findings to enable download." : undefined}
+          disabled={isDownloading || needsAccept || hardBlocked}
+          title={
+            hardBlocked
+              ? "Critical security findings — this skill cannot be packaged."
+              : needsAccept
+              ? "Accept the security findings to enable download."
+              : undefined
+          }
           className="flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 disabled:bg-slate-600 disabled:text-slate-400 text-black text-sm font-semibold transition-all duration-150 shadow-md disabled:cursor-not-allowed"
         >
           {isDownloading ? (
@@ -533,6 +692,18 @@ export const SkillExport: React.FC<SkillExportProps> = ({
           {copyState === "copied" ? "Copied!" : `Copy ${selectedFile}`}
         </button>
 
+        <button
+          onClick={handleCopyBadge}
+          id="skill-copy-badge-btn"
+          title="Copy a Markdown badge for your README"
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-150 border ${copyBadgeState === "copied"
+            ? "bg-emerald-600/20 border-emerald-500/40 text-emerald-400"
+            : "bg-slate-700/50 hover:bg-slate-700 border-slate-600 text-slate-300 hover:text-slate-100"}`}
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" /></svg>
+          {copyBadgeState === "copied" ? "Badge copied!" : "Copy badge"}
+        </button>
+
         {showAcceptCheckbox && (
           <label className="flex items-center gap-2 text-xs text-amber-300 cursor-pointer">
             <input type="checkbox" checked={warnAccepted} onChange={(e) => setWarnAccepted(e.target.checked)} className="accent-amber-500" />
@@ -541,7 +712,14 @@ export const SkillExport: React.FC<SkillExportProps> = ({
         )}
       </div>
 
-      {status === "FAIL" && !warnAccepted && (
+      {hardBlocked && (
+        <p className="text-xs text-red-400 bg-red-900/20 border border-red-700/40 px-3 py-2 rounded-lg">
+          <span className="font-semibold">Export blocked.</span> ScapeGuard found a critical threat
+          (a live credential, remote-code-execution payload, or known exfiltration endpoint). Skills
+          with active-payload critical findings can never be packaged — review the findings above.
+        </p>
+      )}
+      {status === "FAIL" && bypassable && !warnAccepted && (
         <p className="text-xs text-red-400 bg-red-900/20 border border-red-700/40 px-3 py-2 rounded-lg">
           Download is restricted because the security scan returned <span className="font-semibold">FAIL</span>. Review the findings above — you must accept the security risks below to enable the download anyway.
         </p>
@@ -552,7 +730,7 @@ export const SkillExport: React.FC<SkillExportProps> = ({
 
       {/* Zip content hint */}
       <p className="text-[11px] text-slate-500">
-        The <span className="text-slate-400 font-medium">.zip</span> contains a slim <span className="text-slate-400 font-medium">SKILL.md</span>, a <span className="text-slate-400 font-medium">references/</span> folder, ADK/Agno exporters, and a provenance-stamped <span className="text-slate-400 font-medium">manifest.json</span>.
+        The <span className="text-slate-400 font-medium">.zip</span> contains a slim <span className="text-slate-400 font-medium">SKILL.md</span>, a <span className="text-slate-400 font-medium">references/</span> folder, ADK/Agno exporters, a provenance-stamped <span className="text-slate-400 font-medium">manifest.json</span>, and its full ScapeGuard audit as <span className="text-slate-400 font-medium">scan-report.json</span> + <span className="text-slate-400 font-medium">scan-report.sarif</span>.
       </p>
 
       {/* File selector */}

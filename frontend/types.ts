@@ -97,7 +97,7 @@ export interface CachedRepoOutput {
   framework_scan_report?: ScanReport;
 }
 
-// SkillForge security scan report (deterministic, gates export)
+// ScapeGuard security scan report (deterministic, gates export)
 export type ScanStatus = "PASS" | "WARN" | "FAIL";
 
 export interface ScanFinding {
@@ -108,11 +108,40 @@ export interface ScanFinding {
   source_path?: string | null;
   snippet: string;
   message: string;
+  // ScapeGuard v2 (optional for back-compat with cached reports)
+  id?: string;              // issue code, e.g. "GS-SEC-001"
+  category?: string;        // taxonomy slug, e.g. "secrets"
+  confidence?: string;      // "high" | "medium" | "low"
+  owasp_ast?: string[];     // OWASP Agentic Skills Top 10 tags
+  owasp_llm?: string[];     // OWASP LLM Top 10 tags
+  remediation?: string;
+}
+
+export interface CategoryResult {
+  category: string;
+  status: ScanStatus;
+  findings: number;
+}
+
+export interface LicenseInfo {
+  spdx_id: string;
+  source_path?: string;
+  confidence?: string;
 }
 
 export interface ScanReport {
   status: ScanStatus;
   findings: ScanFinding[];
+  // ScapeGuard v2 (optional for back-compat)
+  engine?: string;
+  engine_version?: string;
+  generated_at?: string;
+  skill_hash?: string;
+  files_scanned?: number;
+  categories?: CategoryResult[];
+  counts?: Record<string, number>;
+  license?: LicenseInfo;
+  summary?: string;
 }
 
 // references/*.md content, keyed by package-relative path (e.g. "references/api.md")

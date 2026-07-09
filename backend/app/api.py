@@ -217,11 +217,13 @@ def get_skill_zip(
         try:
             zip_buffer = skillforge.build_zip(pkg, bypass_scan_gate=body.bypass_scan_gate)
         except ScanBlocked as blocked:
+            from app.skillforge.package import is_bypassable
             raise HTTPException(
                 status_code=422,
                 detail={
                     "error": "scan_failed",
                     "scan_report": blocked.report.model_dump(mode="json"),
+                    "bypassable": is_bypassable(blocked.report),
                 },
             )
 

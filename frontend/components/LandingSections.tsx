@@ -104,6 +104,16 @@ export const HowItWorks: React.FC = () => (
   </section>
 );
 
+const ScanRow: React.FC<{ label: string; value: string; tone?: "ok" | "warn" | "muted" }> = ({ label, value, tone = "muted" }) => {
+  const color = tone === "ok" ? "text-emerald-400" : tone === "warn" ? "text-amber-400" : "text-slate-200";
+  return (
+    <div className="flex justify-between">
+      <span className="text-slate-400">{label}</span>
+      <span className={color}>{value}</span>
+    </div>
+  );
+};
+
 export const Security: React.FC = () => (
   <section
     id="security"
@@ -112,18 +122,22 @@ export const Security: React.FC = () => (
   >
     <div className="max-w-[1100px] mx-auto grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-14 items-center">
       <div className="flex flex-col gap-4.5">
-        <span className="text-[11px] font-bold tracking-[0.1em] text-emerald-400">SECURITY</span>
+        <span className="text-[11px] font-bold tracking-[0.1em] text-emerald-400">SECURITY · SCAPEGUARD</span>
         <h2 className="m-0 text-3xl sm:text-4xl font-extrabold tracking-[-0.025em] text-slate-100 leading-tight">
-          Every skill is scanned before it ships.
+          Every skill is scanned by our own engine.
         </h2>
         <p className="m-0 text-[15px] leading-relaxed text-slate-400">
-          A skill is code your agent trusts. So GitScape doesn't hand one over until it has checked
-          the source for the things that bite.
+          A skill is code your agent trusts. So GitScape runs each one through <span className="text-slate-200 font-semibold">ScapeGuard</span> —
+          our deterministic scanner with 45+ rules across 9 threat categories — before it ever
+          leaves the page. Live credentials and remote-code-execution payloads never ship.
         </p>
         <div className="flex flex-col gap-3 mt-1">
-          <CheckRow>Secrets and credentials detected and redacted</CheckRow>
-          <CheckRow>Prompt-injection patterns flagged in docs and comments</CheckRow>
-          <CheckRow>License verified and carried into the manifest</CheckRow>
+          <CheckRow>Secrets &amp; credentials detected — AWS, GitHub, OpenAI, Stripe keys, private keys</CheckRow>
+          <CheckRow>Prompt injection &amp; hidden-Unicode smuggling caught before it reaches your agent</CheckRow>
+          <CheckRow>Malicious execution, exfiltration &amp; supply-chain risks flagged in scripts and docs</CheckRow>
+          <CheckRow>Every finding mapped to the OWASP Agentic Skills &amp; LLM Top 10</CheckRow>
+          <CheckRow>License detected and carried into the manifest</CheckRow>
+          <CheckRow>Every download ships its own scan-report.json + SARIF audit</CheckRow>
           <CheckRow>Your GitHub token stays in your browser — never on our servers</CheckRow>
         </div>
       </div>
@@ -135,21 +149,23 @@ export const Security: React.FC = () => (
           className="flex items-center justify-between px-4.5 py-3"
           style={{ borderBottom: "1px solid rgba(71,85,105,0.4)", background: "rgba(15,23,42,0.8)" }}
         >
-          <span className="text-xs text-slate-400">scan_report.json</span>
+          <span className="text-xs text-slate-400">scan-report.json</span>
           <span
             className="text-[10px] font-bold px-2.5 py-[3px] rounded-full tracking-[0.06em]"
             style={{ background: "rgba(16,185,129,0.15)", color: "#34d399" }}
           >
-            PASSED
+            PASS
           </span>
         </div>
         <div className="p-4.5 flex flex-col gap-2.5 text-[12.5px]">
-          <div className="flex justify-between"><span className="text-slate-400">secrets_found</span><span className="text-emerald-400">0</span></div>
-          <div className="flex justify-between"><span className="text-slate-400">injection_patterns</span><span className="text-emerald-400">0</span></div>
-          <div className="flex justify-between"><span className="text-slate-400">license</span><span className="text-slate-200">"MIT"</span></div>
-          <div className="flex justify-between"><span className="text-slate-400">files_scanned</span><span className="text-slate-200">1,284</span></div>
-          <div className="flex justify-between"><span className="text-slate-400">redactions</span><span className="text-amber-400">2 · .env.example</span></div>
-          <div className="flex justify-between"><span className="text-slate-400">skill_hash</span><span className="text-slate-500">sha256:9f2c…e41a</span></div>
+          <ScanRow label="engine" value='"scapeguard/2.0.0"' />
+          <ScanRow label="secrets" value="PASS" tone="ok" />
+          <ScanRow label="prompt_injection" value="PASS" tone="ok" />
+          <ScanRow label="malicious_execution" value="PASS" tone="ok" />
+          <ScanRow label="supply_chain" value="PASS" tone="ok" />
+          <ScanRow label="license" value='"MIT"' />
+          <ScanRow label="files_scanned" value="14" />
+          <ScanRow label="skill_hash" value="sha256:9f2c…e41a" tone="muted" />
         </div>
       </div>
     </div>
