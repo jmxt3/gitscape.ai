@@ -1,53 +1,61 @@
 # GitScape CLI
 
-**Compile any GitHub repository into a local Agent Skill in one command.**
+<p align="center">
+  <img src="https://raw.githubusercontent.com/jmxt3/GitScape-AI/main/assets/gitscape_readme_banner.png" alt="GitScape Logo" width="100%"/>
+</p>
 
-The GitScape CLI is a zero-dependency, lightweight Node.js utility that connects to the GitScape API, runs code analysis (via tree-sitter) and security scans (via ScapeGuard), downloads the compiled Agent Skill files, and integrates them directly into your project's workspace.
+<p align="center">
+  <a href="https://www.npmjs.com/package/gitscape"><img src="https://img.shields.io/npm/v/gitscape.svg?style=flat-square" alt="NPM Version"/></a>
+  <a href="https://www.npmjs.com/package/gitscape"><img src="https://img.shields.io/npm/dm/gitscape.svg?style=flat-square" alt="NPM Downloads"/></a>
+  <a href="https://github.com/jmxt3/GitScape-AI/blob/main/LICENSE"><img src="https://img.shields.io/npm/l/gitscape.svg?style=flat-square" alt="License"/></a>
+  <a href="https://github.com/jmxt3/GitScape-AI"><img src="https://img.shields.io/github/stars/jmxt3/GitScape-AI.svg?style=flat-square&color=blue" alt="GitHub Stars"/></a>
+</p>
+
+---
+
+## What is GitScape?
+
+**GitScape** compiles any GitHub repository into an AI-ready **Agent Skill** in seconds. 
+
+The GitScape CLI is a zero-dependency, lightweight Node.js utility. It communicates with the GitScape backend service, runs code analysis (using tree-sitter) and security scans, downloads the compiled Agent Skill package (`SKILL.md` and supplementary `references/` files), and integrates them directly into your project's local workspace.
+
+Once compiled, AI coding agents (such as Claude Code, Cursor, Windsurf, or Gemini CLI) can immediately read these skills to gain deep, instant context of the target repository without needing to read the entire codebase.
 
 ---
 
 ## 🚀 Installation
 
+You can run GitScape CLI on-demand without installing it, or install it globally/locally depending on your workflow.
+
 ### 1. On-Demand (Recommended)
-You do not need to install the CLI to use it. Run it instantly using `npx`:
+Run it instantly using `npx`:
 ```bash
 npx gitscape <command> [options]
 ```
 
 ### 2. Global Installation
-If you use the command frequently, install it globally on your machine:
+If you use GitScape frequently, install it globally:
 ```bash
 npm install -g gitscape
 ```
 
 ### 3. Local Development Link
-If you are contributing to this codebase, link the CLI locally:
+If you are developing or contributing to the CLI:
 ```bash
 cd cli
 npm link
 ```
-This maps the global `gitscape` terminal command directly to your local workspace code.
+This maps the global `gitscape` terminal command to your local workspace code.
 
 ---
 
 ## 💻 Commands
 
-### 1. Initialize Workspace
-```bash
-npx gitscape init [options]
-```
-Creates a local `.mcp.json` file inside your current working directory to register the GitScape Model Context Protocol (MCP) server. 
-
-**Options:**
-* `--server <url>`: Specify a custom server (e.g., `npx gitscape init --server http://localhost:8081` during local backend development).
-
----
-
-### 2. Compile and Install a Skill
+### 1. Compile & Install a Skill
 ```bash
 npx gitscape <repository_url> [options]
 ```
-Clones the repository, runs safety checks, generates the `SKILL.md` + `references/` files, writes them to `.agents/skills/<repo-name>/`, and registers the skill in `AGENTS.md` (and `CLAUDE.md`) idempotently.
+Clones the repository, analyzes its structure, runs security checks, generates a progressively-disclosed skill package, saves it to `.agents/skills/<repo-name>/`, and registers it inside your workspace config files (`AGENTS.md`, `CLAUDE.md`, etc.).
 
 **Example:**
 ```bash
@@ -55,43 +63,67 @@ npx gitscape https://github.com/upstash/context7
 ```
 
 **Options:**
-* `--token <pat>`: GitHub Personal Access Token (required to parse private repositories).
+* `--token <pat>`: Optional GitHub Personal Access Token (PAT) for compiling private repositories.
 * `--type <type>`: Skill type: `code` or `framework` (default: `code`).
-* `--server <url>`: Point to a custom backend compiler instance instead of the production API.
+* `--server <url>`: Override the GitScape compiler API endpoint (default: `https://gitscape-143600285956.us-central1.run.app`).
+
+---
+
+### 2. Initialize Workspace MCP
+```bash
+npx gitscape init [options]
+```
+Creates a local `.mcp.json` file inside your current working directory to register the GitScape Model Context Protocol (MCP) server.
+
+**Example:**
+```bash
+npx gitscape init
+```
+
+**Options:**
+* `--server <url>`: Specify a custom server (e.g., `npx gitscape init --server http://localhost:8081` during local backend development).
 
 ---
 
 ### 3. Remove/Uninstall a Skill
 ```bash
-npx gitscape remove <skill_name_or_url>
+npx gitscape remove <skill_name>
 # OR
-npx gitscape uninstall <skill_name_or_url>
+npx gitscape uninstall <skill_name>
 ```
-Surgically deletes the skill folder under `.agents/skills/<name>/` and cleans up all registration lines inside your workspace files (`AGENTS.md`, `CLAUDE.md`, `.gemini/config/AGENTS.md`).
+Deletes the skill folder under `.agents/skills/<name>/` and cleanly removes all references and listings from your workspace files (`AGENTS.md`, `CLAUDE.md`, `.gemini/config/AGENTS.md`).
 
 **Example:**
 ```bash
-npx gitscape remove upstash-context7
+npx gitscape remove context7
 ```
 
 ---
 
 ## 🔄 Updating the CLI
 
-### For `npx` users (On-demand)
-`npx` caches command downloads. To bypass the cache and run the absolute latest version:
+### Bypass Cache (`npx`)
+To ensure you are always running the latest version:
 ```bash
 npx gitscape@latest <command>
 ```
-To clear your `npx` cache entirely:
+To force-clear the `npx` cache:
 ```bash
 npm cache clean --force
 ```
 
-### For global installations
+### Update Global Install
 ```bash
 npm install -g gitscape@latest
 ```
+
+---
+
+## 🔒 Security & Privacy (ScapeGuard)
+GitScape is built with security first:
+* **Token Protection:** Your GitHub access tokens are passed directly to the compiler service in the request payload and are never logged or stored.
+* **Deterministic Sandboxing:** The backend analyzes files in a stateless environment.
+* **ScapeGuard Analysis:** Every compiled skill is scanned for prompt injection, data exfiltration scripts, and hidden text, outputting a clear security grade before writing files.
 
 ---
 
@@ -99,15 +131,15 @@ npm install -g gitscape@latest
 
 To publish updates to the npm registry:
 
-1. **Verify your login**:
+1. **Verify login status**:
    ```bash
    npm whoami
    # Should print 'gitscape'
    ```
    *If not logged in, run `npm login` first.*
 
-2. **Bump the version**:
-   Open `cli/package.json` and update the `"version"` field (e.g., from `0.2.0` to `0.2.1`).
+2. **Bump the package version**:
+   Update the `"version"` field in `cli/package.json` (e.g., from `0.2.0` to `0.2.1`).
 
 3. **Publish to npm**:
    ```bash
@@ -115,3 +147,9 @@ To publish updates to the npm registry:
    npm publish --access public
    ```
    *Provide the 6-digit One-Time Password (OTP) from your authenticator app when prompted.*
+
+---
+
+## 📄 License
+This project is licensed under the MIT License.
+
