@@ -141,5 +141,5 @@ A skill is code your agent trusts. GitScape runs every compiled skill through **
 ---
 
 ## 📄 License
-This project is licensed under the MIT License.
+This project is licensed under the Apache License 2.0. See the [LICENSE](https://github.com/jmxt3/GitScape-AI/blob/main/LICENSE) file for details.
 
