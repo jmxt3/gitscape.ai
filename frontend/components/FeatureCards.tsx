@@ -143,9 +143,9 @@ export const FeatureCards: React.FC<FeatureCardsProps> = ({ stageComplete }) => 
           color={c.color}
           icon={c.icon}
         />
-        <div className="text-base font-bold" style={{ color: c.titleColor }}>
+        <h3 className="text-base font-bold m-0" style={{ color: c.titleColor }}>
           {c.title}
-        </div>
+        </h3>
         <div className="text-[13.5px] leading-relaxed text-slate-400">
           {c.desc}
         </div>

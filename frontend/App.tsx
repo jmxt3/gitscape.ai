@@ -14,7 +14,7 @@ import { transformGithubTreeToD3Hierarchy } from "./components/diagramUtils";
 import { DiagramFullscreenModal } from "./components/DiagramFullscreenModal";
 import { Hero } from "./components/Hero";
 import { FeatureCards } from "./components/FeatureCards";
-import { HowItWorks, Security, OpenSource } from "./components/LandingSections";
+import { HowItWorks, Security, OpenSource, FaqSection } from "./components/LandingSections";
 import {
   GITHUB_TOKEN_LOCAL_STORAGE_KEY,
   REPO_URL_LOCAL_STORAGE_KEY,
@@ -1302,6 +1302,7 @@ const App: React.FC = () => {
           <HowItWorks />
           <Security />
           <OpenSource />
+          <FaqSection />
         </div>
       </main>
 

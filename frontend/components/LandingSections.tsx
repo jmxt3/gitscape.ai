@@ -255,3 +255,111 @@ export const OpenSource: React.FC = () => {
     </section>
   );
 };
+
+const FAQ_ITEMS = [
+  {
+    q: "What is GitScape AI?",
+    a: "GitScape AI is a free tool that converts any GitHub repository into AI-ready context — including a clean text code digest, an interactive file-tree diagram, and a structured SKILL.md file your AI agents can load and act on."
+  },
+  {
+    q: "What is a Code Digest?",
+    a: "A Code Digest is a clean, flat text representation of a GitHub repository's source code. It concatenates all relevant files into a single document optimized for LLM context windows, making it easy to feed any codebase into ChatGPT, Claude, Gemini, or any other AI model."
+  },
+  {
+    q: "What is an Agent Skill?",
+    a: "Agent Skill generates a SKILL.md file — a structured knowledge document that AI coding agents can load to instantly understand a repository's purpose, architecture, patterns, and conventions. It lets your AI agent act on the codebase without needing to re-read every file."
+  },
+  {
+    q: "What is Code Visualization?",
+    a: "Code Visualization renders an interactive, zoomable diagram of your repository's file and directory structure, making it easy to explore and understand the architecture of any codebase at a glance."
+  },
+  {
+    q: "Does GitScape AI support private repositories?",
+    a: "Yes. You can add a GitHub Personal Access Token (PAT) via the token button in the top-right corner. This also raises your API rate limit from 60 to 5,000 requests per hour."
+  },
+  {
+    q: "Is GitScape AI free to use?",
+    a: "Yes, GitScape AI is completely free to use for public repositories. No account or sign-up is required."
+  }
+];
+
+export const FaqSection: React.FC = () => {
+  const [openIndex, setOpenIndex] = useState<number | null>(null);
+
+  const toggle = (i: number) => {
+    setOpenIndex(openIndex === i ? null : i);
+  };
+
+  return (
+    <section
+      id="faq"
+      className="px-6 sm:px-10 py-16 sm:py-[72px]"
+      style={{ borderTop: "1px solid rgba(71,85,105,0.25)" }}
+    >
+      <div className="max-w-[800px] mx-auto flex flex-col gap-10">
+        <div className="flex flex-col items-center gap-2.5 text-center">
+          <span className="text-[11px] font-bold tracking-[0.1em] text-violet-400">QUESTIONS &amp; ANSWERS</span>
+          <h2 className="m-0 text-3xl sm:text-[38px] font-extrabold tracking-[-0.025em] text-slate-100">
+            Frequently Asked Questions
+          </h2>
+          <p className="m-0 text-[15px] text-slate-400">
+            Everything you need to know about GitScape.
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-3">
+          {FAQ_ITEMS.map((item, i) => {
+            const isOpen = openIndex === i;
+            return (
+              <div
+                key={i}
+                className="rounded-xl overflow-hidden transition-all duration-300"
+                style={{
+                  background: isOpen ? "rgba(15, 23, 42, 0.6)" : "rgba(15, 23, 42, 0.25)",
+                  border: isOpen ? "1px solid rgba(139, 92, 246, 0.35)" : "1px solid rgba(71, 85, 105, 0.2)",
+                  boxShadow: isOpen ? "0 4px 20px -2px rgba(139, 92, 246, 0.08)" : "none"
+                }}
+              >
+                <button
+                  onClick={() => toggle(i)}
+                  className="w-full flex items-center justify-between text-left p-5 font-semibold text-slate-200 hover:text-slate-100 transition-colors focus:outline-none"
+                  aria-expanded={isOpen}
+                >
+                  <span className="text-[15px] sm:text-base">{item.q}</span>
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className={`text-slate-400 transition-transform duration-300 shrink-0 ml-4 ${
+                      isOpen ? "rotate-180 text-violet-400" : ""
+                    }`}
+                  >
+                    <path d="m6 9 6 6 6-6" />
+                  </svg>
+                </button>
+                <div
+                  style={{
+                    maxHeight: isOpen ? "500px" : "0px",
+                    transition: "max-height 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease",
+                    opacity: isOpen ? 1 : 0,
+                    overflow: "hidden"
+                  }}
+                >
+                  <div className="px-5 pb-5 pt-0 text-[14px] sm:text-[14.5px] leading-relaxed text-slate-400 border-t border-slate-800/40">
+                    <p className="m-0 mt-3">{item.a}</p>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+};
+
