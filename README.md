@@ -1,5 +1,9 @@
 # Git Scape AI
 
+<p align="center">
+  <img src="docs/gitscape_readme_banner.png" alt="GitScape Header Banner" width="100%">
+</p>
+
 **Understand any GitHub repository in seconds.**
 
 ![React](https://img.shields.io/badge/React-61DAFB.svg?style=for-the-badge&logo=React&logoColor=black)
@@ -189,31 +193,94 @@ visible badge:
 
 ---
 
-### Using the CLI (Zero-dependency & instant)
+## 🛠️ CLI & MCP Integration
 
-You can compile any Git repository into a local Agent Skill inside your current workspace in one command.
+GitScape provides two integration methods to bring compiled agent skills directly into your workspace: a zero-dependency CLI tool and a Model Context Protocol (MCP) Server.
 
-#### 1. Initialize MCP configuration in your workspace
-```bash
-npx gitscape init
+---
+
+### 💻 GitScape CLI
+
+The CLI is a fast, zero-dependency Node.js utility that calls the compiler API and writes the compiled skill files directly to your local filesystem.
+
+#### Installation
+
+- **On-demand (Recommended)**: Run the CLI instantly without installing it globally using `npx`:
+  ```bash
+  npx gitscape [command] [options]
+  ```
+- **Local Dev / Global Link**: If you are developing locally, you can link the CLI to make the `gitscape` command globally available on your terminal:
+  ```bash
+  cd cli
+  npm link
+  ```
+- **Global Install (Production)**:
+  ```bash
+  npm install -g gitscape
+  ```
+
+#### Running the CLI
+
+1. **Initialize Workspace MCP Configuration**:
+   Create a local `.mcp.json` in your workspace pointing to the GitScape server:
+   ```bash
+   npx gitscape init
+   
+   # During local development, point it to your local server:
+   npx gitscape init --server http://127.0.0.1:8081
+   ```
+2. **Compile and Install a Skill**:
+   Compile any GitHub repository and write its files directly to `.agents/skills/<repo-name>/`:
+   ```bash
+   npx gitscape https://github.com/owner/repo
+   ```
+3. **CLI Options**:
+   - `--token <pat>`: Optional GitHub Personal Access Token for private repositories.
+   - `--type <type>`: Skill type: `code` or `framework` (default: `code`).
+   - `--server <url>`: Override the compiler server (default: `https://gitscape-410919026990.us-central1.run.app`).
+
+---
+
+### 🔌 Model Context Protocol (MCP) Server
+
+The MCP Server exposes the `install_skill` tool, allowing AI agents (Cursor, Claude Desktop, Claude Code, Windsurf, etc.) to compile and write skill packages directly to your workspace.
+
+#### MCP Installation & Setup
+
+##### 1. In Cursor / Windsurf
+1. Navigate to **Settings -> Models -> MCP**.
+2. Click **+ Add New MCP Server**.
+3. Configure the settings:
+   - **Name**: `GitScape`
+   - **Type**: `sse`
+   - **URL**: `https://gitscape-410919026990.us-central1.run.app/api/mcp` *(or `http://127.0.0.1:8081/mcp` for local dev)*
+
+##### 2. In Claude Desktop
+Add the following config to your `claude_desktop_config.json` (typically located in `%APPDATA%\Claude\claude_desktop_config.json` on Windows or `~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
+```json
+{
+  "mcpServers": {
+    "gitscape": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "gitscape",
+        "init"
+      ]
+    }
+  }
+}
 ```
-This writes a local `.mcp.json` file to configure your local/remote MCP server.
 
-#### 2. Compile and install a skill locally
-```bash
-npx gitscape https://github.com/owner/repo
-```
+#### Running & Using the MCP
 
-**Options:**
-- `--token <pat>`: Optional GitHub Personal Access Token for private repositories.
-- `--type <type>`: Skill type: `code` or `framework` (default: `code`).
-- `--server <url>`: Override the GitScape API compiler server.
-
-This command will:
-1. Fetch the compiled skill payload from the GitScape API.
-2. Verify security scan grade and print results.
-3. Write the compiled skill files into `.agents/skills/<repo-name>/`.
-4. Idempotently register the skill in your project's `AGENTS.md` or `CLAUDE.md`.
+- **How it runs**: The MCP server runs automatically as part of the FastAPI backend application.
+  - Discovery endpoint: `GET /mcp/tools` (or `/api/mcp/tools` via ingress)
+  - Invocation endpoint: `POST /mcp/call` (or `/api/mcp/call` via ingress)
+- **How to invoke it**: Once configured in your editor, prompt your editor's AI agent:
+  > *"Compile and install the repository https://github.com/upstash/context7 as an agent skill"*
+  
+  The agent will call the `install_skill` tool and automatically write the `SKILL.md`, `manifest.json`, and references directly into your project's `.agents/skills/` directory!
 
 ---
 
