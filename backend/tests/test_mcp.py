@@ -75,8 +75,7 @@ def test_call_tool_install_skill_success(monkeypatch):
         json={
             "name": "install_skill",
             "arguments": {
-                "repo_url": "https://github.com/acme/demo",
-                "skill_type": "code"
+                "repo_url": "https://github.com/acme/demo"
             }
         }
     )

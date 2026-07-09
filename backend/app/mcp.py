@@ -87,11 +87,7 @@ async def list_tools():
                             "type": "string",
                             "description": "Optional GitHub Personal Access Token for private repositories."
                         },
-                        "skill_type": {
-                            "type": "string",
-                            "description": "The type of skill: 'code' or 'framework'. Defaults to 'code'.",
-                            "enum": ["code", "framework"]
-                        }
+
                     },
                     "required": ["repo_url"]
                 }
@@ -100,8 +96,13 @@ async def list_tools():
     }
 
 
-async def run_install_skill(repo_url: str, github_token: Optional[str], skill_type: str) -> Dict[str, Any]:
-    """Execute the core clone and compile flow of install_skill."""
+async def run_install_skill(repo_url: str, github_token: Optional[str]) -> Dict[str, Any]:
+    """Execute the core clone and compile flow of install_skill.
+
+    Always builds a framework (Engineering Skill). Falls back to a code skill
+    automatically when Gemini is unavailable.
+    """
+    skill_type = "framework"
     try:
         repo_url = urllib.parse.unquote(repo_url)
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -224,9 +225,8 @@ async def call_tool(request: Request):
                 }
 
             github_token = arguments.get("github_token")
-            skill_type = arguments.get("skill_type", "code")
 
-            res = await run_install_skill(repo_url, github_token, skill_type)
+            res = await run_install_skill(repo_url, github_token)
             if res.get("isError"):
                 return {
                     "jsonrpc": jsonrpc,
@@ -282,6 +282,5 @@ async def call_tool(request: Request):
         }
 
     github_token = arguments.get("github_token")
-    skill_type = arguments.get("skill_type", "code")
 
-    return await run_install_skill(repo_url, github_token, skill_type)
+    return await run_install_skill(repo_url, github_token)

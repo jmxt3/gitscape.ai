@@ -33,19 +33,19 @@ def build_skill(
     prose: ProseFields | None = None,
     framework_prose: FrameworkProseFields | None = None,
     hd: bool = False,
-    skill_type: str = "code",
+    skill_type: str = "framework",
     prebuilt_references: dict | None = None,
     digest_content: str | None = None,
 ) -> SkillPackage:
     """Build a SkillPackage from content units and repo metadata.
 
-    skill_type="framework" triggers the HD-only Engineering Skill path:
+    skill_type="framework" (default) triggers the Engineering Skill path:
       - Calls generate_framework_prose() to get all 6 canonical sections from Gemini.
       - Uses FRAMEWORK_TOKEN_BUDGET (10 000 tokens) with no section trimming.
       - Falls back to the Code Skill path if Gemini is unavailable.
 
-    skill_type="code" (default) preserves the existing deterministic path with
-    optional LLM prose glue when hd=True.
+    skill_type="code" is the deterministic fallback path with optional LLM
+    prose glue when hd=True. Not exposed to users.
     """
     digest_filename = f"references/{meta.owner}_{meta.repo}_digest.txt".lower().replace("-", "_") if digest_content else None
     extract = build_extract(units, readme=meta.readme)

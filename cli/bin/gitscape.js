@@ -16,7 +16,6 @@ Usage:
 
 Options:
   --token <pat>       Optional GitHub Personal Access Token for private repos
-  --type <type>       Skill type: 'code' or 'framework' (default: 'code')
   -h, --help          Show this help message
 `);
 }
@@ -151,7 +150,6 @@ function injectIntoAgentsMd(skillName) {
 async function handleCompile(repoUrl, options) {
   const server = SERVER_URL;
   const token = options.token || process.env.GITHUB_TOKEN || null;
-  const type = options.type || 'code';
 
   console.log(`Compiling skill for ${repoUrl}...`);
   
@@ -169,7 +167,7 @@ async function handleCompile(repoUrl, options) {
         arguments: {
           repo_url: repoUrl,
           github_token: token,
-          skill_type: type
+          skill_type: 'framework'
         }
       })
     });
@@ -236,8 +234,7 @@ async function main() {
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--token' && i + 1 < args.length) {
       options.token = args[++i];
-    } else if (args[i] === '--type' && i + 1 < args.length) {
-      options.type = args[++i];
+
 
     } else if (args[i].startsWith('--')) {
       console.warn(`Warning: Unknown option ignored: ${args[i]}`);

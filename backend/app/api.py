@@ -147,7 +147,7 @@ class SkillZipRequest(BaseModel):
     languages: List[str] = []
     files_analyzed: int = 0
     bypass_scan_gate: bool = False
-    skill_type: str = "code"  # "code" | "framework"
+    skill_type: str = "framework"  # always "framework"; "code" is internal fallback only
 
 
 def _readme_from_units(units) -> str:

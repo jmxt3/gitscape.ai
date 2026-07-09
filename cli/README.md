@@ -64,7 +64,6 @@ npx gitscape https://github.com/google/adk-python
 
 **Options:**
 * `--token <pat>`: Optional GitHub Personal Access Token (PAT) for compiling private repositories.
-* `--type <type>`: Skill type: `code` or `framework` (default: `code`).
 
 ---
 
