@@ -140,6 +140,13 @@ class FrameworkRationalization(BaseModel):
     reality: str
 
 
+class FrameworkVerificationItem(BaseModel):
+    """One checklist item in the Verification section of a framework skill."""
+
+    criterion: str
+    evidence: str
+
+
 class FrameworkProseFields(BaseModel):
     """LLM-written content for the canonical 6-section engineering skill anatomy (HD only).
 
@@ -154,10 +161,11 @@ class FrameworkProseFields(BaseModel):
 
     when_to_use: list[str] = Field(default_factory=list)
     when_not_to_use: Optional[str] = None
+    related: Optional[str] = None
     core_process: list[FrameworkProcessStep] = Field(default_factory=list)
     common_rationalizations: list[FrameworkRationalization] = Field(default_factory=list)
     red_flags: list[str] = Field(default_factory=list)
-    verification: list[str] = Field(default_factory=list)
+    verification: list[FrameworkVerificationItem] = Field(default_factory=list)
 
 
 # ─── Scan (Phase 4) ────────────────────────────────────────────────────────

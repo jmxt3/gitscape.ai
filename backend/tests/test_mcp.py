@@ -14,8 +14,9 @@ def test_list_tools():
     data = resp.json()
     assert "tools" in data
     tools = data["tools"]
-    assert len(tools) == 1
+    assert len(tools) == 2
     assert tools[0]["name"] == "install_skill"
+    assert tools[1]["name"] == "uninstall_skill"
 
 
 def test_call_tool_not_found():

@@ -20,7 +20,7 @@ import requests
 
 from app.config import settings
 
-from .models import Extract, FrameworkProcessStep, FrameworkProseFields, FrameworkRationalization, ProseFields, RepoMeta
+from .models import Extract, FrameworkProcessStep, FrameworkProseFields, FrameworkRationalization, FrameworkVerificationItem, ProseFields, RepoMeta
 
 logger = logging.getLogger(__name__)
 
@@ -85,14 +85,14 @@ def _prompt(meta: RepoMeta, extract: Extract) -> str:
         "(SKILL.md) that describes a code repository. Use ONLY the structured "
         "context below — never invent files, APIs, or facts not present.\n\n"
         "Return STRICT JSON with exactly these keys:\n"
-        '  "description": one or two sentences, intent-first, starting with how an '
-        "agent should use this skill (max 1024 chars).\n"
+        '  "description": A description following this exact template (max 1024 chars):\n'
+        '                 "[Third-person capability statement, e.g. \'Guides agents through working with {repo}\']. Use when [trigger condition 1], [trigger condition 2], or when the user mentions \'[phrase 1]\', \'[phrase 2]\' — even if they don\'t explicitly ask for {repo}. NOT for [near-miss exclusion]; for that, see [adjacent-skill-name]."\n'
         '  "what_this_is": a single plain paragraph (3-5 sentences) describing the '
         "project, its purpose, architecture, and stack.\n"
         '  "when_to_use": an array of 3-5 short bullet strings.\n\n'
         "No markdown, no code fences, no commentary — JSON only.\n\n"
         "=== STRUCTURED CONTEXT ===\n" + _structured_context(meta, extract)
-    )
+    ).replace("{repo}", meta.repo)
 
 
 def _extract_json(text: str) -> dict:
@@ -152,26 +152,27 @@ def _framework_prompt(meta: RepoMeta, extract: Extract) -> str:
         "and the development lifecycle it enforces — NOT on code symbols or dependencies.\n\n"
         "Use ONLY the structured context below. Do not invent files, APIs, or facts not present.\n\n"
         "Return STRICT JSON with exactly these keys:\n"
-        '  "description": One sentence, trigger-first (max 256 chars). Example: "Use when implementing features or fixing bugs in {repo} to follow established patterns."\n'
+        '  "description": A description following this exact template (max 1024 chars):\n'
+        '                 "[Third-person capability statement, e.g. \'Guides agents through working with {repo}\']. Use when [trigger condition 1], [trigger condition 2], or when the user mentions \'[phrase 1]\', \'[phrase 2]\' — even if they don\'t explicitly ask for {repo}. NOT for [near-miss exclusion]; for that, see [adjacent-skill-name]."\n'
         '  "summary_title": One sentence capturing the essence/vision/design philosophy of this codebase (max 150 chars). Example: "Distinctive, production-grade frontend interfaces that reject generic AI aesthetics through intentional design choices."\n'
         '  "summary_bullets": Array of exactly 4 concise, high-impact bullet points summarizing the core engineering rules/philosophy of this repository.\n'
-        '  "overview": 2-3 paragraphs. What this skill is for, why it matters for THIS specific '
-        "repo, and what an agent must understand before touching the codebase.\n"
-        '  "when_to_use": Array of 4-6 short strings. Each is a concrete trigger scenario '
-        '("Implementing a new API endpoint", "Debugging a failing test").\n'
-        '  "when_not_to_use": One sentence. The counter-indicator.\n'
+        '  "overview": A short overview (1-2 sentences) explaining what this skill does and why an agent should follow it, followed by a single line stating the core principle (e.g. "Tests are proof — \'seems right\' is not done."). Max 300 characters.\n'
+        '  "when_to_use": Array of 4-6 short strings. Each is a concrete trigger scenario.\n'
+        '  "when_not_to_use": One sentence. The counter-indicator (when NOT to use this skill).\n'
+        '  "related": One sentence outlining an adjacent scenario and the adjacent skill to follow (e.g. "For UI changes, follow the frontend-ui-engineering skill.").\n'
         '  "core_process": Array of {"title": string, "content": string} objects. '
         "3-5 numbered steps that define the workflow. Each step should have a descriptive title "
-        "and 2-4 sentences of content. Include code examples in the content where relevant.\n"
+        "and 2-4 sentences of content, explaining the reasoning behind the step (WHY it exists), "
+        "using the imperative mood, incorporating exact commands/templates/thresholds where relevant, "
+        "and avoiding shouting MUST/ALWAYS.\n"
         '  "common_rationalizations": Array of {"excuse": string, "reality": string} objects. '
-        "3-5 rows of shortcuts engineers take and why they fail in this codebase.\n"
+        "3-5 rows of shortcuts engineers/agents take and why they fail in this codebase.\n"
         '  "red_flags": Array of 5-7 short strings. Observable warning signs that the agent '
-        "is going off track (e.g. \"Modifying files without reading their callers first\").\n"
-        '  "verification": Array of 6-8 strings. Checklist items an agent checks before declaring '
-        'work done (do NOT include leading "- [ ] ").\n\n'
+        "is going off track.\n"
+        '  "verification": Array of {"criterion": string, "evidence": string} objects. Checklist items an agent checks before declaring work done. Each item must have a specific exit criterion and the name of the artifact/output that proves it.\n\n'
         "No markdown, no code fences, no commentary — JSON only.\n\n"
         "=== STRUCTURED CONTEXT ===\n" + _structured_context(meta, extract)
-    )
+    ).replace("{repo}", meta.repo)
 
 
 def generate_framework_prose(meta: RepoMeta, extract: Extract) -> FrameworkProseFields | None:
@@ -210,6 +211,11 @@ def generate_framework_prose(meta: RepoMeta, extract: Extract) -> FrameworkProse
             for r in (data.get("common_rationalizations") or [])
             if isinstance(r, dict)
         ]
+        verification = [
+            FrameworkVerificationItem(criterion=v.get("criterion", ""), evidence=v.get("evidence", ""))
+            for v in (data.get("verification") or [])
+            if isinstance(v, dict)
+        ]
 
         return FrameworkProseFields(
             description=data.get("description"),
@@ -218,10 +224,11 @@ def generate_framework_prose(meta: RepoMeta, extract: Extract) -> FrameworkProse
             overview=data.get("overview"),
             when_to_use=[str(x) for x in (data.get("when_to_use") or [])][:7],
             when_not_to_use=data.get("when_not_to_use"),
+            related=data.get("related"),
             core_process=core_process,
             common_rationalizations=rationalizations,
             red_flags=[str(x) for x in (data.get("red_flags") or [])][:8],
-            verification=[str(x) for x in (data.get("verification") or [])][:10],
+            verification=verification[:10],
         )
     except Exception:
         logger.exception("Framework prose generation failed; caller should handle None")

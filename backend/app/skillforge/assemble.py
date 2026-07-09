@@ -398,6 +398,9 @@ def _render_framework_skill_md(
     if fw.when_not_to_use:
         lines.append("")
         lines.append(f"**When NOT to use:** {sanitize_prose(fw.when_not_to_use)}")
+    if fw.related:
+        lines.append("")
+        lines.append(f"**Related:** {sanitize_prose(fw.related)}")
     lines.append("")
 
     # ─── Core Process ────────────────────────────────────────────────
@@ -448,7 +451,10 @@ def _render_framework_skill_md(
     lines += ["## Verification", ""]
     if fw.verification:
         for item in fw.verification:
-            lines.append(f"- [ ] {sanitize_prose(item)}")
+            if isinstance(item, str):
+                lines.append(f"- [ ] {sanitize_prose(item)}")
+            else:
+                lines.append(f"- [ ] {sanitize_prose(item.criterion)} — evidence: {sanitize_prose(item.evidence)}")
     else:
         lines.append("- [ ] All tests pass")
         lines.append("- [ ] Code follows existing patterns in this repository")
