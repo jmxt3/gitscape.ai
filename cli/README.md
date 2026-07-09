@@ -59,7 +59,7 @@ Clones the repository, analyzes its structure, runs security checks, generates a
 
 **Example:**
 ```bash
-npx gitscape https://github.com/upstash/context7
+npx gitscape https://github.com/google/adk-python
 ```
 
 **Options:**
@@ -95,7 +95,7 @@ Deletes the skill folder under `.agents/skills/<name>/` and cleanly removes all 
 
 **Example:**
 ```bash
-npx gitscape remove context7
+npx gitscape remove adk-python
 ```
 
 ---

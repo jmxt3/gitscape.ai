@@ -55,13 +55,13 @@ const CliPanel: React.FC = () => (
         title="compile & install a skill"
         accent="violet"
         prompt
-        code="npx gitscape https://github.com/upstash/context7"
+        code="npx gitscape https://github.com/google/adk-python"
       />
       <CodeSnippet
         title="uninstall"
         accent="violet"
         prompt
-        code="npx gitscape remove upstash-context7"
+        code="npx gitscape remove adk-python"
       />
     </div>
   </div>
@@ -94,7 +94,7 @@ const McpPanel: React.FC = () => (
       <CodeSnippet
         title="2 · then just ask"
         accent="emerald"
-        code="Compile and install https://github.com/upstash/context7 as an agent skill"
+        code="Compile and install https://github.com/google/adk-python as an agent skill"
       />
     </div>
   </div>

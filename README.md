@@ -278,7 +278,7 @@ Add the following config to your `claude_desktop_config.json` (typically located
   - Discovery endpoint: `GET /mcp/tools` (or `/api/mcp/tools` via ingress)
   - Invocation endpoint: `POST /mcp/call` (or `/api/mcp/call` via ingress)
 - **How to invoke it**: Once configured in your editor, prompt your editor's AI agent:
-  > *"Compile and install the repository https://github.com/upstash/context7 as an agent skill"*
+  > *"Compile and install the repository https://github.com/google/adk-python as an agent skill"*
   
   The agent will call the `install_skill` tool and automatically write the `SKILL.md`, `manifest.json`, and references directly into your project's `.agents/skills/` directory!
 
