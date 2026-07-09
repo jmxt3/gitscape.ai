@@ -158,6 +158,7 @@ A skill is code your agent trusts. GitScape runs every compiled skill through **
 * **Audit Reports:** Every download ships its own `scan-report.json` + SARIF audit.
 * **Token Protection:** Your GitHub access tokens are passed directly to the compiler service in the request payload and are never logged or stored on our servers.
 * **Deterministic Sandboxing:** The backend analyzes files in a completely stateless environment.
+* **Network Transparency:** The CLI only requests outbound network access to communicate with the GitScape compiler API (`https://gitscape.ai`) to generate skills. It has zero external package dependencies and performs no tracking, analytics, or background data collection.
 
 ---
 

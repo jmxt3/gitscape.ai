@@ -25,7 +25,7 @@ Git Scape AI is an open-source platform that instantly generates AI-ready text d
 - **Interactive Visualizations:** Explore your codebase structure with beautiful, interactive diagrams.
 - **Agent Skills (SkillForge):** Turn a repo into a progressively-disclosed `SKILL.md` + `references/` package, built **deterministically** (tree-sitter) with an optional LLM "HD" mode.
 - **Security Scanner:** Every generated skill is scanned for prompt injection, exfiltration, and hidden text — export is gated behind a visible **PASS / WARN / FAIL** report.
-- **Privacy First:** GitHub tokens stay in your browser; the HD model key stays server-side.
+- **Privacy First:** GitHub tokens stay in your browser; the HD model key stays server-side. The zero-dependency CLI only requests outbound network access to communicate with the compiler API.
 - **Real-Time Streaming:** WebSocket-powered digest generation with live progress updates.
 
 ---
