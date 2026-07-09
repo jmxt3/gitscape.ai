@@ -126,10 +126,17 @@ npm install -g gitscape@latest
 ---
 
 ## 🔒 Security & Privacy (ScapeGuard)
-GitScape is built with security first:
-* **Token Protection:** Your GitHub access tokens are passed directly to the compiler service in the request payload and are never logged or stored.
-* **Deterministic Sandboxing:** The backend analyzes files in a stateless environment.
-* **ScapeGuard Analysis:** Every compiled skill is scanned for prompt injection, data exfiltration scripts, and hidden text, outputting a clear security grade before writing files.
+
+A skill is code your agent trusts. GitScape runs every compiled skill through **ScapeGuard** — our deterministic scanner with 45+ rules across 9 threat categories — before it ever leaves the server. Live credentials and remote-code-execution payloads never ship:
+
+* **Secrets & Credentials:** Detects AWS, GitHub, OpenAI, Stripe keys, and private keys.
+* **Injection Protection:** Catches prompt injection and hidden-Unicode smuggling before it reaches your agent.
+* **Malicious Code Detection:** Flags malicious execution, exfiltration, and supply-chain risks in scripts and documentation.
+* **OWASP Alignment:** Maps every finding to the OWASP Agentic Skills & LLM Top 10.
+* **License Detection:** Identifies the license and automatically carries it into the manifest.
+* **Audit Reports:** Every download ships its own `scan-report.json` + SARIF audit.
+* **Token Protection:** Your GitHub access tokens are passed directly to the compiler service in the request payload and are never logged or stored on our servers.
+* **Deterministic Sandboxing:** The backend analyzes files in a completely stateless environment.
 
 ---
 
