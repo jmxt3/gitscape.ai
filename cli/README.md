@@ -99,11 +99,6 @@ npx gitscape uninstall <skill_name>
 ```
 Deletes the skill folder under `.agents/skills/<name>/` and cleanly removes all references and listings from your workspace files (`AGENTS.md`, `CLAUDE.md`, `.gemini/config/AGENTS.md`).
 
-**Example:**
-```bash
-npx gitscape remove adk-python
-```
-
 ---
 
 ### 4. Update an Already-Installed Skill
