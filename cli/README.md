@@ -65,13 +65,12 @@ npx gitscape https://github.com/google/adk-python
 **Options:**
 * `--token <pat>`: Optional GitHub Personal Access Token (PAT) for compiling private repositories.
 * `--type <type>`: Skill type: `code` or `framework` (default: `code`).
-* `--server <url>`: Override the GitScape compiler API endpoint (default: `https://gitscape-143600285956.us-central1.run.app`).
 
 ---
 
 ### 2. Initialize Workspace MCP
 ```bash
-npx gitscape init [options]
+npx gitscape init
 ```
 Creates a local `.mcp.json` file inside your current working directory to register the GitScape Model Context Protocol (MCP) server.
 
@@ -79,9 +78,6 @@ Creates a local `.mcp.json` file inside your current working directory to regist
 ```bash
 npx gitscape init
 ```
-
-**Options:**
-* `--server <url>`: Specify a custom server (e.g., `npx gitscape init --server http://localhost:8081` during local backend development).
 
 ---
 

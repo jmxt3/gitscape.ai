@@ -1,6 +1,6 @@
 {
   "name": "gitscape",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "GitScape CLI — compile any Git repository into a local agent skill in one command",
   "main": "bin/gitscape.js",
   "bin": {

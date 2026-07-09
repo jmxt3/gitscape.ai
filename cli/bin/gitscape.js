@@ -3,7 +3,7 @@
 import fs from 'fs';
 import path from 'path';
 
-const DEFAULT_SERVER = process.env.GITSCAPE_SERVER_URL || 'https://gitscape-143600285956.us-central1.run.app';
+const SERVER_URL = 'https://gitscape-143600285956.us-central1.run.app';
 
 function printHelp() {
   console.log(`
@@ -17,13 +17,12 @@ Usage:
 Options:
   --token <pat>       Optional GitHub Personal Access Token for private repos
   --type <type>       Skill type: 'code' or 'framework' (default: 'code')
-  --server <url>      Override GitScape server URL
   -h, --help          Show this help message
 `);
 }
 
-async function handleInit(options = {}) {
-  const server = options.server || DEFAULT_SERVER;
+async function handleInit() {
+  const server = SERVER_URL;
   const mcpConfigPath = path.join(process.cwd(), '.mcp.json');
   const config = {
     mcpServers: {
@@ -150,7 +149,7 @@ function injectIntoAgentsMd(skillName) {
 }
 
 async function handleCompile(repoUrl, options) {
-  const server = options.server || DEFAULT_SERVER;
+  const server = SERVER_URL;
   const token = options.token || process.env.GITHUB_TOKEN || null;
   const type = options.type || 'code';
 
@@ -239,8 +238,7 @@ async function main() {
       options.token = args[++i];
     } else if (args[i] === '--type' && i + 1 < args.length) {
       options.type = args[++i];
-    } else if (args[i] === '--server' && i + 1 < args.length) {
-      options.server = args[++i];
+
     } else if (args[i].startsWith('--')) {
       console.warn(`Warning: Unknown option ignored: ${args[i]}`);
     } else {
