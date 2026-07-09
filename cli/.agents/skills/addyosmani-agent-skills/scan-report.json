@@ -1,0 +1,309 @@
+{
+  "status": "FAIL",
+  "findings": [
+    {
+      "rule": "agency.config_tampering",
+      "severity": "high",
+      "file": "SKILL.md",
+      "line": 22,
+      "source_path": ".claude/commands/ship.md",
+      "snippet": ".claude",
+      "message": "Modifies agent / shell configuration files (persistence or hijack risk).",
+      "id": "GS-AGY-003",
+      "category": "excessive_agency",
+      "confidence": "medium",
+      "owasp_ast": [
+        "AST08"
+      ],
+      "owasp_llm": [
+        "LLM06"
+      ],
+      "remediation": ""
+    },
+    {
+      "rule": "agency.config_tampering",
+      "severity": "high",
+      "file": "SKILL.md",
+      "line": 22,
+      "source_path": ".claude/commands/ship.md",
+      "snippet": ".claude",
+      "message": "Modifies agent / shell configuration files (persistence or hijack risk).",
+      "id": "GS-AGY-003",
+      "category": "excessive_agency",
+      "confidence": "medium",
+      "owasp_ast": [
+        "AST08"
+      ],
+      "owasp_llm": [
+        "LLM06"
+      ],
+      "remediation": ""
+    },
+    {
+      "rule": "agency.config_tampering",
+      "severity": "high",
+      "file": "SKILL.md",
+      "line": 22,
+      "source_path": "docs/codex-setup.md",
+      "snippet": ".codex",
+      "message": "Modifies agent / shell configuration files (persistence or hijack risk).",
+      "id": "GS-AGY-003",
+      "category": "excessive_agency",
+      "confidence": "medium",
+      "owasp_ast": [
+        "AST08"
+      ],
+      "owasp_llm": [
+        "LLM06"
+      ],
+      "remediation": ""
+    },
+    {
+      "rule": "agency.config_tampering",
+      "severity": "high",
+      "file": "references/architecture.md",
+      "line": 8,
+      "source_path": ".claude/commands/ship.md",
+      "snippet": ".claude",
+      "message": "Modifies agent / shell configuration files (persistence or hijack risk).",
+      "id": "GS-AGY-003",
+      "category": "excessive_agency",
+      "confidence": "medium",
+      "owasp_ast": [
+        "AST08"
+      ],
+      "owasp_llm": [
+        "LLM06"
+      ],
+      "remediation": ""
+    },
+    {
+      "rule": "agency.config_tampering",
+      "severity": "high",
+      "file": "references/architecture.md",
+      "line": 11,
+      "source_path": ".claude/commands/ship.md",
+      "snippet": ".claude",
+      "message": "Modifies agent / shell configuration files (persistence or hijack risk).",
+      "id": "GS-AGY-003",
+      "category": "excessive_agency",
+      "confidence": "medium",
+      "owasp_ast": [
+        "AST08"
+      ],
+      "owasp_llm": [
+        "LLM06"
+      ],
+      "remediation": ""
+    },
+    {
+      "rule": "agency.config_tampering",
+      "severity": "high",
+      "file": "references/architecture.md",
+      "line": 12,
+      "source_path": "docs/codex-setup.md",
+      "snippet": ".codex",
+      "message": "Modifies agent / shell configuration files (persistence or hijack risk).",
+      "id": "GS-AGY-003",
+      "category": "excessive_agency",
+      "confidence": "medium",
+      "owasp_ast": [
+        "AST08"
+      ],
+      "owasp_llm": [
+        "LLM06"
+      ],
+      "remediation": ""
+    },
+    {
+      "rule": "agency.config_tampering",
+      "severity": "high",
+      "file": "references/setup.md",
+      "line": 50,
+      "source_path": "docs/cursor-setup.md",
+      "snippet": ".cursor",
+      "message": "Modifies agent / shell configuration files (persistence or hijack risk).",
+      "id": "GS-AGY-003",
+      "category": "excessive_agency",
+      "confidence": "medium",
+      "owasp_ast": [
+        "AST08"
+      ],
+      "owasp_llm": [
+        "LLM06"
+      ],
+      "remediation": ""
+    },
+    {
+      "rule": "agency.config_tampering",
+      "severity": "high",
+      "file": "references/setup.md",
+      "line": 130,
+      "source_path": "docs/codex-setup.md",
+      "snippet": ".codex",
+      "message": "Modifies agent / shell configuration files (persistence or hijack risk).",
+      "id": "GS-AGY-003",
+      "category": "excessive_agency",
+      "confidence": "medium",
+      "owasp_ast": [
+        "AST08"
+      ],
+      "owasp_llm": [
+        "LLM06"
+      ],
+      "remediation": ""
+    },
+    {
+      "rule": "framework.missing_overview",
+      "severity": "medium",
+      "file": "SKILL.md",
+      "line": 0,
+      "source_path": null,
+      "snippet": "",
+      "message": "Engineering Skill is missing the required ## Overview section.",
+      "id": "GS-STR-001",
+      "category": "structure",
+      "confidence": "high",
+      "owasp_ast": [],
+      "owasp_llm": [],
+      "remediation": ""
+    },
+    {
+      "rule": "framework.missing_when_to_use",
+      "severity": "medium",
+      "file": "SKILL.md",
+      "line": 0,
+      "source_path": null,
+      "snippet": "",
+      "message": "Engineering Skill is missing the required ## When to Use section.",
+      "id": "GS-STR-002",
+      "category": "structure",
+      "confidence": "high",
+      "owasp_ast": [],
+      "owasp_llm": [],
+      "remediation": ""
+    },
+    {
+      "rule": "framework.missing_core_process",
+      "severity": "medium",
+      "file": "SKILL.md",
+      "line": 0,
+      "source_path": null,
+      "snippet": "",
+      "message": "Engineering Skill is missing the required ## Core Process section.",
+      "id": "GS-STR-003",
+      "category": "structure",
+      "confidence": "high",
+      "owasp_ast": [],
+      "owasp_llm": [],
+      "remediation": ""
+    },
+    {
+      "rule": "framework.missing_rationalizations",
+      "severity": "medium",
+      "file": "SKILL.md",
+      "line": 0,
+      "source_path": null,
+      "snippet": "",
+      "message": "Engineering Skill is missing the required ## Common Rationalizations section.",
+      "id": "GS-STR-004",
+      "category": "structure",
+      "confidence": "high",
+      "owasp_ast": [],
+      "owasp_llm": [],
+      "remediation": ""
+    },
+    {
+      "rule": "framework.missing_red_flags",
+      "severity": "medium",
+      "file": "SKILL.md",
+      "line": 0,
+      "source_path": null,
+      "snippet": "",
+      "message": "Engineering Skill is missing the required ## Red Flags section.",
+      "id": "GS-STR-005",
+      "category": "structure",
+      "confidence": "high",
+      "owasp_ast": [],
+      "owasp_llm": [],
+      "remediation": ""
+    },
+    {
+      "rule": "framework.missing_verification",
+      "severity": "medium",
+      "file": "SKILL.md",
+      "line": 0,
+      "source_path": null,
+      "snippet": "",
+      "message": "Engineering Skill is missing the required ## Verification section.",
+      "id": "GS-STR-006",
+      "category": "structure",
+      "confidence": "high",
+      "owasp_ast": [],
+      "owasp_llm": [],
+      "remediation": ""
+    }
+  ],
+  "engine": "scapeguard",
+  "engine_version": "2.0.0",
+  "generated_at": "2026-07-09T19:33:42Z",
+  "skill_hash": "sha256:485c649089eff74d2614ef469f05bd3a9ed8f33092af66bd1b2d7ae189943626",
+  "files_scanned": 4,
+  "categories": [
+    {
+      "category": "prompt_injection",
+      "status": "PASS",
+      "findings": 0
+    },
+    {
+      "category": "secrets",
+      "status": "PASS",
+      "findings": 0
+    },
+    {
+      "category": "data_exfiltration",
+      "status": "PASS",
+      "findings": 0
+    },
+    {
+      "category": "malicious_execution",
+      "status": "PASS",
+      "findings": 0
+    },
+    {
+      "category": "supply_chain",
+      "status": "PASS",
+      "findings": 0
+    },
+    {
+      "category": "obfuscation",
+      "status": "PASS",
+      "findings": 0
+    },
+    {
+      "category": "content_exposure",
+      "status": "PASS",
+      "findings": 0
+    },
+    {
+      "category": "excessive_agency",
+      "status": "FAIL",
+      "findings": 8
+    },
+    {
+      "category": "structure",
+      "status": "WARN",
+      "findings": 6
+    }
+  ],
+  "counts": {
+    "high": 8,
+    "medium": 6
+  },
+  "license": {
+    "spdx_id": "MIT",
+    "source_path": "LICENSE",
+    "confidence": "high"
+  },
+  "summary": ""
+}
