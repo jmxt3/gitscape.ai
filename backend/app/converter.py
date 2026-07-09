@@ -208,6 +208,14 @@ TEXT_EXTS = {
   ".zsh", # Zsh Script
 }
 
+# Well-known text files with no extension (LICENSE, Makefile, etc.)
+# that should still be ingested into the digest.
+_EXTENSIONLESS_TEXT = {
+    "license", "licence", "copying", "unlicense",
+    "makefile", "dockerfile", "gemfile", "procfile",
+    "rakefile", "vagrantfile", "justfile", "brewfile",
+}
+
 
 def clone_repository(
     repo_url: str,
@@ -280,7 +288,7 @@ def is_ignored_dir(path: Path) -> bool:
 
 
 def is_text_file(path: Path) -> bool:
-    return path.suffix.lower() in TEXT_EXTS
+    return path.suffix.lower() in TEXT_EXTS or path.name.lower() in _EXTENSIONLESS_TEXT
 
 
 def scan_files(
@@ -385,7 +393,10 @@ def get_all_text_files(root: Path) -> list:
             if not is_ignored_dir(entry):
                 files.extend(get_all_text_files(entry))
         elif entry.is_file():
-            if not is_ignored_file(entry) and entry.suffix.lower() in TEXT_EXTS:
+            if not is_ignored_file(entry) and (
+                entry.suffix.lower() in TEXT_EXTS
+                or entry.name.lower() in _EXTENSIONLESS_TEXT
+            ):
                 files.append(entry)
     return files
 

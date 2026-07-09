@@ -82,6 +82,18 @@ def build_examples(units: list[ContentUnit]) -> list[CodeExample]:
             continue
         scored.append((score, CodeExample(language=lang, code=code, source_path=path, score=score)))
 
+    # Cap per source file to ensure diversity across reference files.
+    # Without this, a single doc with many fenced blocks can dominate the top-N.
+    _PER_FILE_CAP = 3
+    file_counts: dict[str, int] = {}
+    capped: list[tuple[int, CodeExample]] = []
+    for score_val, ex in scored:
+        count = file_counts.get(ex.source_path, 0)
+        if count < _PER_FILE_CAP:
+            capped.append((score_val, ex))
+            file_counts[ex.source_path] = count + 1
+    scored = capped
+
     # stable sort by score desc (Python's sort is stable, so insertion order is the tiebreak)
     scored.sort(key=lambda t: t[0], reverse=True)
     return [ex for _, ex in scored[:_TOP_N]]

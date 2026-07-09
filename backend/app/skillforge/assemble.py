@@ -53,13 +53,21 @@ def _description(meta: RepoMeta, extract: Extract) -> str:
     langs = ", ".join(meta.primary_languages) or "multiple languages"
     n_sym = extract.api_index.total
     n_mod = len(extract.api_index.modules)
-    desc = (
-        f"Specialist knowledge of the {meta.owner}/{meta.repo} codebase ({langs}). "
-        f"Use when working with, extending, or debugging {meta.repo}: navigating its modules, "
-        f"calling its {n_sym} documented public symbols across {n_mod} source files, and "
-        f"understanding its architecture, setup, and configuration. "
-        f"Not for general {langs} questions unrelated to {meta.repo}."
-    )
+    if n_sym > 0:
+        desc = (
+            f"Specialist knowledge of the {meta.owner}/{meta.repo} codebase ({langs}). "
+            f"Use when working with, extending, or debugging {meta.repo}: navigating its modules, "
+            f"calling its {n_sym} documented public symbols across {n_mod} source files, and "
+            f"understanding its architecture, setup, and configuration. "
+            f"Not for general {langs} questions unrelated to {meta.repo}."
+        )
+    else:
+        desc = (
+            f"Specialist knowledge of the {meta.owner}/{meta.repo} project ({langs}). "
+            f"Use when working with or extending {meta.repo}: understanding its architecture, "
+            f"patterns, and configuration. "
+            f"Not for general {langs} questions unrelated to {meta.repo}."
+        )
     return sanitize_prose(desc)[:1024]
 
 
@@ -89,11 +97,13 @@ def _what_this_is(meta: RepoMeta, extract: Extract) -> str:
     if intro:
         return intro
     langs = ", ".join(meta.primary_languages) or "multiple languages"
-    return (
-        f"{meta.owner}/{meta.repo} is a {langs} project with "
-        f"{extract.api_index.total} public symbols across "
-        f"{len(extract.api_index.modules)} source files."
-    )
+    if extract.api_index.total > 0:
+        return (
+            f"{meta.owner}/{meta.repo} is a {langs} project with "
+            f"{extract.api_index.total} public symbols across "
+            f"{len(extract.api_index.modules)} source files."
+        )
+    return f"{meta.owner}/{meta.repo} is a {langs} project."
 
 
 _TOP_DIR = re.compile(r"^(?:├── |└── )([\w.\-]+)/\s*$")
@@ -295,10 +305,13 @@ def _render_skill_md(
         if dirs:
             lines.append("Top-level areas: " + ", ".join(f"`{d}/`" for d in dirs) + ".")
             lines.append("")
-        lines.append(
-            f"Primary languages: {langs}. The skill indexes {extract.api_index.total} "
-            f"public symbols across {len(extract.api_index.modules)} source files."
-        )
+        if extract.api_index.total > 0:
+            lines.append(
+                f"Primary languages: {langs}. The skill indexes {extract.api_index.total} "
+                f"public symbols across {len(extract.api_index.modules)} source files."
+            )
+        else:
+            lines.append(f"Primary languages: {langs}.")
         lines.append("")
 
     flat = _flatten_symbols(extract)

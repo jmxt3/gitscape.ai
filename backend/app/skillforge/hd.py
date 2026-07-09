@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 
 import requests
 
@@ -48,6 +49,29 @@ def _structured_context(meta: RepoMeta, extract: Extract) -> str:
 
     if extract.setup.commands:
         lines.append("Setup commands: " + "; ".join(extract.setup.commands[:8]))
+
+    # ── Skill-collection metadata (from file tree) ──────────────────────
+    # Detect skill directories (skills/<name>/SKILL.md pattern)
+    tree = meta.file_structure or ""
+    skill_dirs = list(dict.fromkeys(re.findall(r"skills/([^/\s]+)/SKILL\.md", tree)))
+    if skill_dirs:
+        lines.append(f"\nThis repository is a SKILL COLLECTION containing {len(skill_dirs)} skills:")
+        for s in skill_dirs[:30]:
+            lines.append(f"  - {s}")
+
+    # Detect commands (commands/<name>.toml or .claude/commands/<name>.md)
+    cmd_matches = list(dict.fromkeys(re.findall(r"commands/([^/\s]+)\.\w+", tree)))
+    if cmd_matches:
+        lines.append(f"\nSlash commands ({len(cmd_matches)}):")
+        for c in cmd_matches[:15]:
+            lines.append(f"  - /{c}")
+
+    # Detect agent personas (agents/<name>.md)
+    agent_matches = list(dict.fromkeys(re.findall(r"agents/([^/\s]+)\.md", tree)))
+    if agent_matches:
+        lines.append(f"\nAgent personas ({len(agent_matches)}):")
+        for a in agent_matches:
+            lines.append(f"  - {a}")
 
     if meta.readme:
         lines.append("README excerpt:\n" + meta.readme[:1500])
@@ -123,6 +147,9 @@ def _framework_prompt(meta: RepoMeta, extract: Extract) -> str:
         "You are a senior engineering skills author producing a Production-grade Engineering Skill "
         "(SKILL.md) for an AI coding agent working in this repository. "
         "Your goal is to teach the agent HOW TO ACT in this codebase — not just what it contains.\n\n"
+        "If the repository is a SKILL COLLECTION (contains a skills/ directory with SKILL.md files), "
+        "focus on the collection's purpose, the individual skills it provides, the slash commands, "
+        "and the development lifecycle it enforces — NOT on code symbols or dependencies.\n\n"
         "Use ONLY the structured context below. Do not invent files, APIs, or facts not present.\n\n"
         "Return STRICT JSON with exactly these keys:\n"
         '  "description": One sentence, trigger-first (max 256 chars). Example: "Use when implementing features or fixing bugs in {repo} to follow established patterns."\n'

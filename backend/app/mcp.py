@@ -73,8 +73,13 @@ async def list_tools():
             {
                 "name": "install_skill",
                 "description": (
-                    "Clones a git repository, compiles its source code and docs into an Anthropic Agent Skill (SKILL.md), "
-                    "performs a security scan, and returns the files to write locally in .agents/skills/."
+                    "Install an agent skill from a GitHub repository. "
+                    "Use this tool when the user asks to: install a skill, compile a repo into a skill, "
+                    "add a skill from GitHub, convert a repository to an agent skill, or learn a codebase. "
+                    "Clones the repo, compiles source code and docs into a SKILL.md, performs a security scan, "
+                    "and returns files to write to .agents/skills/. "
+                    "After receiving the response, the agent MUST write all returned files to disk "
+                    "and register the skill in AGENTS.md."
                 ),
                 "inputSchema": {
                     "type": "object",
@@ -94,9 +99,11 @@ async def list_tools():
             {
                 "name": "uninstall_skill",
                 "description": (
-                    "Returns the exact file paths and AGENTS.md references to delete in order to "
-                    "completely remove a previously installed GitScape skill from .agents/skills/. "
-                    "The agent must execute the deletions locally after receiving this response."
+                    "Remove a previously installed agent skill. "
+                    "Use this tool when the user asks to: uninstall a skill, remove a skill, "
+                    "delete a skill, or clean up an agent skill. "
+                    "Returns the file paths and AGENTS.md references to delete. "
+                    "After receiving the response, the agent MUST execute all listed deletion actions locally."
                 ),
                 "inputSchema": {
                     "type": "object",
@@ -172,6 +179,19 @@ async def run_install_skill(repo_url: str, github_token: Optional[str]) -> Dict[
             # complete source-code context — mirrors what the web zip export does.
             if pkg.digest_filename and pkg.digest_content:
                 files_to_write[f"{base_path}/{pkg.digest_filename}"] = pkg.digest_content
+
+            # Include scan report files so the installed skill has a complete
+            # audit trail — mirrors what the web zip export produces.
+            scan_json = json.dumps(pkg.scan_report.model_dump(mode="json"), indent=2, ensure_ascii=False)
+            files_to_write[f"{base_path}/scan-report.json"] = scan_json
+
+            from app.skillforge.scan.sarif import to_sarif
+            sarif_json = json.dumps(to_sarif(pkg.scan_report), indent=2, ensure_ascii=False)
+            files_to_write[f"{base_path}/scan-report.sarif"] = sarif_json
+
+            # Include exporter files (ADK, Agno wrappers, etc.)
+            for exp_name, exp_content in pkg.exporters.items():
+                files_to_write[f"{base_path}/{exp_name}"] = exp_content
 
             result_payload = {
                 "status": "success",
@@ -369,7 +389,16 @@ async def call_tool(request: Request):
                     "serverInfo": {
                         "name": "gitscape-mcp",
                         "version": "0.2.0"
-                    }
+                    },
+                    "instructions": (
+                        "GitScape compiles any GitHub repository into an AI agent skill. "
+                        "ALWAYS use the install_skill tool when the user asks to: "
+                        "install a skill, compile a repo, add a skill from GitHub, "
+                        "or convert a repository into an agent skill. "
+                        "ALWAYS use the uninstall_skill tool to remove a previously installed skill. "
+                        "After install_skill returns, write ALL returned files to disk and "
+                        "register the skill in AGENTS.md."
+                    )
                 }
             }
 
