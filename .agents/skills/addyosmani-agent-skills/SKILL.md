@@ -1,6 +1,6 @@
 ---
 name: addyosmani-agent-skills
-description: "Specialist knowledge of the addyosmani/agent-skills codebase (Shell, JavaScript). Use when working with, extending, or debugging agent-skills: navigating its modules, calling its 0 documented public symbols across 0 source files, and understanding its architecture, setup, and configuration. Not for general Shell, JavaScript questions unrelated to agent-skills."
+description: "Specialist knowledge of the addyosmani/agent-skills project (Shell, JavaScript). Use when working with or extending agent-skills: understanding its architecture, patterns, and configuration. Not for general Shell, JavaScript questions unrelated to agent-skills."
 ---
 
 # addyosmani/agent-skills — Code Skill
@@ -21,7 +21,7 @@ description: "Specialist knowledge of the addyosmani/agent-skills codebase (Shel
 
 Top-level areas: `.agents/`, `.claude/`, `.claude-plugin/`, `.codex-plugin/`, `.gemini/`, `.github/`, `.opencode/`, `agents/`.
 
-Primary languages: Shell, JavaScript. The skill indexes 0 public symbols across 0 source files.
+Primary languages: Shell, JavaScript.
 
 ## Quickstart
 

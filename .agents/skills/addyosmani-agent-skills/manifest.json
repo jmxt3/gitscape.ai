@@ -2,10 +2,10 @@
   "schema_version": "2.0",
   "name": "addyosmani-agent-skills",
   "display_name": "addyosmani/agent-skills",
-  "description": "Specialist knowledge of the addyosmani/agent-skills codebase (Shell, JavaScript). Use when working with, extending, or debugging agent-skills: navigating its modules, calling its 0 documented public symbols across 0 source files, and understanding its architecture, setup, and configuration. Not for general Shell, JavaScript questions unrelated to agent-skills.",
+  "description": "Specialist knowledge of the addyosmani/agent-skills project (Shell, JavaScript). Use when working with or extending agent-skills: understanding its architecture, patterns, and configuration. Not for general Shell, JavaScript questions unrelated to agent-skills.",
   "version": "1.0.0",
   "builder_version": "1.0.0",
-  "digest_hash": "21d383ebf2052bab72db1d61706c585813e3115d7375a839dfa7f4979b426ff2",
+  "digest_hash": "e805473a38c01cf997829ca1d1d5f1d43d2c4df151125f5b0c13c37cf79f953a",
   "files": [
     "SKILL.md",
     "references/architecture.md",
@@ -29,15 +29,15 @@
         "references/testing-patterns.md",
         "references/testing-patterns.md",
         "references/testing-patterns.md",
-        "references/testing-patterns.md",
-        "references/testing-patterns.md",
-        "references/testing-patterns.md",
-        "references/testing-patterns.md",
-        "references/testing-patterns.md",
         "skills/api-and-interface-design/SKILL.md",
-        "skills/api-and-interface-design/SKILL.md",
-        "skills/api-and-interface-design/SKILL.md",
-        "skills/code-simplification/SKILL.md"
+        "skills/code-simplification/SKILL.md",
+        "skills/documentation-and-adrs/SKILL.md",
+        "skills/frontend-ui-engineering/SKILL.md",
+        "skills/observability-and-instrumentation/SKILL.md",
+        "skills/security-and-hardening/SKILL.md",
+        "skills/security-and-hardening/SKILL.md",
+        "skills/security-and-hardening/SKILL.md",
+        "skills/shipping-and-launch/SKILL.md"
       ]
     },
     {
@@ -61,8 +61,8 @@
     "source_repo": "https://github.com/addyosmani/agent-skills",
     "generated_by": "GitScape.ai",
     "generated_by_url": "https://gitscape.ai",
-    "generated_at": "2026-07-09T19:32:25Z",
-    "files_analyzed": 75,
+    "generated_at": "2026-07-09T19:44:56Z",
+    "files_analyzed": 76,
     "primary_languages": [
       "Shell",
       "JavaScript"
@@ -71,21 +71,21 @@
     "modules_indexed": 0,
     "scan_engine": "scapeguard",
     "scan_engine_version": "2.0.0",
-    "skill_hash": "sha256:2e2504288fab7406752a696b8f7af89229f5eed45a1bca03d32363925df70140",
+    "skill_hash": "sha256:485c649089eff74d2614ef469f05bd3a9ed8f33092af66bd1b2d7ae189943626",
     "license": {
-      "spdx_id": "NOASSERTION",
-      "source_path": "",
-      "confidence": "low"
+      "spdx_id": "MIT",
+      "source_path": "LICENSE",
+      "confidence": "high"
     },
-    "summary_title": "Specialist knowledge of the addyosmani/agent-skills codebase (Shell, JavaScript). Use when working with, extending, or debugging agent-skills: navigating its modules, calling its 0 documented public symbols across 0 source files, and understanding its architecture, setup, and configuration. Not for general Shell, JavaScript questions unrelated to agent-skills.",
+    "summary_title": "Specialist knowledge of the addyosmani/agent-skills project (Shell, JavaScript). Use when working with or extending agent-skills: understanding its architecture, patterns, and configuration. Not for general Shell, JavaScript questions unrelated to agent-skills.",
     "summary_bullets": [
       "Specialist guidelines for working with the agent-skills codebase.",
-      "Understanding modules and symbols across 75 source files.",
+      "Understanding modules and symbols across 76 source files.",
       "Adherence to repository setup, structure, and architecture patterns.",
       "Executing automated tests and verifying codebase changes."
     ]
   },
-  "source_git_head": "edaa28a2293fc51e30df835453a89282f4ff0079",
-  "built_at": "2026-07-09T19:32:25Z",
+  "source_git_head": "d6da74760e4953b923b33a10103927700f2c43d0",
+  "built_at": "2026-07-09T19:44:56Z",
   "model": "gemini-3.1-flash-lite"
 }

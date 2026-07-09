@@ -68,134 +68,7 @@ await expect(asyncFn()).resolves.toBe(value);
 await expect(asyncFn()).rejects.toThrow(Error);
 ```
 
-## Example 4 — `references/testing-patterns.md`
-
-```typescript
-const mockFn = jest.fn();
-mockFn.mockReturnValue(42);
-mockFn.mockResolvedValue({ data: 'test' });
-mockFn.mockImplementation((x) => x * 2);
-
-expect(mockFn).toHaveBeenCalled();
-expect(mockFn).toHaveBeenCalledWith('arg1', 'arg2');
-expect(mockFn).toHaveBeenCalledTimes(3);
-```
-
-## Example 5 — `references/testing-patterns.md`
-
-```typescript
-// Mock an entire module
-jest.mock('./database', () => ({
-  query: jest.fn().mockResolvedValue([{ id: 1, title: 'Test' }]),
-}));
-
-// Mock specific exports
-jest.mock('./utils', () => ({
-  ...jest.requireActual('./utils'),
-  generateId: jest.fn().mockReturnValue('test-id'),
-}));
-```
-
-## Example 6 — `references/testing-patterns.md`
-
-```tsx
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-
-describe('TaskForm', () => {
-  it('submits the form with entered data', async () => {
-    const onSubmit = jest.fn();
-    render(<TaskForm onSubmit={onSubmit} />);
-
-    // Find elements by accessible role/label (not test IDs)
-    await screen.findByRole('textbox', { name: /title/i });
-    fireEvent.change(screen.getByRole('textbox', { name: /title/i }), {
-      target: { value: 'New Task' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: /create/i }));
-
-    await waitFor(() => {
-      expect(onSubmit).toHaveBeenCalledWith({ title: 'New Task' });
-    });
-  });
-
-  it('shows validation error for empty title', async () => {
-    render(<TaskForm onSubmit={jest.fn()} />);
-
-    fireEvent.click(screen.getByRole('button', { name: /create/i }));
-
-    expect(await screen.findByText(/title is required/i)).toBeInTheDocument();
-  });
-});
-```
-
-## Example 7 — `references/testing-patterns.md`
-
-```typescript
-import request from 'supertest';
-import { app } from '../src/app';
-
-describe('POST /api/tasks', () => {
-  it('creates a task and returns 201', async () => {
-    const response = await request(app)
-      .post('/api/tasks')
-      .send({ title: 'Test Task' })
-      .set('Authorization', `Bearer ${testToken}`)
-      .expect(201);
-
-    expect(response.body).toMatchObject({
-      id: expect.any(String),
-      title: 'Test Task',
-      status: 'pending',
-    });
-  });
-
-  it('returns 422 for invalid input', async () => {
-    const response = await request(app)
-      .post('/api/tasks')
-      .send({ title: '' })
-      .set('Authorization', `Bearer ${testToken}`)
-      .expect(422);
-
-    expect(response.body.error.code).toBe('VALIDATION_ERROR');
-  });
-
-  it('returns 401 without authentication', async () => {
-    await request(app)
-      .post('/api/tasks')
-      .send({ title: 'Test' })
-      .expect(401);
-  });
-});
-```
-
-## Example 8 — `references/testing-patterns.md`
-
-```typescript
-import { test, expect } from '@playwright/test';
-
-test('user can create and complete a task', async ({ page }) => {
-  // Navigate and authenticate
-  await page.goto('/');
-  await page.getByRole('textbox', { name: /email/i }).fill('test@example.com');
-  await page.getByLabel(/password/i).fill('testpass123');
-  await page.getByRole('button', { name: /log in/i }).click();
-
-  // Create a task
-  await page.getByRole('button', { name: /new task/i }).click();
-  await page.getByRole('textbox', { name: /title/i }).fill('Buy groceries');
-  await page.getByRole('button', { name: /create/i }).click();
-
-  // Verify task appears
-  const task = page.getByRole('listitem', { name: /buy groceries/i });
-  await expect(task).toBeVisible();
-
-  // Complete the task
-  await task.getByRole('checkbox', { name: /complete buy groceries/i }).check();
-  await expect(task).toHaveCSS('text-decoration-line', 'line-through');
-});
-```
-
-## Example 9 — `skills/api-and-interface-design/SKILL.md`
+## Example 4 — `skills/api-and-interface-design/SKILL.md`
 
 ```typescript
 // Validate at the API boundary
@@ -217,38 +90,7 @@ app.post('/api/tasks', async (req, res) => {
 });
 ```
 
-## Example 10 — `skills/api-and-interface-design/SKILL.md`
-
-```typescript
-// Good: Each variant is explicit
-type TaskStatus =
-  | { type: 'pending' }
-  | { type: 'in_progress'; assignee: string; startedAt: Date }
-  | { type: 'completed'; completedAt: Date; completedBy: string }
-  | { type: 'cancelled'; reason: string; cancelledAt: Date };
-
-// Consumer gets type narrowing
-function getStatusLabel(status: TaskStatus): string {
-  switch (status.type) {
-    case 'pending': return 'Pending';
-    case 'in_progress': return `In progress (${status.assignee})`;
-    case 'completed': return `Done on ${status.completedAt}`;
-    case 'cancelled': return `Cancelled: ${status.reason}`;
-  }
-}
-```
-
-## Example 11 — `skills/api-and-interface-design/SKILL.md`
-
-```typescript
-type TaskId = string & { readonly __brand: 'TaskId' };
-type UserId = string & { readonly __brand: 'UserId' };
-
-// Prevents accidentally passing a UserId where a TaskId is expected
-function getTask(id: TaskId): Promise<Task> { ... }
-```
-
-## Example 12 — `skills/code-simplification/SKILL.md`
+## Example 5 — `skills/code-simplification/SKILL.md`
 
 ```typescript
 // UNCLEAR: Dense ternary chain
@@ -261,4 +103,115 @@ function getStatusLabel(item: Item): string {
   if (item.isArchived) return 'Archived';
   return 'Active';
 }
+```
+
+## Example 6 — `skills/documentation-and-adrs/SKILL.md`
+
+```typescript
+// BAD: Restates the code
+// Increment counter by 1
+counter += 1;
+
+// GOOD: Explains non-obvious intent
+// Rate limit uses a sliding window — reset counter at window boundary,
+// not on a fixed schedule, to prevent burst attacks at window edges
+if (now - windowStart > WINDOW_SIZE_MS) {
+  counter = 0;
+  windowStart = now;
+}
+```
+
+## Example 7 — `skills/frontend-ui-engineering/SKILL.md`
+
+```tsx
+// Good: Does one thing
+export function TaskItem({ task, onToggle, onDelete }: TaskItemProps) {
+  return (
+    <li className="flex items-center gap-3 p-3">
+      <Checkbox checked={task.done} onChange={() => onToggle(task.id)} />
+      <span className={task.done ? 'line-through text-muted' : ''}>{task.title}</span>
+      <Button variant="ghost" size="sm" onClick={() => onDelete(task.id)}>
+        <TrashIcon />
+      </Button>
+    </li>
+  );
+}
+```
+
+## Example 8 — `skills/observability-and-instrumentation/SKILL.md`
+
+```typescript
+// Express: child logger per request, ID propagated downstream
+app.use((req, res, next) => {
+  req.id = req.headers['x-request-id'] ?? crypto.randomUUID();
+  req.log = logger.child({ requestId: req.id });
+  res.setHeader('x-request-id', req.id);
+  next();
+});
+```
+
+## Example 9 — `skills/security-and-hardening/SKILL.md`
+
+```typescript
+// BAD: SQL injection via string concatenation
+const query = `SELECT * FROM users WHERE id = '${userId}'`;
+
+// GOOD: Parameterized query
+const user = await db.query('SELECT * FROM users WHERE id = $1', [userId]);
+
+// GOOD: ORM with parameterized input
+const user = await prisma.user.findUnique({ where: { id: userId } });
+```
+
+## Example 10 — `skills/security-and-hardening/SKILL.md`
+
+```typescript
+// Password hashing
+import { hash, compare } from 'bcrypt';
+
+const SALT_ROUNDS = 12;
+const hashedPassword = await hash(plaintext, SALT_ROUNDS);
+const isValid = await compare(plaintext, hashedPassword);
+
+// Session management
+app.use(session({
+  secret: process.env.SESSION_SECRET,  // From environment, not code
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    httpOnly: true,     // Not accessible via JavaScript
+    secure: true,       // HTTPS only
+    sameSite: 'lax',    // CSRF protection
+    maxAge: 24 * 60 * 60 * 1000,  // 24 hours
+  },
+}));
+```
+
+## Example 11 — `skills/security-and-hardening/SKILL.md`
+
+```typescript
+// BAD: Rendering user input as HTML
+element.innerHTML = userInput;
+
+// GOOD: Use framework auto-escaping (React does this by default)
+return <div>{userInput}</div>;
+
+// If you MUST render HTML, sanitize first
+import DOMPurify from 'dompurify';
+const clean = DOMPurify.sanitize(userInput);
+```
+
+## Example 12 — `skills/shipping-and-launch/SKILL.md`
+
+```typescript
+// Feature flag check
+const flags = await getFeatureFlags(userId);
+
+if (flags.taskSharing) {
+  // New feature: task sharing
+  return <TaskSharingPanel task={task} />;
+}
+
+// Default: existing behavior
+return null;
 ```
