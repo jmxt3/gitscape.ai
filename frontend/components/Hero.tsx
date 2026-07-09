@@ -1,4 +1,5 @@
 import React from "react";
+import { CodeSnippet } from "./CodeSnippet";
 
 /**
  * Aurora hero — replaces the old centered h1/p block in App.tsx.
@@ -31,6 +32,16 @@ export const Hero: React.FC = () => (
         </code>{" "}
         — so your agents act like they wrote it.
       </p>
+
+      <div className="flex flex-wrap items-center justify-center gap-3">
+        <CodeSnippet compact prompt accent="violet" code="npx gitscape <repo-url>" />
+        <a
+          href="#developer-tools"
+          className="text-[12.5px] font-medium text-slate-500 hover:text-slate-300 transition-colors"
+        >
+          also an MCP server →
+        </a>
+      </div>
 
       <a
         href="#security"
