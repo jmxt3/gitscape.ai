@@ -140,6 +140,7 @@ const SCAPEGUARD_RULE_LABELS: Record<string, string> = {
   "GS-EXE-007": "Chmod & Run — Downloads a file and immediately makes it executable or runs it",
   "GS-EXE-008": "Cryptominer — Mining-pool protocol or known miner binary reference",
   "GS-EXE-009": "Hacktool / Webshell — Credential dumping, exploitation, or PHP webshell signature",
+  "GS-EXE-010": "Dangerous Call (AST) — Dynamic code execution detected by tree-sitter analysis",
 
   // Data Exfiltration (GS-EXF)
   "GS-EXF-001": "Send Secrets — Instruction to send secrets/credentials outward",

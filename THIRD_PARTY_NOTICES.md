@@ -34,6 +34,9 @@ registry and deterministic gate. Derived material includes:
 - **OSV.dev batch-lookup + TTL-cache design** in `backend/app/skillforge/scan/osv.py`,
   feeding the supply-chain rules GS-DEP-006 (known vulnerability) and GS-DEP-007
   (malicious package).
+- **Behavioral dangerous-call taxonomy** in `backend/app/skillforge/scan/behavioral.py`
+  (GS-EXE-010) — the exec/eval/subprocess/chain detection classes are derived from
+  SkillSpector's AST analyzer (reimplemented on tree-sitter across Python/JS/TS/Go).
 
 ### Apache License 2.0
 
