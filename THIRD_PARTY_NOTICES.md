@@ -31,6 +31,9 @@ registry and deterministic gate. Derived material includes:
     sets (GS-EXE-008, GS-EXE-009).
 - **Risk-scoring constants** in `backend/app/skillforge/scan/scoring.py` — the
   per-severity point table and the ×1.3 executable-context multiplier.
+- **OSV.dev batch-lookup + TTL-cache design** in `backend/app/skillforge/scan/osv.py`,
+  feeding the supply-chain rules GS-DEP-006 (known vulnerability) and GS-DEP-007
+  (malicious package).
 
 ### Apache License 2.0
 

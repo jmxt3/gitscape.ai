@@ -17,6 +17,7 @@ from pathlib import PurePosixPath
 from ...models import Confidence, ScanFinding, Severity
 from ..context import ScanContext, line_of
 from ..data.top_packages import ALL_TOP, edit_distance_at_most_one
+from ..osv import osv_enabled, query_batch
 from ..registry import Rule
 from ..taxonomy import Category
 
@@ -134,6 +135,81 @@ def _check_typosquat(ctx: ScanContext, rule: Rule) -> list[ScanFinding]:
     return findings
 
 
+# ─── OSV.dev live lookups (GS-DEP-006 / 007) ─────────────────────────────────
+
+_REQ_PIN = re.compile(r"^([A-Za-z0-9._-]+)\s*==\s*([0-9][A-Za-z0-9.+!-]*)")
+_GOMOD_PIN = re.compile(r"^\s*([\w./-]+)\s+v(\d+\.\d+\.\d+[\w.+-]*)", re.M)
+_NPM_VER = re.compile(r"\d+\.\d+")
+
+
+def _pinned_deps(ctx: ScanContext) -> list[tuple[str, str, str]]:
+    """Exactly-pinned deps we can query against OSV: (ecosystem, name, version).
+
+    Only concrete versions are queryable — unpinned/range specs are already
+    covered by GS-DEP-001 and are skipped here.
+    """
+    deps: list[tuple[str, str, str]] = []
+    for u, name in _config_units(ctx):
+        content = getattr(u, "content", "") or ""
+        if name == "requirements.txt":
+            for line in content.splitlines():
+                line = line.strip()
+                if not line or line.startswith(("#", "-")):
+                    continue
+                m = _REQ_PIN.match(line)
+                if m:
+                    deps.append(("PyPI", m.group(1), m.group(2)))
+        elif name == "package.json":
+            try:
+                data = json.loads(content)
+            except Exception:
+                continue
+            for block in ("dependencies", "devDependencies"):
+                for dep, spec in (data.get(block) or {}).items():
+                    if isinstance(spec, str):
+                        v = spec.strip().lstrip("^~>=< v")
+                        if _NPM_VER.match(v):
+                            deps.append(("npm", dep, v))
+        elif name == "go.mod":
+            for m in _GOMOD_PIN.finditer(content):
+                deps.append(("Go", m.group(1), m.group(2)))
+    # dedupe, preserve order
+    return list(dict.fromkeys(deps))
+
+
+def _osv_rule(ctx: ScanContext, rule: Rule, *, malicious: bool) -> list[ScanFinding]:
+    if not osv_enabled():
+        return []
+    deps = _pinned_deps(ctx)
+    if not deps:
+        return []
+    results = query_batch(deps)  # cached + fail-open (returns {} on any error)
+    findings: list[ScanFinding] = []
+    for key in deps:
+        eco, name, version = key
+        ids = results.get(key, [])
+        hits = [i for i in ids if (i.startswith("MAL-") == malicious)]
+        if not hits:
+            continue
+        shown = ", ".join(hits[:3]) + ("…" if len(hits) > 3 else "")
+        if malicious:
+            msg = f"Dependency '{name}=={version}' is flagged as a MALICIOUS package by OSV.dev ({shown})."
+        else:
+            msg = f"Dependency '{name}=={version}' has known vulnerabilities per OSV.dev ({shown})."
+        findings.append(rule.finding(
+            file="manifest", line=0, snippet=f"{name}=={version}", message=msg,
+        ))
+    return findings
+
+
+def _check_known_vuln(ctx: ScanContext, rule: Rule) -> list[ScanFinding]:
+    return _osv_rule(ctx, rule, malicious=False)
+
+
+def _check_malicious_package(ctx: ScanContext, rule: Rule) -> list[ScanFinding]:
+    return _osv_rule(ctx, rule, malicious=True)
+
+
 RULES: list[Rule] = [
     Rule(
         id="GS-DEP-001", name="supply_chain.unpinned", category=C,
@@ -168,5 +244,23 @@ RULES: list[Rule] = [
         severity=Severity.MEDIUM, confidence=Confidence.LOW,
         check=_check_typosquat,
         message="Dependency name resembles a popular package (possible typosquat).",
+    ),
+    Rule(
+        # Live OSV.dev lookup. Data-backed, so HIGH confidence; MEDIUM severity
+        # (a known CVE in a dep is worth a WARN, not a hard FAIL). supply_chain
+        # is not an unbypassable category, so a stale OSV record never bricks a build.
+        id="GS-DEP-006", name="supply_chain.known_vulnerability", category=C,
+        severity=Severity.MEDIUM, confidence=Confidence.HIGH,
+        check=_check_known_vuln,
+        message="Pinned dependency has a known vulnerability (OSV.dev).",
+        remediation="Upgrade the dependency to a patched version.",
+    ),
+    Rule(
+        # OSV `MAL-*` advisories mark packages known to be malicious.
+        id="GS-DEP-007", name="supply_chain.malicious_package", category=C,
+        severity=Severity.CRITICAL, confidence=Confidence.HIGH,
+        check=_check_malicious_package,
+        message="Pinned dependency is a known malicious package (OSV.dev).",
+        remediation="Remove the malicious dependency immediately.",
     ),
 ]
