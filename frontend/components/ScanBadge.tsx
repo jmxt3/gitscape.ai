@@ -193,6 +193,8 @@ const SCAPEGUARD_RULE_LABELS: Record<string, string> = {
   "GS-DEP-003": "Install from URL/VCS — Installs dependency directly from URL/VCS",
   "GS-DEP-004": "Lifecycle Install Scripts — Package lifecycle install scripts present",
   "GS-DEP-005": "Typosquatted Dependency — Dependency name resembles a popular package",
+  "GS-DEP-006": "Known Vulnerability — Pinned dependency has a known CVE (OSV.dev)",
+  "GS-DEP-007": "Malicious Package — Pinned dependency flagged malicious by OSV.dev",
 };
 
 function scapeguardTooltip(f: ScanFinding): string {
