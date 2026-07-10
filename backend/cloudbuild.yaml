@@ -20,8 +20,7 @@ steps:
     id: 'push'
     args:
       - 'push'
-      - '--all-tags'
-      - 'us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/gitscape-api'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/gitscape-api:$_IMAGE_TAG'
 
   # ── Step 3: Deploy to Cloud Run ───────────────────────────────────────────────
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'

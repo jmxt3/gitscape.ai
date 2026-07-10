@@ -38,8 +38,7 @@ steps:
     waitFor: ['build-api']
     args:
       - 'push'
-      - '--all-tags'
-      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/gitscape-api'
+      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/gitscape-api:$_IMAGE_TAG'
 
   # ── Step 2b: Push web image ───────────────────────────────────────────────────
   - name: 'gcr.io/cloud-builders/docker'
@@ -47,8 +46,7 @@ steps:
     waitFor: ['build-web']
     args:
       - 'push'
-      - '--all-tags'
-      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/gitscape-web'
+      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/gitscape-web:$_IMAGE_TAG'
 
   # ── Step 3: Substitute image tags into service.yaml ──────────────────────────
   # Uses sed to replace the placeholder values in service.yaml before deploying.
