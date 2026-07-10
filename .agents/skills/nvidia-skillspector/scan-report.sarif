@@ -6,7 +6,7 @@
       "tool": {
         "driver": {
           "name": "ScapeGuard",
-          "version": "2.0.0",
+          "version": "2.1.0",
           "informationUri": "https://gitscape.ai",
           "rules": [
             {
@@ -110,6 +110,78 @@
               "name": "injection.execute_the_following",
               "shortDescription": {
                 "text": "Prompt-injection: instruction to execute the following commands."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "category": "prompt_injection",
+                "owasp-ast": [
+                  "AST01"
+                ],
+                "owasp-llm": [
+                  "LLM01"
+                ],
+                "tags": [
+                  "prompt_injection",
+                  "AST01",
+                  "LLM01"
+                ]
+              }
+            },
+            {
+              "id": "GS-INJ-006",
+              "name": "injection.anti_refusal",
+              "shortDescription": {
+                "text": "Prompt-injection: anti-refusal / jailbreak framing (disable safety, unrestricted persona)."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "category": "prompt_injection",
+                "owasp-ast": [
+                  "AST01"
+                ],
+                "owasp-llm": [
+                  "LLM01"
+                ],
+                "tags": [
+                  "prompt_injection",
+                  "AST01",
+                  "LLM01"
+                ]
+              }
+            },
+            {
+              "id": "GS-INJ-007",
+              "name": "injection.concealment",
+              "shortDescription": {
+                "text": "Prompt-injection: instructs the agent to conceal an action from the user."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "category": "prompt_injection",
+                "owasp-ast": [
+                  "AST01"
+                ],
+                "owasp-llm": [
+                  "LLM01"
+                ],
+                "tags": [
+                  "prompt_injection",
+                  "AST01",
+                  "LLM01"
+                ]
+              }
+            },
+            {
+              "id": "GS-INJ-008",
+              "name": "injection.conditional_trigger",
+              "shortDescription": {
+                "text": "Prompt-injection: conditional/dormant trigger for a delayed action."
               },
               "defaultConfiguration": {
                 "level": "error"
@@ -558,6 +630,54 @@
               }
             },
             {
+              "id": "GS-EXE-008",
+              "name": "execution.cryptominer",
+              "shortDescription": {
+                "text": "Cryptominer: mining-pool protocol or known miner binary reference."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "category": "malicious_execution",
+                "owasp-ast": [
+                  "AST02"
+                ],
+                "owasp-llm": [
+                  "LLM05"
+                ],
+                "tags": [
+                  "malicious_execution",
+                  "AST02",
+                  "LLM05"
+                ]
+              }
+            },
+            {
+              "id": "GS-EXE-009",
+              "name": "execution.hacktool",
+              "shortDescription": {
+                "text": "Offensive tooling / webshell signature (credential dumping, exploitation, or PHP webshell)."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "category": "malicious_execution",
+                "owasp-ast": [
+                  "AST02"
+                ],
+                "owasp-llm": [
+                  "LLM05"
+                ],
+                "tags": [
+                  "malicious_execution",
+                  "AST02",
+                  "LLM05"
+                ]
+              }
+            },
+            {
               "id": "GS-EXF-001",
               "name": "exfil.send_secrets",
               "shortDescription": {
@@ -658,6 +778,30 @@
               "name": "exfil.sensitive_path",
               "shortDescription": {
                 "text": "Reads a sensitive credential file (SSH keys, AWS creds, .npmrc)."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "category": "data_exfiltration",
+                "owasp-ast": [
+                  "AST04"
+                ],
+                "owasp-llm": [
+                  "LLM02"
+                ],
+                "tags": [
+                  "data_exfiltration",
+                  "AST04",
+                  "LLM02"
+                ]
+              }
+            },
+            {
+              "id": "GS-EXF-006",
+              "name": "exfil.internal_endpoint",
+              "shortDescription": {
+                "text": "SSRF: accesses a cloud-metadata / internal service endpoint (credential-theft vector)."
               },
               "defaultConfiguration": {
                 "level": "error"
@@ -918,6 +1062,30 @@
               }
             },
             {
+              "id": "GS-OBF-006",
+              "name": "obfuscation.data_uri_payload",
+              "shortDescription": {
+                "text": "Base64 data-URI payload (decodes to executable content)."
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "category": "obfuscation",
+                "owasp-ast": [
+                  "AST06"
+                ],
+                "owasp-llm": [
+                  "LLM01"
+                ],
+                "tags": [
+                  "obfuscation",
+                  "AST06",
+                  "LLM01"
+                ]
+              }
+            },
+            {
               "id": "GS-CNT-001",
               "name": "content.fetch_and_obey",
               "shortDescription": {
@@ -1086,6 +1254,54 @@
               }
             },
             {
+              "id": "GS-AGY-005",
+              "name": "agency.memory_poisoning",
+              "shortDescription": {
+                "text": "Memory poisoning: writes durable instructions into the agent's persistent memory."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "category": "excessive_agency",
+                "owasp-ast": [
+                  "AST08"
+                ],
+                "owasp-llm": [
+                  "LLM06"
+                ],
+                "tags": [
+                  "excessive_agency",
+                  "AST08",
+                  "LLM06"
+                ]
+              }
+            },
+            {
+              "id": "GS-AGY-006",
+              "name": "agency.agent_snooping",
+              "shortDescription": {
+                "text": "Agent snooping: reads other skills, session history, or agent-internal state."
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "category": "excessive_agency",
+                "owasp-ast": [
+                  "AST08"
+                ],
+                "owasp-llm": [
+                  "LLM06"
+                ],
+                "tags": [
+                  "excessive_agency",
+                  "AST08",
+                  "LLM06"
+                ]
+              }
+            },
+            {
               "id": "GS-STR-000",
               "name": "framework.structure",
               "shortDescription": {
@@ -1110,6 +1326,8 @@
       "properties": {
         "skillHash": "sha256:06663b511cf0fbc2a207b5132e171e5f7e103dbcd90bbc20e9a474c235c4e9f9",
         "status": "PASS",
+        "riskScore": 0,
+        "grade": "A",
         "filesScanned": 6
       }
     }

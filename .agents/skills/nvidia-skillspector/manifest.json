@@ -1,5 +1,5 @@
 {
-  "schema_version": "2.0",
+  "schema_version": "2.1",
   "name": "nvidia-skillspector",
   "display_name": "NVIDIA/SkillSpector",
   "description": "Guides agents through working with the NVIDIA/SkillSpector codebase (Python, TypeScript, Shell). Use when extending, debugging, or navigating SkillSpector, or when the user mentions 'SkillSpector', 'NVIDIA/SkillSpector', or asks about its architecture, modules, or public API. Not for general Python, TypeScript, Shell questions unrelated to SkillSpector.",
@@ -202,6 +202,7 @@
     }
   ],
   "scan_status": "PASS",
+  "scan_grade": "A",
   "framework_compatibility": [
     "claude-skills",
     "google-adk",
@@ -214,7 +215,7 @@
     "source_repo": "https://github.com/NVIDIA/SkillSpector",
     "generated_by": "GitScape.ai",
     "generated_by_url": "https://gitscape.ai",
-    "generated_at": "2026-07-10T03:50:20Z",
+    "generated_at": "2026-07-10T18:51:30Z",
     "files_analyzed": 217,
     "primary_languages": [
       "Python",
@@ -224,7 +225,7 @@
     "symbols_indexed": 282,
     "modules_indexed": 69,
     "scan_engine": "scapeguard",
-    "scan_engine_version": "2.0.0",
+    "scan_engine_version": "2.1.0",
     "skill_hash": "sha256:06663b511cf0fbc2a207b5132e171e5f7e103dbcd90bbc20e9a474c235c4e9f9",
     "license": {
       "spdx_id": "Apache-2.0",
@@ -240,6 +241,6 @@
     ]
   },
   "source_git_head": "c2d09df019e358d3dc12d980b82c798b87cb9f56",
-  "built_at": "2026-07-10T03:50:20Z",
+  "built_at": "2026-07-10T18:51:30Z",
   "model": "gemini-3.1-flash-lite"
 }
