@@ -111,6 +111,28 @@ export const HowItWorks: React.FC = () => (
   </section>
 );
 
+const GRADE_TONES: Record<string, { chip: string; text: string; border: string }> = {
+  emerald: { chip: "rgba(16,185,129,0.15)", text: "#34d399", border: "rgba(16,185,129,0.45)" },
+  lime:    { chip: "rgba(132,204,22,0.15)", text: "#a3e635", border: "rgba(132,204,22,0.45)" },
+  amber:   { chip: "rgba(245,158,11,0.15)", text: "#fbbf24", border: "rgba(245,158,11,0.45)" },
+  red:     { chip: "rgba(239,68,68,0.15)",  text: "#f87171", border: "rgba(239,68,68,0.45)" },
+};
+
+const GradeKey: React.FC<{ letter: string; tone: keyof typeof GRADE_TONES; label: string }> = ({ letter, tone, label }) => {
+  const t = GRADE_TONES[tone];
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <span
+        className="inline-flex items-center justify-center w-5 h-5 rounded border text-[11px] font-bold font-mono"
+        style={{ background: t.chip, color: t.text, borderColor: t.border }}
+      >
+        {letter}
+      </span>
+      <span className="text-slate-400">{label}</span>
+    </span>
+  );
+};
+
 const ScanRow: React.FC<{ label: string; value: string; tone?: "ok" | "warn" | "muted" }> = ({ label, value, tone = "muted" }) => {
   const color = tone === "ok" ? "text-emerald-400" : tone === "warn" ? "text-amber-400" : "text-slate-200";
   return (
@@ -134,18 +156,22 @@ export const Security: React.FC = () => (
           Every skill is scanned by <span className="text-emerald-400">ScapeGuard</span>.
         </h2>
         <p className="m-0 text-[15px] leading-relaxed text-slate-400">
-          A skill is code your agent trusts. So GitScape runs each one through <span className="text-emerald-400 font-semibold">ScapeGuard</span> —
-          our deterministic scanner with 45+ rules across 9 threat categories — before it ever
-          leaves the page. Live credentials and remote-code-execution payloads never ship.
+          A skill is code your agent trusts. GitScape runs each one through <span className="text-emerald-400 font-semibold">ScapeGuard</span>,
+          a deterministic scanner with 55+ rules across 9 threat categories, and assigns an
+          <span className="text-slate-200 font-semibold"> A–F grade</span> before it can leave the page.
         </p>
-        <div className="flex flex-col gap-3 mt-1">
-          <CheckRow>Secrets &amp; credentials detected — AWS, GitHub, OpenAI, Stripe keys, private keys</CheckRow>
-          <CheckRow>Prompt injection &amp; hidden-Unicode smuggling caught before it reaches your agent</CheckRow>
-          <CheckRow>Malicious execution, exfiltration &amp; supply-chain risks flagged in scripts and docs</CheckRow>
+        {/* Grade legend — teaches the A–F scale at a glance */}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-1 text-[12px]">
+          <GradeKey letter="A" tone="emerald" label="clean" />
+          <GradeKey letter="B" tone="lime" label="minor" />
+          <GradeKey letter="C" tone="amber" label="review advised" />
+          <GradeKey letter="F" tone="red" label="blocked" />
+        </div>
+        <div className="flex flex-col gap-3 mt-2">
+          <CheckRow>Secrets, prompt injection, and malicious code caught before they reach your agent</CheckRow>
           <CheckRow>Every finding mapped to the OWASP Agentic Skills &amp; LLM Top 10</CheckRow>
-          <CheckRow>License detected and carried into the manifest</CheckRow>
-          <CheckRow>Every download ships its own scan-report.json + SARIF audit</CheckRow>
-          <CheckRow>Your GitHub token stays in your browser — never on our servers</CheckRow>
+          <CheckRow>Each download ships its own scan-report.json and SARIF audit</CheckRow>
+          <CheckRow>Live credentials and remote-code-execution payloads are blocked from export</CheckRow>
         </div>
       </div>
       <div
@@ -157,15 +183,25 @@ export const Security: React.FC = () => (
           style={{ borderBottom: "1px solid rgba(71,85,105,0.4)", background: "rgba(15,23,42,0.8)" }}
         >
           <span className="text-xs text-slate-400">scan-report.json</span>
-          <span
-            className="text-[10px] font-bold px-2.5 py-[3px] rounded-full tracking-[0.06em]"
-            style={{ background: "rgba(16,185,129,0.15)", color: "#34d399" }}
-          >
-            PASS
-          </span>
+          <div className="flex items-center gap-2">
+            <span
+              className="text-[11px] font-bold px-2 py-[2px] rounded border tracking-[0.04em]"
+              style={{ background: "rgba(16,185,129,0.15)", borderColor: "rgba(16,185,129,0.4)", color: "#34d399" }}
+            >
+              A
+            </span>
+            <span
+              className="text-[10px] font-bold px-2.5 py-[3px] rounded-full tracking-[0.06em]"
+              style={{ background: "rgba(16,185,129,0.15)", color: "#34d399" }}
+            >
+              PASS
+            </span>
+          </div>
         </div>
         <div className="p-4.5 flex flex-col gap-2.5 text-[12.5px]">
-          <ScanRow label="engine" value='"scapeguard/2.0.0"' />
+          <ScanRow label="engine" value='"scapeguard/2.1.0"' />
+          <ScanRow label="grade" value='"A"' tone="ok" />
+          <ScanRow label="risk_score" value="0" tone="ok" />
           <ScanRow label="secrets" value="PASS" tone="ok" />
           <ScanRow label="prompt_injection" value="PASS" tone="ok" />
           <ScanRow label="malicious_execution" value="PASS" tone="ok" />
@@ -275,6 +311,14 @@ const FAQ_ITEMS = [
   {
     q: "What is an Agent Skill?",
     a: "Agent Skill generates a SKILL.md file — a structured knowledge document that AI coding agents can load to instantly understand a repository's purpose, architecture, patterns, and conventions. It lets your AI agent act on the codebase without needing to re-read every file."
+  },
+  {
+    q: "Is the generated skill safe to install?",
+    a: "Yes. Every skill is scanned by ScapeGuard — our deterministic scanner — before it can leave the page. It checks 9 threat categories, including prompt injection, hardcoded secrets, and remote-code execution, all mapped to the OWASP Agentic Skills & LLM Top 10. Live credentials and RCE payloads are hard-blocked and can never be exported."
+  },
+  {
+    q: "What does the A–F security grade mean?",
+    a: "Each scan gives the skill a letter grade from a 0–100 risk score: A is clean, B is minor, C means review advised, and F is blocked from export. The grade is shown on the page and saved in manifest.json, and every download ships its own scan-report.json and SARIF audit."
   },
   {
     q: "What is Code Visualization?",
