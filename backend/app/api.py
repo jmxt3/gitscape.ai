@@ -139,6 +139,69 @@ def get_digest(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+class ScanRequest(BaseModel):
+    repo_url: str
+    github_token: Optional[str] = None
+
+
+@router.post("/scan")
+@limiter.limit("10/minute")
+def scan_repo(request: Request, body: ScanRequest):
+    """Security-scan a repository without building/installing a skill.
+
+    Runs the deterministic SkillForge pipeline (no LLM) purely to produce the
+    ScapeGuard verdict — "what grade would this repo's skill get?" — and returns
+    only the scan report. Nothing is written; no digest or skill is returned.
+    """
+    from app.skillforge.models import ScanStatus
+    from app.skillforge.package import is_bypassable
+
+    try:
+        repo_url = urllib.parse.unquote(body.repo_url)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            clone_path = os.path.join(tmpdir, "repo")
+            converter.clone_repository(repo_url, clone_path, github_token=body.github_token)
+            digest_str, metadata = converter.generate_markdown_digest(
+                repo_url, clone_path, return_metadata=True
+            )
+            meta = RepoMeta(
+                owner=metadata["owner"], repo=metadata["repo"], repo_url=repo_url,
+                primary_languages=metadata["primary_languages"],
+                files_analyzed=metadata["files_analyzed"],
+                readme=metadata.get("readme", ""),
+                file_structure=metadata.get("file_structure", ""),
+                structure_overview=metadata.get("structure_overview", ""),
+                generated_at=datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                git_sha=converter.get_git_sha(clone_path),
+            )
+            units = skillforge.units_from_clone(Path(clone_path))
+            # Deterministic, keyless build (skill_type="code"): no Gemini, and no
+            # STRUCTURE-section warnings — we only want the repo's security verdict.
+            pkg = skillforge.build_skill(
+                units, meta, digest_hash=skillforge.content_hash(digest_str),
+                digest_content=digest_str, skill_type="code",
+            )
+
+        report = pkg.scan_report
+        return {
+            "repo_url": repo_url,
+            "grade": report.grade,
+            "status": report.status.value,
+            "risk_score": report.risk_score,
+            "safe_to_install": report.status != ScanStatus.FAIL,
+            "bypassable": is_bypassable(report),
+            "counts": report.counts,
+            "categories": [c.model_dump(mode="json") for c in report.categories],
+            "findings": [f.model_dump(mode="json") for f in report.findings],
+            "engine": report.engine,
+            "engine_version": report.engine_version,
+            "scanned_at": report.generated_at,
+            "skill_hash": report.skill_hash,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 class SkillZipRequest(BaseModel):
     repo_url: str
     owner: str
