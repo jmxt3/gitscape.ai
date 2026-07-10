@@ -71,11 +71,17 @@ npm install -g gitscape
 ```bash
 npx gitscape <repository_url> [options]
 ```
-Clones the repository, analyzes its structure, runs security checks, generates a progressively-disclosed skill package, saves it to `.agents/skills/<repo-name>/`, and registers it inside your workspace config files (`AGENTS.md`, `CLAUDE.md`, etc.).
+Clones the repository, analyzes its structure, runs the ScapeGuard security scan, generates a progressively-disclosed skill package, saves it to `.agents/skills/<repo-name>/`, and registers it inside your workspace config files (`AGENTS.md`, `CLAUDE.md`, etc.).
+
+Each compile prints the skill's **ScapeGuard security grade** (`A`–`F`); the full report ships alongside the skill as `scan-report.json` and `scan-report.sarif`.
 
 **Example:**
 ```bash
 npx gitscape https://github.com/google/adk-python
+# ✓ Skill compiled successfully (Scan Grade: A)
+#   write .agents/skills/google-adk-python/SKILL.md
+#   ...
+#   ✓ Skill google-adk-python installed to .agents/skills/google-adk-python
 ```
 
 **Options:**
@@ -113,6 +119,7 @@ Before writing the new files the CLI will automatically delete the previous skil
 ```bash
 npx gitscape https://github.com/google/adk-python
 # Output:
+#   ✓ Skill compiled successfully (Scan Grade: A)
 #   clean .agents/skills/google-adk-python (previous version removed)
 #   write .agents/skills/google-adk-python/SKILL.md
 #   write .agents/skills/google-adk-python/references/api.md
@@ -148,11 +155,13 @@ npm install -g gitscape@latest
 
 ## 🔒 Security & Privacy (ScapeGuard)
 
-A skill is code your agent trusts. GitScape runs every compiled skill through **ScapeGuard** — our deterministic scanner with 45+ rules across 9 threat categories — before it ever leaves the server. Live credentials and remote-code-execution payloads never ship:
+A skill is code your agent trusts. GitScape runs every compiled skill through **ScapeGuard** — our deterministic scanner with 55+ rules across 9 threat categories — before it ever leaves the server. Every skill earns an **A–F security grade** (backed by a 0–100 risk score), and live credentials and remote-code-execution payloads never ship:
 
+* **Security Grade:** Each compile returns an `A`–`F` grade and `risk_score`, printed by the CLI and recorded in `manifest.json`.
 * **Secrets & Credentials:** Detects AWS, GitHub, OpenAI, Stripe keys, and private keys.
-* **Injection Protection:** Catches prompt injection and hidden-Unicode smuggling before it reaches your agent.
-* **Malicious Code Detection:** Flags malicious execution, exfiltration, and supply-chain risks in scripts and documentation.
+* **Injection Protection:** Catches prompt injection, jailbreak/anti-refusal framing, and hidden-Unicode smuggling before it reaches your agent.
+* **Malicious Code Detection:** Flags malicious execution, exfiltration, SSRF, and supply-chain risks in scripts and documentation.
+* **Dependency Scanning:** Checks pinned dependencies against **OSV.dev** for known vulnerabilities and known-malicious packages.
 * **OWASP Alignment:** Maps every finding to the OWASP Agentic Skills & LLM Top 10.
 * **License Detection:** Identifies the license and automatically carries it into the manifest.
 * **Audit Reports:** Every download ships its own `scan-report.json` + SARIF audit.
