@@ -72,6 +72,7 @@ export const OutputTabs: React.FC<OutputTabsProps> = ({
   const badge = resolvedScan ? SCAN_BADGE[resolvedScan.status] : null;
 
   const handleSwitchToSecurity = useCallback(() => setActiveTab('security'), []);
+  const handleSwitchToDigest = useCallback(() => setActiveTab('digest'), []);
 
   return (
     <div
@@ -187,6 +188,7 @@ export const OutputTabs: React.FC<OutputTabsProps> = ({
               frameworkReferences={frameworkReferences}
               onFrameworkSkillGenerated={onFrameworkSkillGenerated}
               onSwitchToSecurity={handleSwitchToSecurity}
+              onSwitchToDigest={handleSwitchToDigest}
             />
           ) : (
             <div className="flex flex-col items-center justify-center py-16 gap-3 text-slate-500">

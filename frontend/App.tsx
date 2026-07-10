@@ -652,6 +652,15 @@ const App: React.FC = () => {
       setTimeout(() => setProgressFading(true), 600);
       setTimeout(() => { setProgressVisible(false); setProgressFading(false); setProgressPercent(0); }, 1300);
 
+      // Scroll to the results section after the progress bar finishes/fades out
+      setTimeout(() => {
+        const element = document.getElementById("output-area");
+        if (element) {
+          element.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }, 1300);
+
+
       const branchToUse = defaultBranchFromFetch;
 
       // Fetch the file tree in the background so it never blocks the main thread.

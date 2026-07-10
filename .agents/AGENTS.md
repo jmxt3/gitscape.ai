@@ -101,3 +101,4 @@ Quick-reference checklists in `.agents/references/`:
 
 ## GitScape Skills
 - [addyosmani-agent-skills](.agents/skills/addyosmani-agent-skills/SKILL.md)
+- [nvidia-skillspector](.agents/skills/nvidia-skillspector/SKILL.md)

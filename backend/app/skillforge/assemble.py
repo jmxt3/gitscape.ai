@@ -94,6 +94,7 @@ def _description(meta: RepoMeta, extract: Extract) -> str:
 
 
 _BADGE = re.compile(r"^\s*(\[!\[|!\[|<img|<p|<a|=+\s*$|-+\s*$)")
+_HTML_TAG = re.compile(r"<[a-zA-Z/][^>]*>")
 
 
 def _readme_intro(readme: str) -> str:
@@ -101,17 +102,19 @@ def _readme_intro(readme: str) -> str:
         return ""
     para: list[str] = []
     for line in readme.splitlines():
-        s = line.strip()
-        if not s:
+        # Clean HTML tags and strip whitespace
+        clean_line = _HTML_TAG.sub("", line).strip()
+        if not clean_line:
             if para:
                 break
             continue
-        if s.startswith("#") or _BADGE.match(s):
+        if clean_line.startswith("#") or _BADGE.match(clean_line):
             if para:
                 break
             continue
-        para.append(s)
+        para.append(clean_line)
     return " ".join(para)[:600]
+
 
 
 def _what_this_is(meta: RepoMeta, extract: Extract) -> str:
@@ -905,7 +908,7 @@ def _render_framework_skill_md(
     lines.append("")
 
     # ─── References (includes Code Access as a bullet) ─────────────────────
-    has_refs = (ref_files and len(ref_files) > 0) or digest_filename or meta.repo_url
+    has_refs = (ref_files and len(ref_files) > 0) or digest_filename
     if has_refs:
         lines += ["## References", ""]
         labels = {
@@ -920,12 +923,6 @@ def _render_framework_skill_md(
                 lines.append(f"- [{labels.get(rf, rf)}]({rf})")
         if digest_filename:
             lines.append(f"- [Full Code Digest]({digest_filename})")
-        if meta.repo_url:
-            encoded_url = quote(meta.repo_url, safe="")
-            lines.append(
-                f"- [GitScape Code Digest](https://gitscape.ai/?repo={encoded_url}) — "
-                f"full source digest via the GitScape API"
-            )
         lines.append("")
 
     return "\n".join(lines).strip() + "\n"

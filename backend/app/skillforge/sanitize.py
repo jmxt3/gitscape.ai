@@ -20,6 +20,7 @@ _BIDI = [0x202A, 0x202B, 0x202C, 0x202D, 0x202E, 0x2066, 0x2067, 0x2068, 0x2069,
 
 _STRIP_TABLE = {cp: None for cp in (_ZERO_WIDTH + _BIDI)}
 _HTML_COMMENT = re.compile(r"<!--.*?-->", re.DOTALL)
+_HTML_TAG = re.compile(r"<[a-zA-Z/][^>]*>")
 
 
 def strip_invisibles(text: str) -> str:
@@ -28,8 +29,10 @@ def strip_invisibles(text: str) -> str:
 
 
 def sanitize_prose(text: str) -> str:
-    """Full prose sanitization: NFKC, drop HTML comments, strip invisibles."""
+    """Full prose sanitization: NFKC, drop HTML comments and tags, strip invisibles."""
     text = unicodedata.normalize("NFKC", text)
     text = _HTML_COMMENT.sub("", text)
+    text = _HTML_TAG.sub("", text)
     text = strip_invisibles(text)
     return text
+

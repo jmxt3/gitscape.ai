@@ -28,6 +28,7 @@ interface SkillExportProps {
     references: SkillReferences | null
   ) => void;
   onSwitchToSecurity?: () => void;
+  onSwitchToDigest?: () => void;
 }
 
 
@@ -145,6 +146,7 @@ export const SkillExport: React.FC<SkillExportProps> = ({
   frameworkReferences,
   onFrameworkSkillGenerated,
   onSwitchToSecurity,
+  onSwitchToDigest,
 }) => {
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
@@ -617,7 +619,48 @@ export const SkillExport: React.FC<SkillExportProps> = ({
                       },
                       pre: ({ children }) => <pre className="bg-slate-900 border border-slate-700/60 rounded-lg p-3 mb-3 overflow-x-auto text-[11px]">{children}</pre>,
                       blockquote: ({ children }) => <blockquote className="border-l-2 border-amber-500/50 pl-3 text-slate-400 italic my-3">{children}</blockquote>,
-                      a: ({ href, children }) => <a href={href} target="_blank" rel="noopener noreferrer" className="text-amber-400 hover:text-amber-300 underline underline-offset-2">{children}</a>,
+                      a: ({ href, children }) => {
+                        const isLocalFile = href && fileNames.includes(href);
+                        if (isLocalFile) {
+                          return (
+                            <a
+                              href={`#${href}`}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                setSelectedFile(href);
+                              }}
+                              className="text-amber-400 hover:text-amber-300 underline underline-offset-2 cursor-pointer"
+                            >
+                              {children}
+                            </a>
+                          );
+                        }
+                        const isDigestLink = href && (href.endsWith("_digest.txt") || href.includes("_digest.txt"));
+                        if (isDigestLink && onSwitchToDigest) {
+                          return (
+                            <a
+                              href={`#digest`}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                onSwitchToDigest();
+                              }}
+                              className="text-amber-400 hover:text-amber-300 underline underline-offset-2 cursor-pointer"
+                            >
+                              {children}
+                            </a>
+                          );
+                        }
+                        return (
+                          <a
+                            href={href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-amber-400 hover:text-amber-300 underline underline-offset-2"
+                          >
+                            {children}
+                          </a>
+                        );
+                      },
                       hr: () => <hr className="border-slate-700 my-4" />,
                       table: ({ children }) => <div className="overflow-x-auto mb-3"><table className="text-xs w-full border-collapse">{children}</table></div>,
                       th: ({ children }) => <th className="text-left px-3 py-1.5 bg-slate-800 text-slate-200 font-semibold border border-slate-700">{children}</th>,
