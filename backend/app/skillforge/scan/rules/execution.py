@@ -15,6 +15,7 @@ from __future__ import annotations
 import re
 
 from ...models import Confidence, Severity
+from ..behavioral import check_behavioral
 from ..registry import Rule
 from ..taxonomy import Category
 
@@ -109,5 +110,15 @@ RULES: list[Rule] = [
             re.I),
         message="Offensive tooling / webshell signature (credential dumping, exploitation, or PHP webshell).",
         remediation="Remove the offensive-tooling reference; it has no place in a legitimate skill.",
+    ),
+    Rule(
+        # AST-based (tree-sitter) dangerous-call detection over fenced code blocks
+        # and shipped scripts. Per-finding severity is set by the check (risk
+        # gradient: CRITICAL only for chains in real script files).
+        id="GS-EXE-010", name="execution.behavioral_dangerous_call", category=C,
+        severity=Severity.HIGH, confidence=Confidence.HIGH,
+        check=check_behavioral,
+        message="Dynamic code execution / dangerous call detected by AST analysis.",
+        remediation="Avoid exec/eval and dynamic code execution in a shipped skill.",
     ),
 ]
