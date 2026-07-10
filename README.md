@@ -1,38 +1,61 @@
-# Git Scape AI
+<h1 align="center">GitScape</h1>
 
 <p align="center">
-  <img src="assets/gitscape_readme_banner.png" alt="GitScape Header Banner" width="100%">
+  <img src="assets/gitscape_readme_banner_2.jpg" alt="GitScape App Screenshot" width="700" />
 </p>
 
-**Understand any GitHub repository in seconds.**
+<p align="center">
+  <strong>The open-source repository compiler and MCP server for AI agents.</strong><br/>
+  Ingest codebases. Scan for injections. Forge custom Agent Skills instantly.<br/>
+  The complete repo-to-agent pipeline, running locally or on Cloud Run.
+</p>
 
-[![NPM Version](https://img.shields.io/npm/v/gitscape.svg?style=for-the-badge&color=CB3837&logo=npm)](https://www.npmjs.com/package/gitscape)
-[![NPM Downloads](https://img.shields.io/npm/dm/gitscape.svg?style=for-the-badge&color=CB3837)](https://www.npmjs.com/package/gitscape)
-[![License](https://img.shields.io/github/license/jmxt3/GitScape-AI.svg?style=for-the-badge)](https://github.com/jmxt3/GitScape-AI/blob/main/LICENSE)
-![Google Cloud](https://img.shields.io/badge/Google%20Cloud-4285F4.svg?style=for-the-badge&logo=Google-Cloud&logoColor=white)
-![Docker](https://img.shields.io/badge/Docker-2496ED.svg?style=for-the-badge&logo=Docker&logoColor=white)
+<p align="center">
+  <a href="https://www.npmjs.com/package/gitscape">
+    <img src="https://img.shields.io/npm/v/gitscape.svg?style=flat&color=CB3837&logo=npm" alt="NPM Version" />
+  </a>
+  <a href="https://www.npmjs.com/package/gitscape">
+    <img src="https://img.shields.io/npm/dm/gitscape.svg?style=flat&color=CB3837" alt="Downloads" />
+  </a>
+  <a href="https://github.com/jmxt3/GitScape-AI/blob/main/LICENSE">
+    <img src="https://img.shields.io/github/license/jmxt3/GitScape-AI.svg?style=flat" alt="License" />
+  </a>
+  <img src="https://img.shields.io/badge/Google%20Cloud-4285F4.svg?style=flat&logo=Google-Cloud&logoColor=white" alt="Google Cloud" />
+  <img src="https://img.shields.io/badge/Docker-2496ED.svg?style=flat&logo=Docker&logoColor=white" alt="Docker" />
+</p>
 
+<p align="center">
+  <a href="https://gitscape.ai">gitscape.ai</a> •
+  <a href="#-features">Features</a> •
+  <a href="#-quick-start">Quick Start</a> •
+  <a href="#-cli--mcp-integration">CLI & MCP</a> •
+  <a href="#-agent-skills-skillforge">Agent Skills</a> •
+  <a href="#-architecture">Architecture</a>
+</p>
+
+<br/>
 
 ---
 
-## 🚀 Overview
+## 🧠 What is GitScape?
 
-Git Scape AI is an open-source platform that instantly generates AI-ready text digests of GitHub codebases, visualizes repository structures with interactive diagrams, and packages any repo into a downloadable **Agent Skill** for Claude, Google ADK, Agno, and other agent frameworks. It supports both public and private repositories.
+GitScape is an **open-source platform and CLI tool** that generates AI-ready text digests of GitHub codebases, visualizes repository structures with interactive diagrams, and packages any repository into a downloadable **Agent Skill** for Cursor, Windsurf, Claude Code, Agno, and other agent frameworks. It supports both public and private repositories.
 
-- **npx CLI (`gitscape`):** Compile any repository on the fly and install it directly into your local agent configuration.
-- **Model Context Protocol (MCP) Server:** Seamlessly run an MCP server locally or remotely to let AI agents install skills directly.
-- **Code Digests:** Generate a complete, AI-ready text digest of any GitHub repo.
-- **Interactive Visualizations:** Explore your codebase structure with beautiful, interactive diagrams.
-- **Agent Skills (SkillForge):** Turn a repo into a progressively-disclosed `SKILL.md` + `references/` package, built **deterministically** (tree-sitter) with an optional LLM "HD" mode.
-- **Security Scanner:** Every generated skill is scanned for prompt injection, exfiltration, and hidden text — export is gated behind a visible **PASS / WARN / FAIL** report.
-- **Privacy First:** GitHub tokens stay in your browser; the HD model key stays server-side. The zero-dependency CLI only requests outbound network access to communicate with the compiler API.
-- **Real-Time Streaming:** WebSocket-powered digest generation with live progress updates.
+Rather than feeding raw, unorganized code to your agent, GitScape compiles a deterministic index of code symbols, dependencies, and setup commands, allowing agents to understand codebases instantly with a fraction of the token budget.
+
+*   ⚡ **npx CLI (`gitscape`)** — Compile any repository on the fly and install it directly into your local agent configuration.
+*   🔌 **Model Context Protocol (MCP)** — A built-in MCP server that exposes `install_skill` directly to Cursor, Windsurf, and Claude.
+*   🗺️ **Code Digests & Visualizations** — Generate a complete text digest of any repo, and explore its structure with beautiful, interactive D3 diagrams.
+*   🧠 **SkillForge Skill Pipeline** — Turn codebases into a progressively-disclosed `SKILL.md` + `references/` package, built deterministically via Tree-sitter.
+*   🛡️ **ScapeGuard Security Gate** — Rest easy. Every generated skill is scanned for prompt injection, data exfiltration, and hidden malicious text before export.
+*   🔒 **Privacy-First Design** — GitHub tokens stay in your browser; the zero-dependency CLI only requests outbound network access to communicate with the compiler API.
+*   📡 **Real-Time Streaming** — WebSocket-powered digest generation with live progress updates.
 
 ---
 
 ## 🏗️ Architecture
 
-This is a monorepo containing three workspaces:
+GitScape is built as a monorepo containing three workspaces:
 
 ```
 GitScape/
@@ -41,7 +64,7 @@ GitScape/
 └── cli/       # Node.js zero-dependency CLI (fetches from API, writes locally)
 ```
 
-### High-Level System Architecture
+### High-Level System Flow
 
 ```mermaid
 graph TD
@@ -72,7 +95,7 @@ graph TD
     Editor -- "Write Skill files" --> LocalFiles
 ```
 
-### How they fit together
+### Component Structure
 
 ```
 ┌──────────────────────────────────────┐
@@ -137,148 +160,143 @@ flowchart TD
 
 ## 🧠 Agent Skills (SkillForge)
 
-SkillForge turns a repository digest into a high-quality, progressively-disclosed
-[Agent Skill](https://agentskills.io). The guiding principle is **invert the labor**:
-do ~90% of the work deterministically from the code's structure, and use an LLM only
-for short natural-language glue.
+SkillForge turns a repository digest into a high-quality, progressively-disclosed [Agent Skill](https://agentskills.io). The guiding principle is **invert the labor**: do ~90% of the work deterministically from the code's structure, and use an LLM only for short natural-language glue.
 
-**Pipeline** (`backend/app/skillforge/`):
-
+### Pipeline
 ```
 ingest → parse → classify → extract → sanitize → assemble → scan (GATE) → package
 ```
 
-- **parse** — split the digest by its `FILE:` markers (or read the live clone) into typed `ContentUnit`s.
-- **extract** — the quality lever, fully deterministic via **tree-sitter**: a public API/symbol index (signatures + one-line purpose), an import/dependency graph, mined setup commands, and deduped code examples.
-- **assemble** — a slim, token-budgeted `SKILL.md` plus a `references/` folder (`api.md`, `architecture.md`, `examples.md`, `setup.md`, `config.md`), every chunk stamped with its source path.
-- **scan** — a deterministic, zero-LLM security gate (see below).
+1.  **Parse** — Split the digest by its `FILE:` markers into typed `ContentUnit`s.
+2.  **Extract** — Fully deterministic extraction via **Tree-sitter**: public API/symbol index (signatures + one-line purpose), import/dependency graphs, build commands, and deduped code examples.
+3.  **Assemble** — A slim, token-budgeted `SKILL.md` plus a `references/` folder containing details on APIs, architecture, examples, setup, and configuration.
+4.  **Scan** — A deterministic, zero-LLM security gate.
 
-**Output package:**
+### Output Package Structure
 
 ```
 <owner-repo>/
-├── SKILL.md            # slim entry point (token-budgeted, links into references/)
-├── references/*.md     # api, architecture, examples, setup, config (provenance-stamped)
-├── exporters/*.py      # Google ADK + Agno wrappers
-└── manifest.json       # digest hash + per-chunk provenance + scan status + freshness metadata
+├── SKILL.md            # Slim entry point (token-budgeted, links into references/)
+├── references/         # Detailed markdown documentation
+│   ├── api.md          # Public API symbols, classes, and signatures
+│   ├── architecture.md # Monorepo & workspace structure
+│   ├── examples.md     # Mined, deduplicated code examples
+│   ├── setup.md        # Commands, prerequisites, and env vars
+│   └── config.md       # Configuration files and schemas
+├── exporters/          # Autogenerated Google ADK + Agno wrappers
+│   └── adk_wrapper.py
+└── manifest.json       # Digest hash + provenance metadata + scan status
 ```
 
-### Two tiers
+### Compilation Tiers
 
-| Tier | What it does | Needs a key? |
-|---|---|---|
-| **Standard** (default) | Complete, valid skill built **deterministically** — instant, no model | No |
-| **HD** | Adds LLM-written prose (the "what / when / description") via Gemini Flash | Server-side `GEMINI_API_KEY` |
+| Tier | What it does | Requirements | Cost/Latency |
+| :--- | :--- | :--- | :--- |
+| **Standard** *(Default)* | Complete, valid skill built **deterministically** via Tree-sitter. | None | Instant, free |
+| **HD** | Adds rich LLM-written prose descriptions and context. | `GEMINI_API_KEY` (Server-side) | Low latency, high quality |
 
-### 🛡️ Security scanner (the trust layer)
+### 🛡️ ScapeGuard Security Gate
 
-The digest is repo-derived and untrusted, so an injection planted in a README or
-docstring could flow into `SKILL.md` and then into your agent's context. Every
-generated skill is scanned (pure Python, no LLM) for **prompt injection**,
-**exfiltration**, **hidden/invisible text**, and high-entropy blobs. The result is a
-visible badge:
+Because codebase digests are repository-derived and untrusted, prompt injections or exfiltration vectors planted in READMEs or docstrings could flow directly into your agent's context. 
 
-- **PASS** → export allowed.
-- **WARN** → requires explicit "I accept the warnings".
-- **FAIL** → export **blocked** (`POST /skill-zip` returns `422` with the report, naming the originating file).
+ScapeGuard is a deterministic, zero-LLM security scanner that evaluates skills along 8 axes, guarding against:
+*   **Prompt Injections** (system overrides, instruction hijacking)
+*   **Data Exfiltration** (sneaky curl/wget commands, domain pings)
+*   **Hidden/Obfuscated Text** (zero-width spaces, invisible characters)
+*   **High-Entropy Blobs** (possible embedded credentials or secrets)
+
+The result is returned as a status badge:
+*   🟢 **PASS** — Export/installation allowed.
+*   🟡 **WARN** — Requires explicit user approval (`--force` or manual consent).
+*   🔴 **FAIL** — Export is **blocked** (`422 Unprocessable Entity` returned).
 
 ---
 
 ## 🏁 Quick Start
 
 ### Prerequisites
-
-- [Node.js](https://nodejs.org/) v18+ (for `frontend/` and `cli/`)
-- [Python 3.10+](https://python.org/) + [`uv`](https://github.com/astral-sh/uv) (for `backend/`)
-- [Docker](https://www.docker.com/) (optional, for containerized runs)
-
----
-
-## 🛠️ CLI & MCP Integration
-
-GitScape provides two integration methods to bring compiled agent skills directly into your workspace: a zero-dependency CLI tool and a Model Context Protocol (MCP) Server.
+*   **Node.js** v18+ (for the Frontend and CLI)
+*   **Python 3.10+** + [**`uv`**](https://github.com/astral-sh/uv) (for the Backend)
+*   **Docker** (Optional, for containerized execution)
 
 ---
 
-### 💻 GitScape CLI
+## 💻 CLI & MCP Integration
+
+GitScape provides two integration methods to bring compiled agent skills directly into your local workspace:
+
+### 🚀 GitScape CLI
 
 The CLI is a fast, zero-dependency Node.js utility that calls the compiler API and writes the compiled skill files directly to your local filesystem.
 
 #### Installation
 
-- **On-demand (Recommended)**: Run the CLI instantly without installing it globally using `npx`:
-  ```bash
-  npx gitscape [command] [options]
-  ```
-- **Local Dev / Global Link**: If you are developing locally, you can link the CLI to make the `gitscape` command globally available on your terminal:
-  ```bash
-  cd cli
-  npm link
-  ```
-- **Global Install (Production)**:
-  ```bash
-  npm install -g gitscape
-  ```
+```bash
+# On-demand (Recommended)
+npx gitscape [command] [options]
 
-#### Running the CLI
+# Global installation
+npm install -g gitscape
 
-1. **Initialize Workspace MCP Configuration**:
-   Create a local `.mcp.json` in your workspace pointing to the GitScape server:
-   ```bash
-   npx gitscape init
-   
-   # During local development, point it to your local server:
-   npx gitscape init --server http://127.0.0.1:8081
-   ```
-2. **Compile and Install a Skill**:
-   Compile any GitHub repository and write its files directly to `.agents/skills/<repo-name>/`:
-   ```bash
-   npx gitscape https://github.com/owner/repo
-   ```
-3. **CLI Options**:
-   - `--token <pat>`: Optional GitHub Personal Access Token for private repositories.
-   - `--type <type>`: Skill type: `code` or `framework` (default: `code`).
-   - `--server <url>`: Override the compiler server (default: `https://gitscape-143600285956.us-central1.run.app`).
+# Local Development link
+cd cli && npm link
+```
 
-4. **Update an Already-Installed Skill**:
-   Re-running the install command on the same repo is all you need — **there is no separate update command**:
-   ```bash
-   npx gitscape https://github.com/owner/repo
-   ```
-   The CLI automatically removes the previous skill directory before writing the new files, so renamed or deleted reference files never accumulate. Your `AGENTS.md` / `CLAUDE.md` registration is untouched (idempotent).
+#### Usage Flow
 
-   Via MCP, tell your agent:
-   > *"Update the google/adk-python skill"*
-   
-   The agent calls `install_skill` with the same URL — same result.
+1.  **Initialize Workspace MCP Config**
+    Creates a local `.mcp.json` file pointing to the GitScape server:
+    ```bash
+    npx gitscape init
+    
+    # Or point to a local development backend:
+    npx gitscape init --server http://127.0.0.1:8081
+    ```
 
-5. **Uninstall a Skill**:
-   ```bash
-   npx gitscape remove <skill_name>
-   ```
-   Deletes `.agents/skills/<skill_name>/` and removes its registration from `AGENTS.md` and `CLAUDE.md`.
+2.  **Compile and Install a Skill**
+    Compiles any GitHub repository and writes files directly to `.agents/skills/<repo-name>/`:
+    ```bash
+    npx gitscape https://github.com/owner/repo
+    ```
 
-   Via MCP, tell your agent:
-   > *"Uninstall the google-adk-python skill"*
+3.  **CLI Command Options**
+
+| Option | Description |
+| :--- | :--- |
+| `--token <pat>` | GitHub Personal Access Token (for private repositories) |
+| `--type <type>` | Skill type: `code` or `framework` (default: `code`) |
+| `--server <url>` | Override compiler API (default: `https://gitscape-143600285956.us-central1.run.app`) |
+
+4.  **Updating a Skill**
+    Just re-run the install command. The CLI automatically wipes the target directory to avoid stale files while keeping your `AGENTS.md` registrations intact:
+    ```bash
+    npx gitscape https://github.com/owner/repo
+    ```
+
+5.  **Removing a Skill**
+    Deletes the directory and cleans up `AGENTS.md` and `CLAUDE.md`:
+    ```bash
+    npx gitscape remove <skill_name>
+    ```
 
 ---
 
 ### 🔌 Model Context Protocol (MCP) Server
 
-The MCP Server exposes the `install_skill` tool, allowing AI agents (Cursor, Claude Desktop, Claude Code, Windsurf, etc.) to compile and write skill packages directly to your workspace.
+The MCP Server exposes the `install_skill` and `uninstall_skill` tools, allowing AI agents (Cursor, Claude Code, Windsurf, etc.) to compile and write skill packages directly to your workspace on your behalf.
 
-#### MCP Installation & Setup
+#### Setup Instructions
 
-##### 1. In Cursor / Windsurf
-1. Navigate to **Settings -> Models -> MCP**.
-2. Click **+ Add New MCP Server**.
-3. Configure the settings:
-   - **Name**: `GitScape`
-   - **Type**: `sse`
-   - **URL**: `https://gitscape-143600285956.us-central1.run.app/api/mcp` *(or `http://127.0.0.1:8081/mcp` for local dev)*
+##### 1. Cursor & Windsurf
+1.  Navigate to **Settings -> Models -> MCP**.
+2.  Click **+ Add New MCP Server**.
+3.  Configure the settings:
+    *   **Name**: `GitScape`
+    *   **Type**: `sse`
+    *   **URL**: `https://gitscape-143600285956.us-central1.run.app/api/mcp` *(or `http://127.0.0.1:8081/mcp` for local development)*
 
-##### 2. In Claude Desktop
-Add the following config to your `claude_desktop_config.json` (typically located in `%APPDATA%\Claude\claude_desktop_config.json` on Windows or `~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
+##### 2. Claude Desktop
+Add the following configuration to your `claude_desktop_config.json`:
 ```json
 {
   "mcpServers": {
@@ -294,107 +312,79 @@ Add the following config to your `claude_desktop_config.json` (typically located
 }
 ```
 
-#### Running & Using the MCP
-
-- **How it runs**: The MCP server runs automatically as part of the FastAPI backend application.
-  - Discovery endpoint: `GET /mcp/tools` (or `/api/mcp/tools` via ingress)
-  - Invocation endpoint: `POST /mcp/call` (or `/api/mcp/call` via ingress)
-- **How to invoke it**: Once configured in your editor, prompt your editor's AI agent:
-  > *"Compile and install the repository https://github.com/google/adk-python as an agent skill"*
-  
-  The agent will call the `install_skill` tool and automatically write the `SKILL.md`, `manifest.json`, and references directly into your project's `.agents/skills/` directory!
+#### MCP Invocation Examples
+Once configured, you can command your AI editor:
+*   > *"Compile and install https://github.com/google/adk-python as an agent skill"*
+*   > *"Update the google-adk-python skill"*
+*   > *"Uninstall the google-adk-python skill"*
 
 ---
 
-### Run the Frontend
+## 🛠️ Local Development
+
+### 1. Run the Frontend
 
 ```bash
 cd frontend
 npm install
 npm run dev
-# → http://localhost:5173
+# Running on http://localhost:5173
 ```
 
-By default, the frontend talks to the **production** API (`api.gitscape.ai`). To run
-end-to-end against your **local** backend (required to use the local skill endpoints),
-point it at your local API in `frontend/.env.local`:
-
+By default, the frontend talks to the production API. To run against a local backend, create `frontend/.env.local`:
 ```env
 VITE_API_HOST=localhost:8081
 ```
 
----
+### 2. Run the Backend with `uv`
 
-### Run the Backend with `uv`
+The backend uses `uv` for ultra-fast dependency management.
 
-The backend uses [uv](https://github.com/astral-sh/uv) for fast dependency and virtual environment management.
-
-#### 1. Install `uv`
-If you do not have `uv` installed, install it via:
-```bash
-# macOS/Linux
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# Windows (PowerShell)
-irm https://astral.sh/uv/install.ps1 | iex
-
-# Or via pip
-pip install uv
-```
-
-#### 2. Sync dependencies and activate venv
 ```bash
 cd backend
+# Create and activate virtual environment
 uv venv
-source .venv/bin/activate   # Windows: .venv\Scripts\activate
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# Install dependencies
 uv sync
-```
 
-#### 3. Start development server
-```bash
+# Configure environment and run development server
 cp .env.example .env
-# Start with reload enabled
 uv run uvicorn main:app --reload --port 8081
-# → http://localhost:8081/docs
+# API Docs available at http://localhost:8081/docs
 ```
 
----
-
-## 🧪 Testing
-
-To run the backend tests, ensure you have activated the virtual environment:
+### 3. Run Backend Tests
 
 ```bash
 cd backend
-# Run all tests quietly
+# Quiet output
 uv run pytest -q
 
-# Run with verbose output
+# Verbose output
 uv run pytest -v
 ```
 
-Tests cover:
-- Core Markdown parser and tree-sitter symbol extractors.
-- ScapeGuard 8-axis security scanner rules (prompt injection, exfiltration, obfuscation).
-- FastAPI HTTP and WebSocket endpoints (including MCP tool invocation routes).
-
 ---
 
-## 🐳 Docker
+## 🐳 Docker Deployment
 
-Both services ship with a `Dockerfile`. Run them independently:
+Both frontend and backend include optimized `Dockerfiles` for independent deployment:
 
 ```bash
 # Frontend
-cd frontend && docker build -t git_scape_web . && docker run -p 8080:8080 git_scape_web
+cd frontend
+docker build -t gitscape_web .
+docker run -p 8080:8080 gitscape_web
 
 # Backend
-cd backend && docker build -t git_scape_api . && docker run -p 8081:8081 git_scape_api
+cd backend
+docker build -t gitscape_api .
+docker run -p 8081:8081 gitscape_api
 ```
 
-For full deployment instructions on **Google Cloud Run**, see the README inside each workspace:
-- [`frontend/README.md`](frontend/README.md)
-- [`backend/README.md`](backend/README.md)
+Refer to the individual `README.md` files in [frontend/README.md](file:///c:/Users/jmach/dev/GitScape/frontend/README.md) and [backend/README.md](file:///c:/Users/jmach/dev/GitScape/backend/README.md) for Google Cloud Run and Cloud Build deployment pipelines.
 
 ---
 
@@ -402,23 +392,23 @@ For full deployment instructions on **Google Cloud Run**, see the README inside 
 
 We welcome contributions of all kinds!
 
-1. **Fork** the repository and create your branch:
-   ```bash
-   git checkout -b feature/your-feature-name
-   ```
-2. Work inside the relevant workspace (`frontend/`, `backend/`, or `cli/`).
-3. **Test locally** and ensure tests pass.
-4. **Open a Pull Request** with a clear description of the change.
+1.  **Fork** the repository and create your branch:
+    ```bash
+    git checkout -b feature/your-feature-name
+    ```
+2.  Work inside the relevant workspace (`frontend/`, `backend/`, or `cli/`).
+3.  **Test locally** and ensure all tests pass.
+4.  **Open a Pull Request** with a clear description of the change.
 
 ---
 
 ## 📚 Resources
 
-- [Git Scape AI Website](https://gitscape.ai/)
-- [Gemini API Key Docs](https://ai.google.dev/gemini-api/docs/api-key)
-- [GitHub PAT Docs](https://github.com/settings/tokens/new?scopes=repo&description=GitRepoDigestAI)
-- [FastAPI Docs](https://fastapi.tiangolo.com/)
-- [Google Cloud Run Docs](https://cloud.google.com/run/docs)
+*   [GitScape Website](https://gitscape.ai/)
+*   [Gemini API Key Setup](https://ai.google.dev/gemini-api/docs/api-key)
+*   [GitHub Personal Access Tokens](https://github.com/settings/tokens/new)
+*   [FastAPI Documentation](https://fastapi.tiangolo.com/)
+*   [Google Cloud Run](https://cloud.google.com/run/docs)
 
 ---
 

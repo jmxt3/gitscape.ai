@@ -29,8 +29,8 @@ export const Hero: React.FC<HeroProps> = ({ onSelectMcp }) => (
       </h1>
 
       <p className="m-0 text-lg sm:text-[19px] leading-relaxed text-slate-400 max-w-4xl">
-        Paste a GitHub URL. GitScape reads the codebase, maps its
-        architecture, and forges a ready-to-load{" "}
+        Paste a GitHub URL. GitScape automates codebase ingestion, runs a
+        security scanner, and forges a ready-to-load{" "}
         <code className="font-mono text-[0.85em] text-violet-300">
           SKILL.md
         </code>{" "}
