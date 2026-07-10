@@ -197,18 +197,58 @@ ingest → parse → classify → extract → sanitize → assemble → scan (GA
 
 ### 🛡️ ScapeGuard Security Gate
 
-Because codebase digests are repository-derived and untrusted, prompt injections or exfiltration vectors planted in READMEs or docstrings could flow directly into your agent's context. 
+A skill is code your agent trusts. Because codebase digests are repository-derived and untrusted, prompt injections, credentials, or malicious execution scripts planted in READMEs or docstrings could flow directly into your agent's context. 
 
-ScapeGuard is a deterministic, zero-LLM security scanner that evaluates skills along 8 axes, guarding against:
-*   **Prompt Injections** (system overrides, instruction hijacking)
-*   **Data Exfiltration** (sneaky curl/wget commands, domain pings)
-*   **Hidden/Obfuscated Text** (zero-width spaces, invisible characters)
-*   **High-Entropy Blobs** (possible embedded credentials or secrets)
+To prevent this, GitScape compiles and runs every skill through **ScapeGuard**—a pure-Python, deterministic, zero-LLM static analysis security scanner that evaluates skills along **55+ rules** across **9 threat categories**, assigning an **A–F grade** and a numeric **Risk Score** before the skill is exported or installed.
 
-The result is returned as a status badge:
-*   🟢 **PASS** — Export/installation allowed.
-*   🟡 **WARN** — Requires explicit user approval (`--force` or manual consent).
-*   🔴 **FAIL** — Export is **blocked** (`422 Unprocessable Entity` returned).
+#### 📊 ScapeGuard Grading Scale
+*   🟢 **Grade A** (Clean) — No findings or negligible low-severity issues. Automatically allowed.
+*   🟡 **Grade B** (Minor Warnings) — Low/medium severity issues. Allowed with user acknowledgement.
+*   🟠 **Grade C** (Review Advised) — Multiple warnings or potential risks. Requires explicit user approval (`--force` or manual consent).
+*   🔴 **Grade F** (Blocked) — Critical vulnerabilities (e.g., live credentials or remote code execution payloads) are detected. Export and installation are **blocked** (`422 Unprocessable Entity`).
+
+#### 🔒 Key Features
+*   **Secrets & Remote Code Blocked:** Live credentials (API keys, tokens, private keys) and execution vectors are caught before they reach your agent.
+*   **OWASP Mapping:** Every finding maps directly to the **OWASP Agentic Skills Top 10** (AST01–AST10, 2026) and **OWASP LLM Top 10** for standard compliance auditing.
+*   **Audit Artifacts:** Each build/download automatically generates and ships its own `scan-report.json` and a full `scan-report.sarif` audit file in the output folder.
+*   **Real-Time Vulnerability Checks:** Integrates real-time querying of the [OSV.dev](https://osv.dev) database to identify and flag known package vulnerabilities during compilation (`scan/osv.py`, `GS-DEP-006/007`).
+*   **Tree-sitter Behavioral Analysis:** Uses AST-based semantic analysis of imports, exports, and call graphs (`scan/behavioral.py`, `tslang.py`) to detect suspicious behavior profiles.
+*   **Flexible CLI & API Gating:** Enforces installation blocks in local environments via the `safe_to_install` flag, a dedicated `gitscape scan` command, and a public `POST /scan` endpoint.
+*   **Extensible Rule Registry & Obfuscation Guard:** Supports custom external rule registries, YARA-based script analysis, and multilingual processing to block obfuscated or non-English injection attempts.
+
+#### 🗂️ The 9 Threat Categories (Taxonomy)
+1.  **Prompt Injection** (`GS-INJ` / AST01 / LLM01) — System overrides and instruction hijacking.
+2.  **Secrets & Credentials** (`GS-SEC` / AST05 / LLM02) — Embedded API keys, tokens, and credentials.
+3.  **Data Exfiltration** (`GS-EXF` / AST04 / LLM02) — Code/instructions exfiltrating data to external hosts.
+4.  **Malicious Execution** (`GS-EXE` / AST02 / LLM05) — Remote code execution, destructive commands, or shells.
+5.  **Supply Chain** (`GS-DEP` / AST03 / LLM03) — Unpinned, unverifiable, or typosquatted dependencies.
+6.  **Obfuscation** (`GS-OBF` / AST06 / LLM01) — Zero-width spaces, homoglyphs, or encoded payloads.
+7.  **Untrusted Content** (`GS-CNT` / AST07 / LLM08) — Indirect injection risks from dynamic third-party fetching.
+8.  **Excessive Agency** (`GS-AGY` / AST08 / LLM06) — Config tampering, safety-bypass flags, or privilege escalation.
+9.  **Structure & Quality** (`GS-STR`) — Completeness and integrity validation for the generated framework skills.
+
+#### 📝 Sample Audit Report (`scan-report.json`)
+```json
+{
+  "status": "PASS",
+  "engine": "scapeguard",
+  "engine_version": "2.1.0",
+  "grade": "A",
+  "risk_score": 0,
+  "files_scanned": 14,
+  "skill_hash": "sha256:9f2c...",
+  "license": {
+    "spdx_id": "MIT"
+  },
+  "categories": [
+    { "category": "secrets", "status": "PASS", "findings": 0 },
+    { "category": "prompt_injection", "status": "PASS", "findings": 0 },
+    { "category": "malicious_execution", "status": "PASS", "findings": 0 },
+    { "category": "supply_chain", "status": "PASS", "findings": 0 }
+    // ...other categories
+  ]
+}
+```
 
 ---
 
