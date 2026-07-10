@@ -167,27 +167,360 @@ def _render_api_md(extract: Extract) -> str:
     return "\n".join(out).strip() + "\n"
 
 
-def _render_architecture_md(meta: RepoMeta, extract: Extract) -> str:
+def _render_architecture_md(meta: RepoMeta, extract: Extract, units: list[ContentUnit] | None = None) -> str:
+    """Render a rich, agent-actionable architecture reference.
+
+    Sections (in order of actionability):
+    1. Purpose — what this project does (README intro)
+    2. Entry Points — where to start
+    3. Module Map — what each module does + key exports
+    4. Dependency Flow — Mermaid graph from import graph
+    5. External Dependencies — packages + declaring manifest
+    6. Conventions — patterns the agent should follow
+    7. Directory Structure — raw tree (least actionable, at the bottom)
+    """
     out = ["# Architecture", ""]
+
+    # ─── Purpose ───────────────────────────────────────────────────────────
+    intro = sanitize_prose(_readme_intro(meta.readme))
+    if intro:
+        out += ["## Purpose", "", intro, ""]
+
+    # ─── Entry Points ──────────────────────────────────────────────────────
+    entry_points = _detect_entry_points(extract, units or [])
+    if entry_points:
+        out += ["## Entry Points", ""]
+        for ep_path, ep_reason in entry_points:
+            out.append(f"- `{ep_path}` — {ep_reason}")
+        out.append("")
+
+    # ─── Module Map ────────────────────────────────────────────────────────
+    if extract.api_index.modules:
+        table = _module_map_table(extract, units)
+        out += ["## Module Map", ""] + table + [""]
+
+    # ─── Dependency Flow (Mermaid) ─────────────────────────────────────────
+    mermaid = _render_mermaid_flow(extract)
+    if mermaid:
+        out += ["## Dependency Flow", "", "```mermaid", mermaid, "```", ""]
+
+    # ─── External Dependencies ─────────────────────────────────────────────
+    if extract.import_graph.external:
+        out += [
+            "## External Dependencies", "",
+            "| Package | Declared in |", "|---|---|",
+        ]
+        for dep in extract.import_graph.external:
+            out.append(f"| `{dep.name}` | `{dep.source_path}` |")
+        out.append("")
+
+    # ─── Conventions ───────────────────────────────────────────────────────
+    conventions = _conventions_section(meta, extract, units or [])
+    if conventions:
+        out += ["## Conventions", ""] + conventions + [""]
+
+    # ─── Directory Structure (least actionable — last) ─────────────────────
     tree = meta.structure_overview or meta.file_structure
     if tree.strip():
-        out += ["## Directory structure", "", "```", tree.strip(), "```", ""]
-    if extract.api_index.modules:
-        out += ["## Modules", ""]
-        for path, syms in extract.api_index.modules.items():
-            out.append(f"- `{path}` — {len(syms)} public symbols")
-        out.append("")
-    if extract.import_graph.external:
-        out += ["## External dependencies", ""]
-        for dep in extract.import_graph.external:
-            out.append(f"- `{dep.name}` *(declared in {dep.source_path})*")
-        out.append("")
-    if extract.import_graph.internal:
-        out += ["## Internal imports", ""]
-        for path, mods in list(extract.import_graph.internal.items())[:40]:
-            out.append(f"- `{path}` → {', '.join('`%s`' % m for m in mods)}")
-        out.append("")
+        out += ["## Directory Structure", "", "```", tree.strip(), "```", ""]
+
     return "\n".join(out).strip() + "\n"
+
+
+# ─── architecture helpers ──────────────────────────────────────────────────
+
+
+_ENTRY_POINT_NAMES = {
+    "main.py", "app.py", "cli.py", "__main__.py", "server.py", "manage.py",
+    "index.ts", "index.js", "index.tsx", "index.jsx",
+    "main.ts", "main.js", "main.go", "main.rs",
+    "cmd/main.go",
+}
+
+_ENTRY_POINT_PATTERNS = [
+    (re.compile(r'''if\s+__name__\s*==\s*['"]__main__['"]\s*:'''), "script entry point"),
+    (re.compile(r'''app\s*=\s*(?:FastAPI|Flask|Django|Express|Starlette)\s*\('''), "application factory"),
+    (re.compile(r'''createApp\s*\(|createServer\s*\('''), "application factory"),
+    (re.compile(r'''func\s+main\s*\(\s*\)'''), "Go main function"),
+    (re.compile(r'''fn\s+main\s*\(\s*\)'''), "Rust main function"),
+]
+
+
+def _detect_entry_points(
+    extract: Extract, units: list[ContentUnit], max_entries: int = 6,
+) -> list[tuple[str, str]]:
+    """Detect likely entry points by filename patterns and content signatures."""
+    found: list[tuple[str, str]] = []
+    seen: set[str] = set()
+
+    # Check API modules for known entry-point filenames
+    all_paths = set(extract.api_index.modules.keys())
+    for u in units:
+        all_paths.add(u.path)
+
+    for path in sorted(all_paths):
+        from pathlib import PurePosixPath
+        name = PurePosixPath(path).name.lower()
+        if name in _ENTRY_POINT_NAMES and path not in seen:
+            seen.add(path)
+            found.append((path, "application entry point"))
+
+    # Scan unit content for entry-point patterns
+    for u in units:
+        if u.path in seen:
+            continue
+        if u.kind not in (FileKind.SOURCE,):
+            continue
+        for pattern, reason in _ENTRY_POINT_PATTERNS:
+            if pattern.search(u.content):
+                seen.add(u.path)
+                found.append((u.path, reason))
+                break
+
+    return found[:max_entries]
+
+
+def _sanitize_mermaid_id(path: str) -> str:
+    """Convert a file path to a valid Mermaid node ID.
+
+    Mermaid node IDs cannot contain `/`, `.`, `-`, or spaces.
+    """
+    return re.sub(r"[^a-zA-Z0-9_]", "_", path)
+
+
+def _render_mermaid_flow(
+    extract: Extract, max_nodes: int = 25,
+) -> str:
+    """Generate a Mermaid dependency flow diagram from the internal import graph.
+
+    When the graph exceeds max_nodes, collapses to directory-level nodes.
+    Returns empty string if no internal imports exist.
+    """
+    internal = extract.import_graph.internal
+    if not internal:
+        return ""
+
+    # Collect all nodes and edges
+    all_paths = set(internal.keys())
+    edges: list[tuple[str, str]] = []
+
+    for importer, imported_modules in internal.items():
+        from pathlib import PurePosixPath
+        importer_dir = str(PurePosixPath(importer).parent)
+        for mod in imported_modules:
+            # Try to resolve relative imports to actual paths
+            target = _resolve_import(importer, mod, all_paths)
+            if target and target != importer:
+                edges.append((importer, target))
+                all_paths.add(target)
+
+    if not edges:
+        return ""
+
+    # If too many nodes, collapse to directory level
+    if len(all_paths) > max_nodes:
+        return _render_mermaid_directory_level(edges)
+
+    # Build the Mermaid diagram
+    lines = ["graph TD"]
+
+    # Declare nodes with readable labels
+    declared: set[str] = set()
+    for path in sorted(all_paths):
+        node_id = _sanitize_mermaid_id(path)
+        if node_id not in declared:
+            declared.add(node_id)
+            from pathlib import PurePosixPath
+            short = PurePosixPath(path).name
+            lines.append(f'    {node_id}["{short}"]')
+
+    # Add edges (deduplicated)
+    seen_edges: set[tuple[str, str]] = set()
+    for src, dst in edges:
+        src_id = _sanitize_mermaid_id(src)
+        dst_id = _sanitize_mermaid_id(dst)
+        edge_key = (src_id, dst_id)
+        if edge_key not in seen_edges and src_id != dst_id:
+            seen_edges.add(edge_key)
+            lines.append(f"    {src_id} --> {dst_id}")
+
+    return "\n".join(lines)
+
+
+def _render_mermaid_directory_level(edges: list[tuple[str, str]]) -> str:
+    """Collapse a file-level graph to directory-level nodes for large repos."""
+    from pathlib import PurePosixPath
+
+    dir_edges: set[tuple[str, str]] = set()
+    all_dirs: set[str] = set()
+
+    for src, dst in edges:
+        src_dir = str(PurePosixPath(src).parent) or "root"
+        dst_dir = str(PurePosixPath(dst).parent) or "root"
+        all_dirs.add(src_dir)
+        all_dirs.add(dst_dir)
+        if src_dir != dst_dir:
+            dir_edges.add((src_dir, dst_dir))
+
+    if not dir_edges:
+        return ""
+
+    lines = ["graph TD"]
+    for d in sorted(all_dirs):
+        node_id = _sanitize_mermaid_id(d)
+        label = d + "/" if d != "root" else "root"
+        lines.append(f'    {node_id}["{label}"]')
+
+    for src_dir, dst_dir in sorted(dir_edges):
+        lines.append(f"    {_sanitize_mermaid_id(src_dir)} --> {_sanitize_mermaid_id(dst_dir)}")
+
+    return "\n".join(lines)
+
+
+def _resolve_import(importer: str, module: str, known_paths: set[str]) -> str | None:
+    """Best-effort resolve a relative import to a known file path.
+
+    e.g. importer='app/api.py', module='.models' → 'app/models.py'
+    """
+    from pathlib import PurePosixPath
+
+    if not module.startswith("."):
+        # Absolute import — try matching against known paths
+        candidates = [
+            module.replace(".", "/") + ".py",
+            module.replace(".", "/") + "/index.ts",
+            module.replace(".", "/") + "/index.js",
+            module.replace(".", "/") + ".ts",
+            module.replace(".", "/") + ".js",
+        ]
+        for c in candidates:
+            if c in known_paths:
+                return c
+        return None
+
+    # Count leading dots for relative level
+    dots = len(module) - len(module.lstrip("."))
+    remainder = module.lstrip(".")
+
+    base = PurePosixPath(importer).parent
+    for _ in range(dots - 1):
+        base = base.parent
+
+    if remainder:
+        rel_path = str(base / remainder.replace(".", "/"))
+    else:
+        rel_path = str(base / "__init__")
+
+    # Try common extensions
+    for ext in (".py", ".ts", ".js", ".tsx", ".jsx", ""):
+        candidate = rel_path + ext
+        if candidate in known_paths:
+            return candidate
+
+    # Try as a package (directory with __init__.py)
+    init_candidate = rel_path + "/__init__.py"
+    if init_candidate in known_paths:
+        return init_candidate
+
+    return None
+
+
+def _module_map_table(extract: Extract, units: list[ContentUnit] | None = None) -> list[str]:
+    """Build a Module Map table: path | symbol count | purpose | key exports.
+
+    Purpose is derived from the module's top-level docstring (Option A).
+    """
+    # Pre-build a path→docstring lookup from units
+    docstrings: dict[str, str] = {}
+    if units:
+        for u in units:
+            if u.path in extract.api_index.modules:
+                ds = _extract_module_docstring(u.content)
+                if ds:
+                    docstrings[u.path] = ds
+
+    lines = [
+        "| Module | Purpose | Symbols | Key exports |",
+        "|---|---|---|---|",
+    ]
+    for path, syms in extract.api_index.modules.items():
+        count = len(syms)
+        purpose = docstrings.get(path, "—")
+        top_exports = ", ".join(f"`{s.name}`" for s in syms[:3])
+        if len(syms) > 3:
+            top_exports += f" (+{len(syms) - 3} more)"
+        lines.append(f"| `{path}` | {purpose} | {count} | {top_exports} |")
+    return lines
+
+
+_RE_MODULE_DOCSTRING = re.compile(
+    r'^\s*(?:"""|\'\'\'|/\*\*|///?)\s*(.+?)(?:"""|\'\'\'|\*/)?\s*$',
+    re.MULTILINE,
+)
+
+
+def _extract_module_docstring(content: str) -> str:
+    """Extract the first-line purpose from a module's top-level docstring.
+
+    Looks for Python triple-quote docstrings, JS/TS /** doc comments,
+    or // leading comments at the very top of the file.
+    Returns at most 80 characters.
+    """
+    lines = content.lstrip().splitlines()[:10]  # only scan first 10 lines
+    if not lines:
+        return ""
+
+    # Python: """...""" or '''...''' at top level
+    joined = "\n".join(lines)
+    py_match = re.search(r'^(?:"""|\'\'\'|\s*"""\s*\n)\s*(.+?)(?:\.|\n)', joined)
+    if py_match:
+        return py_match.group(1).strip()[:80]
+
+    # JS/TS: /** ... */ or // at top
+    js_match = re.search(r'^\s*(?:/\*\*\s*\n?\s*\*?\s*|//\s*)(.+)', joined)
+    if js_match:
+        return js_match.group(1).strip().rstrip("*/").strip()[:80]
+
+    return ""
+
+
+def _conventions_section(
+    meta: RepoMeta, extract: Extract, units: list[ContentUnit],
+) -> list[str]:
+    """Derive observable conventions from the codebase structure."""
+    lines: list[str] = []
+
+    # Primary languages
+    if meta.primary_languages:
+        langs = ", ".join(meta.primary_languages)
+        lines.append(f"- Primary languages: {langs}")
+
+    # Test structure
+    test_paths = [u.path for u in units if u.kind == FileKind.TEST]
+    if test_paths:
+        from pathlib import PurePosixPath
+        test_dirs = sorted({str(PurePosixPath(p).parent) for p in test_paths})[:3]
+        lines.append(f"- Tests located in: {', '.join('`' + d + '`' for d in test_dirs)}")
+
+    # Config locations
+    config_paths = [u.path for u in units if u.kind == FileKind.CONFIG]
+    if config_paths:
+        from pathlib import PurePosixPath
+        config_names = sorted({PurePosixPath(p).name for p in config_paths})[:5]
+        lines.append(f"- Configuration files: {', '.join('`' + n + '`' for n in config_names)}")
+
+    # Module count
+    if extract.api_index.total > 0:
+        lines.append(
+            f"- {extract.api_index.total} public symbols across "
+            f"{len(extract.api_index.modules)} source modules"
+        )
+
+    # External dependency count
+    if extract.import_graph.external:
+        lines.append(f"- {len(extract.import_graph.external)} external dependencies")
+
+    return lines
 
 
 def _render_examples_md(extract: Extract) -> str:
@@ -242,7 +575,7 @@ def _build_references(meta: RepoMeta, extract: Extract, units: list[ContentUnit]
         refs["references/api.md"] = api
         prov.append(ProvenanceEntry(chunk="references/api.md", source_paths=list(extract.api_index.modules)))
 
-    arch = _render_architecture_md(meta, extract)
+    arch = _render_architecture_md(meta, extract, units)
     if arch:
         refs["references/architecture.md"] = arch
         prov.append(ProvenanceEntry(

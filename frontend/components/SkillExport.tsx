@@ -113,6 +113,149 @@ const SEVERITY_COLOR: Record<string, string> = {
   info: "text-slate-400",
 };
 
+// OWASP Agentic Skills Top 10 (AST) — human-readable tooltips
+const OWASP_AST_LABELS: Record<string, string> = {
+  AST01: "Prompt Injection — Overriding agent instructions via skill text",
+  AST02: "Insecure Tool Implementation — Remote code exec, destructive commands",
+  AST03: "Supply Chain — Unpinned or unverifiable dependencies",
+  AST04: "Insufficient Access Control — Data exfiltration via external endpoints",
+  AST05: "Sensitive Data Exposure — Hardcoded API keys, tokens, private keys",
+  AST06: "Obfuscation — Hidden text, encoded payloads, homoglyph tricks",
+  AST07: "Untrusted Content — Fetching and acting on third-party content",
+  AST08: "Excessive Agency — Privilege escalation, config tampering, safety bypass",
+  AST09: "Insecure Communication — Unprotected inter-agent channels",
+  AST10: "Resource Exhaustion — Unbounded loops, memory, or token consumption",
+};
+
+// OWASP LLM Top 10 — human-readable tooltips
+const OWASP_LLM_LABELS: Record<string, string> = {
+  LLM01: "Prompt Injection — Manipulating model behavior via crafted input",
+  LLM02: "Sensitive Information Disclosure — Leaking private data in responses",
+  LLM03: "Supply Chain — Poisoned training data or compromised components",
+  LLM04: "Data and Model Poisoning — Corrupting model behavior or training data",
+  LLM05: "Improper Output Handling — Executing unvalidated model output",
+  LLM06: "Excessive Agency — Model taking actions beyond intended scope",
+  LLM07: "System Prompt Leakage — Exposing system instructions to users",
+  LLM08: "Vector and Embedding Weaknesses — Exploiting retrieval systems",
+  LLM09: "Misinformation — Generating false or misleading content",
+  LLM10: "Unbounded Consumption — Uncontrolled resource usage",
+};
+
+function owaspTooltip(tag: string): string {
+  return OWASP_AST_LABELS[tag] ?? OWASP_LLM_LABELS[tag] ?? tag;
+}
+
+// ScapeGuard custom rule IDs — human-readable tooltips
+const SCAPEGUARD_RULE_LABELS: Record<string, string> = {
+  // Excessive Agency (GS-AGY)
+  "GS-AGY-001": "Privilege Escalation — Skill requests elevated privileges (sudo/runas)",
+  "GS-AGY-002": "Safety Bypass — Disables host agent's safety or confirmation checks",
+  "GS-AGY-003": "Config Tampering — Modifies agent or shell configuration files",
+  "GS-AGY-004": "Direct Money Access — Attempts crypto wallet or payment actions",
+
+  // Untrusted Content (GS-CNT)
+  "GS-CNT-001": "Fetch & Obey — Fetches remote content and treats it as instructions",
+  "GS-CNT-002": "External Domains — Skill references external domains",
+  "GS-CNT-003": "HTML Comments — HTML comments survived into the shipped skill",
+
+  // Malicious Execution (GS-EXE)
+  "GS-EXE-001": "Pipe to Shell — Downloads and pipes a script straight into a shell",
+  "GS-EXE-002": "Fetch then Eval — Fetches a URL and evaluates the response",
+  "GS-EXE-003": "Decode then Exec — Decodes an encoded blob and executes it",
+  "GS-EXE-004": "Destructive Command — Command that can delete files, disks, or databases",
+  "GS-EXE-005": "Reverse Shell — Opens an outbound interactive shell to a remote host",
+  "GS-EXE-006": "Dynamic Eval — Dynamic code evaluation in a shipped script",
+  "GS-EXE-007": "Chmod & Run — Downloads a file and immediately makes it executable or runs it",
+
+  // Data Exfiltration (GS-EXF)
+  "GS-EXF-001": "Send Secrets — Instruction to send secrets/credentials outward",
+  "GS-EXF-002": "Raw IP URL — Suspicious URL pointing at a raw IP address",
+  "GS-EXF-003": "Known Drop Endpoint — Reference to a known data-exfiltration drop endpoint",
+  "GS-EXF-004": "Env Harvesting — Environment-variable harvesting piped to a network call",
+  "GS-EXF-005": "Sensitive Path Read — Reads sensitive credentials (SSH keys, AWS, etc.)",
+
+  // Prompt Injection (GS-INJ)
+  "GS-INJ-001": "Ignore Previous — Attempt to override prior instructions",
+  "GS-INJ-002": "Reveal System Prompt — Attempt to exfiltrate the system prompt",
+  "GS-INJ-003": "Persona Override — Hidden persona/role override",
+  "GS-INJ-004": "Role Tags — Embedded chat role or control tags",
+  "GS-INJ-005": "Execute Follow-up — Instruction to run or execute subsequent commands",
+
+  // Obfuscation (GS-OBF)
+  "GS-OBF-001": "Invisible Characters — Hidden zero-width or bidirectional control character",
+  "GS-OBF-002": "High Entropy Blob — High-entropy base64-like blob (possible payload)",
+  "GS-OBF-003": "Escape Sequence Run — Dense hex or unicode escape run (likely obfuscation)",
+  "GS-OBF-004": "Char Chain Execution — String-reversal or chr() chain feeding an exec/eval",
+  "GS-OBF-005": "Mixed Script Homoglyph — Mixed-script homoglyph token (visual spoofing)",
+
+  // Secrets & Credentials (GS-SEC)
+  "GS-SEC-001": "Hardcoded AWS Access Key ID",
+  "GS-SEC-002": "Hardcoded GitHub Token",
+  "GS-SEC-003": "Hardcoded OpenAI API Key",
+  "GS-SEC-004": "Hardcoded Anthropic API Key",
+  "GS-SEC-005": "Hardcoded Google API Key",
+  "GS-SEC-006": "Hardcoded Slack Token",
+  "GS-SEC-007": "Hardcoded Stripe Live Secret Key",
+  "GS-SEC-008": "Embedded PEM Private Key",
+  "GS-SEC-009": "JSON Web Token (JWT)",
+  "GS-SEC-010": "Generic Credentials Assigned to variable",
+
+  // Structure & Quality (GS-STR)
+  "GS-STR-001": "Missing Overview — Required ## Overview section is missing",
+  "GS-STR-002": "Missing When to Use — Required ## When to Use section is missing",
+  "GS-STR-003": "Missing Core Process — Required ## Core Process section is missing",
+  "GS-STR-004": "Missing Rationalizations — Required ## Common Rationalizations section is missing",
+  "GS-STR-005": "Missing Red Flags — Required ## Red Flags section is missing",
+  "GS-STR-006": "Missing Verification — Required ## Verification section is missing",
+
+  // Supply Chain (GS-DEP)
+  "GS-DEP-001": "Unpinned Dependencies — Version drift or substitution risk",
+  "GS-DEP-002": "Unverifiable Package — Install instruction for undeclared package",
+  "GS-DEP-003": "Install from URL/VCS — Installs dependency directly from URL/VCS",
+  "GS-DEP-004": "Lifecycle Install Scripts — Package lifecycle install scripts present",
+  "GS-DEP-005": "Typosquatted Dependency — Dependency name resembles a popular package",
+};
+
+function scapeguardTooltip(f: ScanFinding): string {
+  const code = f.id || "";
+  const label = SCAPEGUARD_RULE_LABELS[code];
+  let tooltip = `ScapeGuard Rule: ${code}`;
+  if (label) {
+    tooltip += `\n${label}`;
+  } else if (f.rule) {
+    tooltip += `\nRule Name: ${f.rule}`;
+  }
+  if (f.remediation) {
+    tooltip += `\n\nRemediation: ${f.remediation}`;
+  }
+  return tooltip;
+}
+
+// Group key for deduplicating findings that share the same rule, message, and snippet
+// but appear in multiple files.
+interface GroupedFinding {
+  representative: ScanFinding;
+  locations: { file: string; line: number; source_path?: string | null }[];
+}
+
+function groupFindings(findings: ScanFinding[]): GroupedFinding[] {
+  const map = new Map<string, GroupedFinding>();
+  for (const f of findings) {
+    const key = `${f.id ?? f.rule}||${f.message}||${f.snippet ?? ""}`;
+    const existing = map.get(key);
+    if (existing) {
+      existing.locations.push({ file: f.file, line: f.line, source_path: f.source_path });
+    } else {
+      map.set(key, {
+        representative: f,
+        locations: [{ file: f.file, line: f.line, source_path: f.source_path }],
+      });
+    }
+  }
+  return Array.from(map.values());
+}
+
+
 // Categories whose CRITICAL findings can never be shipped — mirrors the backend
 // gate in scan/package.py so the UI can show the hard-block state immediately,
 // before a download round-trip. The server remains the source of truth (its
@@ -179,7 +322,7 @@ const CategoryTile: React.FC<{ result: CategoryResult }> = ({ result }) => (
   </div>
 );
 
-const ScanBadge: React.FC<{ report: ScanReport }> = ({ report }) => {
+const ScanBadge: React.FC<{ report: ScanReport; repoUrl?: string }> = ({ report, repoUrl }) => {
   const [open, setOpen] = useState(report.status !== "PASS");
   const style = STATUS_STYLES[report.status];
   const categories = useMemo(() => {
@@ -223,14 +366,21 @@ const ScanBadge: React.FC<{ report: ScanReport }> = ({ report }) => {
       )}
 
       {/* Findings detail */}
-      {open && report.findings.length > 0 && (
+      {open && report.findings.length > 0 && (() => {
+        const groups = groupFindings(report.findings);
+        return (
         <ul className="mt-2.5 flex flex-col gap-1.5 max-h-72 overflow-auto">
-          {report.findings.map((f, i) => (
+          {groups.map((g, i) => {
+            const f = g.representative;
+            return (
             <li key={i} className="text-[11px] bg-slate-900/50 rounded-md px-2.5 py-2 border border-slate-700/60">
               {/* Row 1: issue code + category + severity + confidence */}
               <div className="flex items-center gap-1.5 flex-wrap">
                 {f.id && (
-                  <span className="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-600/60 text-slate-300 font-mono text-[10px]">{f.id}</span>
+                  <span
+                    title={scapeguardTooltip(f)}
+                    className="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-600/60 text-slate-300 font-mono text-[10px] cursor-help"
+                  >{f.id}</span>
                 )}
                 <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold tracking-wide bg-slate-800/60 border border-slate-700/60 text-slate-300">
                   {categoryLabel(categoryOf(f))}
@@ -241,18 +391,49 @@ const ScanBadge: React.FC<{ report: ScanReport }> = ({ report }) => {
                 {f.confidence && (
                   <span className="text-[9px] text-slate-500 font-mono">conf: {f.confidence}</span>
                 )}
-                {/* OWASP mapping chips */}
+                {/* OWASP mapping chips — with tooltips */}
                 {[...(f.owasp_ast ?? []), ...(f.owasp_llm ?? [])].map((tag) => (
-                  <span key={tag} className="px-1 py-0.5 rounded bg-violet-900/30 border border-violet-700/40 text-violet-300 text-[9px] font-mono">{tag}</span>
+                  <span
+                    key={tag}
+                    title={owaspTooltip(tag)}
+                    className="px-1 py-0.5 rounded bg-violet-900/30 border border-violet-700/40 text-violet-300 text-[9px] font-mono cursor-help"
+                  >{tag}</span>
                 ))}
+                {/* Duplicate count badge */}
+                {g.locations.length > 1 && (
+                  <span
+                    title={`Found in ${g.locations.length} locations`}
+                    className="px-1.5 py-0.5 rounded bg-slate-700/50 border border-slate-600/40 text-slate-400 text-[9px] font-mono cursor-help"
+                  >
+                    ×{g.locations.length}
+                  </span>
+                )}
               </div>
               {/* Row 2: message */}
               <div className="text-slate-300 mt-1 leading-relaxed">{f.message}</div>
-              {/* Row 3: file location + source attribution */}
-              <div className="text-slate-500 mt-0.5 font-mono text-[10px]">
-                {f.file}{f.line ? `:${f.line}` : ""}
-                {f.source_path ? <span className="text-slate-600"> · from {f.source_path}</span> : null}
-              </div>
+              {/* Row 3: file locations (grouped) */}
+              {g.locations.map((loc, li) => (
+                <div key={li} className="text-slate-500 mt-0.5 font-mono text-[10px]">
+                  {loc.file}{loc.line ? `:${loc.line}` : ""}
+                  {loc.source_path ? (
+                    <span className="text-slate-600">
+                      {" · from "}
+                      {repoUrl ? (
+                        <a
+                          href={`${repoUrl.replace(/\.git$/, "")}/blob/HEAD/${loc.source_path}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-violet-400/80 hover:text-violet-300 underline decoration-violet-500/30 hover:decoration-violet-400/60 transition-colors"
+                        >
+                          {loc.source_path}
+                        </a>
+                      ) : (
+                        loc.source_path
+                      )}
+                    </span>
+                  ) : null}
+                </div>
+              ))}
               {/* Row 4: offending snippet */}
               {f.snippet && (
                 <div className="text-slate-500 mt-0.5 font-mono text-[10px] truncate italic">"{f.snippet}"</div>
@@ -262,9 +443,11 @@ const ScanBadge: React.FC<{ report: ScanReport }> = ({ report }) => {
                 <div className="text-emerald-400/80 mt-0.5 text-[10px]">↳ {f.remediation}</div>
               )}
             </li>
-          ))}
+            );
+          })}
         </ul>
-      )}
+        );
+      })()}
 
       {/* Provenance footer */}
       {open && (
@@ -664,7 +847,7 @@ export const SkillExport: React.FC<SkillExportProps> = ({
 
 
       {/* Scan badge */}
-      {displayScan && <ScanBadge report={displayScan} />}
+      {displayScan && <ScanBadge report={displayScan} repoUrl={repoUrl} />}
 
       {/* Action buttons */}
       <div className="flex items-center gap-3 flex-wrap">

@@ -9,11 +9,12 @@ interface RepoInputProps {
 }
 
 const QUICK_LOAD_REPOS = [
+  { name: "Google ADK", url: "https://github.com/google/adk-python" },
   { name: "FastAPI", url: "https://github.com/tiangolo/fastapi" },
-  { name: "LangGraph", url: "https://github.com/langchain-ai/langgraph" },
-  { name: "Codex", url: "https://github.com/openai/codex" },
-  { name: "ADK", url: "https://github.com/google/adk-python" },
-  { name: "OpenClaw", url: "https://github.com/openclaw/openclaw" },
+  { name: "LangChain", url: "https://github.com/langchain-ai/langchain" },
+  { name: "Supabase", url: "https://github.com/supabase/supabase" },
+  { name: "vLLM", url: "https://github.com/vllm-project/vllm" },
+  { name: "Transformers", url: "https://github.com/huggingface/transformers" },
 ];
 
 const ClearIcon: React.FC<{ className?: string }> = ({ className = "w-4 h-4" }) => (
@@ -92,10 +93,10 @@ export const RepoInput: React.FC<RepoInputProps> = ({ repoUrl, setRepoUrl, onGen
             isLoading
               ? { background: "#334155", color: "#94a3b8", height: 52 }
               : {
-                  background: "linear-gradient(135deg,#7c3aed,#6d28d9)",
-                  boxShadow: "0 4px 20px -4px rgba(124,58,237,0.6)",
-                  height: 52,
-                }
+                background: "linear-gradient(135deg,#7c3aed,#6d28d9)",
+                boxShadow: "0 4px 20px -4px rgba(124,58,237,0.6)",
+                height: 52,
+              }
           }
         >
           {isLoading ? (
