@@ -5,6 +5,9 @@ Remote code execution (fetch-and-run), decode-and-run, destructive commands,
 and reverse shells. These are the payloads that make a skill actively dangerous
 rather than merely sloppy, so most sit at CRITICAL.
 
+Portions derived from NVIDIA SkillSpector (https://github.com/NVIDIA/SkillSpector),
+Apache-2.0. See THIRD_PARTY_NOTICES.md.
+
 Author: GitScape.ai
 """
 from __future__ import annotations
@@ -81,5 +84,30 @@ RULES: list[Rule] = [
             r"(curl|wget)\b[^\n]{0,120}(-o|-O|>)[^\n]{0,60}(&&|;)\s*(chmod\s+\+x|\./)",
             re.I),
         message="Downloads a file and immediately makes it executable / runs it.",
+    ),
+    Rule(
+        # Cryptominer signatures (ported from SkillSpector's cryptominer YARA).
+        id="GS-EXE-008", name="execution.cryptominer", category=C,
+        severity=Severity.CRITICAL, confidence=Confidence.HIGH,
+        pattern=re.compile(
+            r"stratum\+(?:tcp|ssl)://|\bxmrig\b|\bminerd\b|\bcpuminer\b|--donate-level\b"
+            r"|\bcoinhive\b|\bcryptonight\b|\bnicehash\b"
+            r"|(?:pool\.)?(?:minexmr|nanopool|supportxmr|f2pool|ethermine)\.(?:com|org)",
+            re.I),
+        message="Cryptominer: mining-pool protocol or known miner binary reference.",
+        remediation="Remove the cryptominer; a skill must never run mining workloads.",
+    ),
+    Rule(
+        # Offensive-tooling / webshell signatures (ported from SkillSpector's
+        # hacktools + webshells YARA — kept to near-exclusively offensive strings).
+        id="GS-EXE-009", name="execution.hacktool", category=C,
+        severity=Severity.HIGH, confidence=Confidence.MEDIUM,
+        pattern=re.compile(
+            r"\bmimikatz\b|sekurlsa::logonpasswords|Invoke-Mimikatz|\bmeterpreter\b"
+            r"|\bmsfvenom\b|\bmsfconsole\b|\bLaZagne\b|\bResponder\.py\b"
+            r"|(?:eval|system|assert|passthru|shell_exec)\s*\(\s*\$_(?:POST|GET|REQUEST)",
+            re.I),
+        message="Offensive tooling / webshell signature (credential dumping, exploitation, or PHP webshell).",
+        remediation="Remove the offensive-tooling reference; it has no place in a legitimate skill.",
     ),
 ]

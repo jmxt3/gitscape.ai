@@ -65,6 +65,14 @@ const STATUS_DOT: Record<ScanStatus, string> = {
   FAIL: "bg-red-400",
 };
 
+// Letter-grade chip styling (A best → F worst). Mirrors backend scan/scoring.py.
+const GRADE_STYLES: Record<string, string> = {
+  A: "bg-emerald-900/40 border-emerald-500/50 text-emerald-300",
+  B: "bg-lime-900/40 border-lime-500/50 text-lime-300",
+  C: "bg-amber-900/40 border-amber-500/50 text-amber-300",
+  F: "bg-red-900/40 border-red-500/50 text-red-300",
+};
+
 const SEVERITY_COLOR: Record<string, string> = {
   critical: "text-red-400",
   high: "text-red-400",
@@ -114,6 +122,8 @@ const SCAPEGUARD_RULE_LABELS: Record<string, string> = {
   "GS-AGY-002": "Safety Bypass — Disables host agent's safety or confirmation checks",
   "GS-AGY-003": "Config Tampering — Modifies agent or shell configuration files",
   "GS-AGY-004": "Direct Money Access — Attempts crypto wallet or payment actions",
+  "GS-AGY-005": "Memory Poisoning — Writes durable instructions into agent memory (CLAUDE.md/AGENTS.md)",
+  "GS-AGY-006": "Agent Snooping — Reads other skills, session history, or agent-internal state",
 
   // Untrusted Content (GS-CNT)
   "GS-CNT-001": "Fetch & Obey — Fetches remote content and treats it as instructions",
@@ -128,6 +138,8 @@ const SCAPEGUARD_RULE_LABELS: Record<string, string> = {
   "GS-EXE-005": "Reverse Shell — Opens an outbound interactive shell to a remote host",
   "GS-EXE-006": "Dynamic Eval — Dynamic code evaluation in a shipped script",
   "GS-EXE-007": "Chmod & Run — Downloads a file and immediately makes it executable or runs it",
+  "GS-EXE-008": "Cryptominer — Mining-pool protocol or known miner binary reference",
+  "GS-EXE-009": "Hacktool / Webshell — Credential dumping, exploitation, or PHP webshell signature",
 
   // Data Exfiltration (GS-EXF)
   "GS-EXF-001": "Send Secrets — Instruction to send secrets/credentials outward",
@@ -135,6 +147,7 @@ const SCAPEGUARD_RULE_LABELS: Record<string, string> = {
   "GS-EXF-003": "Known Drop Endpoint — Reference to a known data-exfiltration drop endpoint",
   "GS-EXF-004": "Env Harvesting — Environment-variable harvesting piped to a network call",
   "GS-EXF-005": "Sensitive Path Read — Reads sensitive credentials (SSH keys, AWS, etc.)",
+  "GS-EXF-006": "Internal Endpoint — Accesses cloud-metadata / internal service (SSRF credential-theft)",
 
   // Prompt Injection (GS-INJ)
   "GS-INJ-001": "Ignore Previous — Attempt to override prior instructions",
@@ -142,6 +155,9 @@ const SCAPEGUARD_RULE_LABELS: Record<string, string> = {
   "GS-INJ-003": "Persona Override — Hidden persona/role override",
   "GS-INJ-004": "Role Tags — Embedded chat role or control tags",
   "GS-INJ-005": "Execute Follow-up — Instruction to run or execute subsequent commands",
+  "GS-INJ-006": "Anti-Refusal — Jailbreak framing that disables safety or forces an unrestricted persona",
+  "GS-INJ-007": "Concealment — Instructs the agent to hide an action from the user",
+  "GS-INJ-008": "Conditional Trigger — Dormant payload gated on a time or usage condition",
 
   // Obfuscation (GS-OBF)
   "GS-OBF-001": "Invisible Characters — Hidden zero-width or bidirectional control character",
@@ -149,6 +165,7 @@ const SCAPEGUARD_RULE_LABELS: Record<string, string> = {
   "GS-OBF-003": "Escape Sequence Run — Dense hex or unicode escape run (likely obfuscation)",
   "GS-OBF-004": "Char Chain Execution — String-reversal or chr() chain feeding an exec/eval",
   "GS-OBF-005": "Mixed Script Homoglyph — Mixed-script homoglyph token (visual spoofing)",
+  "GS-OBF-006": "Data-URI Payload — Base64 data URI that decodes to executable content",
 
   // Secrets & Credentials (GS-SEC)
   "GS-SEC-001": "Hardcoded AWS Access Key ID",
@@ -316,6 +333,18 @@ export const ScanBadge: React.FC<{ report: ScanReport; repoUrl?: string }> = ({ 
           <ScanStatusIcon status={report.status} />
           {style.label}
         </span>
+        {report.grade && (
+          <span
+            title={`ScapeGuard grade ${report.grade}${
+              typeof report.risk_score === "number" ? ` · risk score ${report.risk_score}` : ""
+            }`}
+            className={`px-1.5 py-0.5 rounded border text-[11px] font-bold font-mono cursor-help ${
+              GRADE_STYLES[report.grade] ?? "bg-slate-800 border-slate-600/60 text-slate-300"
+            }`}
+          >
+            {report.grade}
+          </span>
+        )}
         <span className="ml-auto text-[10px] font-mono opacity-70">
           {report.findings.length} finding{report.findings.length === 1 ? "" : "s"}
           {(open ? " ▲" : " ▼")}

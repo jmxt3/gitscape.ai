@@ -95,6 +95,8 @@ def to_sarif(report: ScanReport, *, engine: str = "ScapeGuard", version: str = "
             "properties": {
                 "skillHash": report.skill_hash,
                 "status": report.status.value,
+                "riskScore": report.risk_score,
+                "grade": report.grade,
                 "filesScanned": report.files_scanned,
             },
         }],

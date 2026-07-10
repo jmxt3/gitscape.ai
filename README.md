@@ -426,6 +426,8 @@ We welcome contributions of all kinds!
 
 This project is licensed under the [Apache License 2.0](LICENSE).
 
+Third-party code and derived detection rules are credited in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) — notably the ScapeGuard security scanner, which derives several patterns and scoring constants from [NVIDIA SkillSpector](https://github.com/NVIDIA/SkillSpector) (Apache-2.0).
+
 ---
 
 ## 🙏 Acknowledgements

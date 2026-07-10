@@ -34,10 +34,11 @@ from .context import ScanContext, line_of
 from .license_detect import detect_license
 from .rules import CHECK_RULES, PATTERN_RULES
 from .registry import DROP, REFERENCES, SCRIPTS, SKILL_MD
+from .scoring import compute_score, grade_for
 from .taxonomy import CATEGORIES, Category, info
 
 ENGINE_NAME = "scapeguard"
-ENGINE_VERSION = "2.0.0"
+ENGINE_VERSION = "2.1.0"
 
 
 # ─── status math ─────────────────────────────────────────────────────────────
@@ -194,8 +195,10 @@ def scan_skill(
     for f in findings:
         f.source_path = _attribute(f.snippet, units)
 
+    status = _status_for(findings)
+    score = compute_score(findings)
     return ScanReport(
-        status=_status_for(findings),
+        status=status,
         findings=findings,
         engine=ENGINE_NAME,
         engine_version=ENGINE_VERSION,
@@ -205,4 +208,6 @@ def scan_skill(
         categories=_category_results(findings, is_framework_skill),
         counts=_counts(findings),
         license=detect_license(units),
+        risk_score=score,
+        grade=grade_for(status, score),
     )

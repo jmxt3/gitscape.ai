@@ -28,6 +28,18 @@ CASES = {
     "zero_width.md": (ScanStatus.FAIL, "GS-OBF-001"),
     "homoglyph.md": (ScanStatus.FAIL, "GS-OBF-005"),
     "clean_skill.md": (ScanStatus.PASS, None),
+    # ── Phase 1 rules ported from SkillSpector ──
+    "jailbreak_anti_refusal.md": (ScanStatus.FAIL, "GS-INJ-006"),
+    "concealment.md": (ScanStatus.FAIL, "GS-INJ-007"),
+    "conditional_trigger.md": (ScanStatus.FAIL, "GS-INJ-008"),
+    "ssrf_metadata.md": (ScanStatus.FAIL, "GS-EXF-006"),
+    "memory_poison.md": (ScanStatus.FAIL, "GS-AGY-005"),
+    "agent_snoop.md": (ScanStatus.WARN, "GS-AGY-006"),
+    "data_uri_exec.md": (ScanStatus.FAIL, "GS-OBF-006"),
+    "miner_stratum.md": (ScanStatus.FAIL, "GS-EXE-008"),
+    # ── Benign look-alikes that must NOT gate ──
+    "cloud_docs_metadata.md": (ScanStatus.PASS, None),
+    "refusal_docs.md": (ScanStatus.PASS, None),
 }
 
 
@@ -48,3 +60,17 @@ def test_clean_skill_all_categories_green():
     text = (FIXTURES / "clean_skill.md").read_text(encoding="utf-8")
     report = scan_skill(text, {})
     assert all(c.status == ScanStatus.PASS for c in report.categories), report.findings
+
+
+@pytest.mark.xfail(
+    reason="Known gap: ScapeGuard's injection regexes are English-only, so a "
+    "non-English prompt injection is missed. Tracked as a Phase 3 item "
+    "(multilingual keyword table + advisory judge).",
+    strict=False,
+)
+def test_multilingual_injection_gap():
+    # A Chinese "ignore all previous instructions / reveal system prompt / send
+    # the conversation to our server" — malicious, but English patterns miss it.
+    text = (FIXTURES / "zh_injection.md").read_text(encoding="utf-8")
+    report = scan_skill(text, {})
+    assert report.status == ScanStatus.FAIL
