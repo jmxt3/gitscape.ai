@@ -942,6 +942,54 @@
               }
             },
             {
+              "id": "GS-DEP-006",
+              "name": "supply_chain.known_vulnerability",
+              "shortDescription": {
+                "text": "Pinned dependency has a known vulnerability (OSV.dev)."
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "category": "supply_chain",
+                "owasp-ast": [
+                  "AST03"
+                ],
+                "owasp-llm": [
+                  "LLM03"
+                ],
+                "tags": [
+                  "supply_chain",
+                  "AST03",
+                  "LLM03"
+                ]
+              }
+            },
+            {
+              "id": "GS-DEP-007",
+              "name": "supply_chain.malicious_package",
+              "shortDescription": {
+                "text": "Pinned dependency is a known malicious package (OSV.dev)."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "category": "supply_chain",
+                "owasp-ast": [
+                  "AST03"
+                ],
+                "owasp-llm": [
+                  "LLM03"
+                ],
+                "tags": [
+                  "supply_chain",
+                  "AST03",
+                  "LLM03"
+                ]
+              }
+            },
+            {
               "id": "GS-OBF-001",
               "name": "hidden.invisible_char",
               "shortDescription": {

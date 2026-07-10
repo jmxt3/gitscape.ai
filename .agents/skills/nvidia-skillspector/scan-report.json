@@ -3,7 +3,7 @@
   "findings": [],
   "engine": "scapeguard",
   "engine_version": "2.1.0",
-  "generated_at": "2026-07-10T18:51:30Z",
+  "generated_at": "2026-07-10T19:56:33Z",
   "skill_hash": "sha256:06663b511cf0fbc2a207b5132e171e5f7e103dbcd90bbc20e9a474c235c4e9f9",
   "files_scanned": 6,
   "categories": [
