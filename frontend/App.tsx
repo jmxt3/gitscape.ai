@@ -11,7 +11,7 @@ import { GithubTokenModal } from "./components/GithubTokenModal";
 import { GithubService, GithubFile } from "./services/githubService";
 import { OutputTabs } from "./components/OutputTabs";
 import { transformGithubTreeToD3Hierarchy } from "./components/diagramUtils";
-import { DiagramFullscreenModal } from "./components/DiagramFullscreenModal";
+// DiagramFullscreenModal import removed — Code Map tab hidden
 import { Hero } from "./components/Hero";
 import { HowItWorks, Security, OpenSource, FaqSection } from "./components/LandingSections";
 import { CliPanel, McpPanel, DevTools } from "./components/DevToolsSection";
@@ -406,17 +406,17 @@ const DIGEST_MESSAGES = [
   "Analyzing dependencies, exports, and vibes.",
 ];
 
-const VISUALIZATION_MESSAGES = [
-  "Mapping every branch, literally.",
-  "Drawing the map so your AI never gets lost.",
-  "Measuring the architecture. Ruler in hand.",
-  "Making your spaghetti code look like modern art.",
-  "Fitting all the pieces into a pretty picture.",
-  "Connecting the dots between every module.",
-  "Turning folder chaos into structured beauty.",
-  "Rendering your repo like a Renaissance painting.",
-  "Building a dependency graph that would make GraphQL jealous.",
-  "Zooming out to see the full picture.",
+const SECURITY_SCAN_MESSAGES = [
+  "Scanning files for secrets and credentials...",
+  "ScapeGuard is auditing code patterns...",
+  "Looking for prompt injections in docs...",
+  "Checking for excessive agency vectors...",
+  "Verifying dependency signatures and configurations...",
+  "Analyzing inputs for malicious execution paths...",
+  "Detecting data exfiltration leaks...",
+  "Checking structure quality & Red Flags...",
+  "Making sure your agents stay in their sandbox...",
+  "Auditing code vibes for security compliance...",
 ];
 
 const SKILL_MESSAGES = [
@@ -534,16 +534,7 @@ const App: React.FC = () => {
   const [frameworkScanReport, setFrameworkScanReport] = useState<ScanReport | null>(null);
   const [frameworkReferences, setFrameworkReferences] = useState<SkillReferences | null>(null);
 
-  const [showDiagramFullscreenModal, setShowDiagramFullscreenModal] =
-    useState<boolean>(false);
-  const [diagramDataForModal, setDiagramDataForModal] =
-    useState<RawDiagramNode | null>(null);
-  const [repoNameForModal, setRepoNameForModal] = useState<string | undefined>(
-    undefined
-  );
-  const [defaultBranchForModal, setDefaultBranchForModal] = useState<
-    string | null
-  >(null);
+  // Diagram fullscreen modal state removed — Code Map tab hidden
 
 
   const currentRepoInfoRef = useRef<{ owner: string; repo: string } | null>(
@@ -778,7 +769,7 @@ const App: React.FC = () => {
       if (msgTick % 84 === 0) {
         setProgressPercent((pct) => {
           const s = getProgressStep(pct);
-          const pool = s === 1 ? DIGEST_MESSAGES : s === 2 ? VISUALIZATION_MESSAGES : SKILL_MESSAGES;
+          const pool = s === 1 ? DIGEST_MESSAGES : s === 2 ? SECURITY_SCAN_MESSAGES : SKILL_MESSAGES;
           setProgressMessage(pick(pool));
           return pct;
         });
@@ -993,7 +984,7 @@ const App: React.FC = () => {
   // Defer the expensive tree transform to a separate browser task.
   // Using useEffect + setTimeout means this NEVER runs during a user-click
   // event — it always runs in its own task after the browser is idle.
-  const [diagramData, setDiagramData] = useState<RawDiagramNode | null>(null);
+  const [_diagramData, setDiagramData] = useState<RawDiagramNode | null>(null);
   useEffect(() => {
     if (!processedRepoName || filesToRenderInDiagram.length === 0) {
       setDiagramData(null);
@@ -1019,31 +1010,14 @@ const App: React.FC = () => {
     }
   }, [digest, processedRepoName, repoUrl, githubService, repoNameForFilename]);
 
-  const handleOpenDiagramFullscreenModal = useCallback(
-    (data: RawDiagramNode, repoNameModal: string, branch: string | null) => {
-      setDiagramDataForModal(data);
-      setRepoNameForModal(repoNameModal);
-      setDefaultBranchForModal(branch);
-      setShowDiagramFullscreenModal(true);
-      document.body.style.overflow = "hidden";
-    },
-    []
-  );
-
-  const handleCloseDiagramFullscreenModal = useCallback(() => {
-    setShowDiagramFullscreenModal(false);
-    setDiagramDataForModal(null);
-    setRepoNameForModal(undefined);
-    setDefaultBranchForModal(null);
-    document.body.style.overflow = "";
-  }, []);
+  // Diagram fullscreen modal handlers removed — Code Map tab hidden
 
   const showOutputArea =
     repoUrl.trim() !== "" &&
-    ((!isLoading &&
-      (digest || (diagramData && filesToRenderInDiagram.length > 0)) &&
-      !error) ||
-    (!isLoading && processedRepoName && digest));
+    !isLoading &&
+    !error &&
+    processedRepoName &&
+    !!digest;
 
   // Clear all output when the user erases the repo URL
   // eslint-disable-next-line react-hooks/rules-of-hooks
@@ -1145,7 +1119,7 @@ const App: React.FC = () => {
                       <div className="flex justify-between mb-2 px-0.5">
                         {[
                           { label: "CODE DIGEST", threshold: 0, activeColor: "text-violet-400", inactiveColor: "text-slate-600" },
-                          { label: "CODE MAP", threshold: 34, activeColor: "text-emerald-400", inactiveColor: "text-slate-600" },
+                          { label: "SECURITY SCAN", threshold: 34, activeColor: "text-emerald-400", inactiveColor: "text-slate-600" },
                           { label: "AGENT SKILL", threshold: 67, activeColor: "text-amber-400", inactiveColor: "text-slate-600" },
                         ].map((step, i) => {
                           const isActive = progressPercent >= step.threshold;
@@ -1298,12 +1272,10 @@ const App: React.FC = () => {
             <OutputTabs
               digest={digest}
               isLoadingDigest={isLoading && progressPercent < 100 && !digest}
-              diagramData={diagramData}
               repoName={processedRepoName!}
               repoNameForFilename={repoNameForFilename}
               defaultBranch={currentDefaultBranch}
               filesCount={filesToRenderInDiagram.filter((f) => f.type === "blob").length || null}
-              onOpenDiagramFullscreenModal={handleOpenDiagramFullscreenModal}
               skillMd={skillMd}
               manifestJson={manifestJson}
               scanReport={scanReport}
@@ -1397,17 +1369,7 @@ const App: React.FC = () => {
         />
       )}
 
-      {showDiagramFullscreenModal &&
-        diagramDataForModal &&
-        repoNameForModal && (
-          <DiagramFullscreenModal
-            isOpen={showDiagramFullscreenModal}
-            onClose={handleCloseDiagramFullscreenModal}
-            data={diagramDataForModal}
-            repoName={repoNameForModal}
-            defaultBranch={defaultBranchForModal || ""}
-          />
-        )}
+      {/* DiagramFullscreenModal removed — Code Map tab hidden */}
     </div>
   );
 };

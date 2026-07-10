@@ -1,20 +1,17 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { DigestOutput } from './DigestOutput';
-import { Diagram } from './Diagram';
 import { SkillExport } from './SkillExport';
-import { RawDiagramNode, SkillManifest, ScanReport, SkillReferences } from '../types';
+import { ScanBadge } from './ScanBadge';
+import { SkillManifest, ScanReport, SkillReferences } from '../types';
 
 interface OutputTabsProps {
   digest: string;
   isLoadingDigest: boolean;
 
-  diagramData: RawDiagramNode | null;
   repoName: string;
   repoNameForFilename: string | null;
   defaultBranch: string | null;
   filesCount?: number | null;
-
-  onOpenDiagramFullscreenModal: (data: RawDiagramNode, repoName: string, defaultBranch: string | null) => void;
 
   skillMd?: string;
   manifestJson?: SkillManifest | null;
@@ -36,11 +33,11 @@ interface OutputTabsProps {
   ) => void;
 }
 
-type TabKey = 'digest' | 'map' | 'skill';
+type TabKey = 'digest' | 'security' | 'skill';
 
 const TABS: { key: TabKey; label: string; activeColor: string; underline: string }[] = [
   { key: 'digest', label: 'Digest', activeColor: '#c4b5fd', underline: '#7c3aed' },
-  { key: 'map', label: 'Code Map', activeColor: '#6ee7b7', underline: '#10b981' },
+  { key: 'security', label: 'Security', activeColor: '#6ee7b7', underline: '#10b981' },
   { key: 'skill', label: 'Agent Skill', activeColor: '#fcd34d', underline: '#f59e0b' },
 ];
 
@@ -53,12 +50,10 @@ const SCAN_BADGE: Record<ScanReport['status'], { label: string; bg: string; colo
 export const OutputTabs: React.FC<OutputTabsProps> = ({
   digest,
   isLoadingDigest,
-  diagramData,
   repoName,
   repoNameForFilename,
   defaultBranch,
   filesCount,
-  onOpenDiagramFullscreenModal,
   skillMd,
   manifestJson,
   scanReport,
@@ -75,6 +70,8 @@ export const OutputTabs: React.FC<OutputTabsProps> = ({
 
   const resolvedScan = frameworkScanReport ?? scanReport;
   const badge = resolvedScan ? SCAN_BADGE[resolvedScan.status] : null;
+
+  const handleSwitchToSecurity = useCallback(() => setActiveTab('security'), []);
 
   return (
     <div
@@ -148,22 +145,27 @@ export const OutputTabs: React.FC<OutputTabsProps> = ({
         </section>
       )}
 
-      {activeTab === 'map' && (
-        <section id="section-code-visualization" role="tabpanel">
-          <div className="h-[500px] min-h-[400px] w-full">
-            {diagramData && repoName && defaultBranch ? (
-              <Diagram
-                data={diagramData}
-                repoName={repoName}
-                defaultBranch={defaultBranch}
-                onOpenFullscreenModal={onOpenDiagramFullscreenModal}
-              />
-            ) : (
-              <div className="flex items-center justify-center h-full text-slate-500 text-sm">
-                Code map data not available or still loading.
-              </div>
-            )}
-          </div>
+      {activeTab === 'security' && (
+        <section id="section-security" role="tabpanel">
+          {resolvedScan ? (
+            <div className="flex flex-col gap-4">
+              <p className="text-[12px] text-slate-400 leading-relaxed">
+                <span className="font-semibold text-slate-300">ScapeGuard</span> scans every generated skill
+                for prompt injection, hardcoded secrets, data exfiltration, malicious execution,
+                supply chain risks, obfuscation, untrusted content, excessive agency, and structure quality.
+              </p>
+              <ScanBadge report={resolvedScan} repoUrl={repoUrl} />
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-16 gap-3 text-slate-500">
+              <span className="flex items-center justify-center w-10 h-10 rounded-full bg-emerald-500/10 text-emerald-500/60">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+                </svg>
+              </span>
+              <p className="text-sm">Security scan will run automatically when your skill is generated.</p>
+            </div>
+          )}
         </section>
       )}
 
@@ -184,6 +186,7 @@ export const OutputTabs: React.FC<OutputTabsProps> = ({
               frameworkScanReport={frameworkScanReport}
               frameworkReferences={frameworkReferences}
               onFrameworkSkillGenerated={onFrameworkSkillGenerated}
+              onSwitchToSecurity={handleSwitchToSecurity}
             />
           ) : (
             <div className="flex flex-col items-center justify-center py-16 gap-3 text-slate-500">

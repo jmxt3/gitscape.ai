@@ -34,8 +34,8 @@ const STEPS = [
   },
   {
     n: 2,
-    title: "Map",
-    desc: "Builds an interactive architecture diagram from the file tree — every branch, literally.",
+    title: "Scan",
+    desc: "ScapeGuard checks every generated skill for prompt injection, secrets, exfiltration, and 6 more threat categories.",
     border: "#10b981",
     color: "#34d399",
     titleColor: "#6ee7b7",
@@ -44,7 +44,7 @@ const STEPS = [
   {
     n: 3,
     title: "Forge",
-    desc: "Compiles digest + map into a scanned, packaged SKILL.md your agents load in one line.",
+    desc: "Compiles digest + scan into a packaged SKILL.md your agents load in one line.",
     border: "#f59e0b",
     color: "#fbbf24",
     titleColor: "#fcd34d",
