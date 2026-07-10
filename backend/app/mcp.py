@@ -78,7 +78,10 @@ async def list_tools():
                     "add a skill from GitHub, convert a repository to an agent skill, or learn a codebase. "
                     "Clones the repo, compiles source code and docs into a SKILL.md, performs a security scan, "
                     "and returns files to write to .agents/skills/. "
-                    "After receiving the response, the agent MUST write all returned files to disk "
+                    "The response carries a ScapeGuard security verdict: scan_grade (A/B/C/F), scan_status "
+                    "(PASS/WARN/FAIL), risk_score, and safe_to_install. Do NOT write the files when "
+                    "safe_to_install is false unless the user explicitly accepts the findings. "
+                    "After receiving a safe response, the agent MUST write all returned files to disk "
                     "and register the skill in AGENTS.md."
                 ),
                 "inputSchema": {
@@ -193,10 +196,27 @@ async def run_install_skill(repo_url: str, github_token: Optional[str]) -> Dict[
             for exp_name, exp_content in pkg.exporters.items():
                 files_to_write[f"{base_path}/{exp_name}"] = exp_content
 
+            from app.skillforge.models import ScanStatus
+            from app.skillforge.package import is_bypassable
+            from app.skillforge.scan.judge import judge_enabled
+
+            report = pkg.scan_report
+            llm_judge_used = bool(report.summary)
             result_payload = {
                 "status": "success",
                 "skill_name": pkg.name,
-                "scan_grade": pkg.scan_report.status.value,
+                # Letter grade (A/B/C/F); scan_status keeps the PASS/WARN/FAIL verdict.
+                "scan_grade": report.grade or report.status.value,
+                "scan_status": report.status.value,
+                "risk_score": report.risk_score,
+                # Agent-facing install gate: safe unless the scan FAILed, and
+                # whether the UI may still offer an accept-and-download path.
+                "safe_to_install": report.status != ScanStatus.FAIL,
+                "bypassable": is_bypassable(report),
+                # Transparency: how the scan actually ran.
+                "scan_mode": "static+llm_judge" if llm_judge_used else "static",
+                "llm_judge_requested": judge_enabled(),
+                "llm_judge_used": llm_judge_used,
                 "pre_write_actions": [
                     {
                         "type": "delete_directory_if_exists",

@@ -142,6 +142,8 @@ export interface ScanReport {
   counts?: Record<string, number>;
   license?: LicenseInfo;
   summary?: string;
+  risk_score?: number;
+  grade?: string; // A/B/C/F
 }
 
 // references/*.md content, keyed by package-relative path (e.g. "references/api.md")

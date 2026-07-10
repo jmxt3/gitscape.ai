@@ -244,6 +244,9 @@ class ScanReport(BaseModel):
     counts: dict[str, int] = Field(default_factory=dict)  # severity -> count
     license: LicenseInfo = Field(default_factory=LicenseInfo)
     summary: str = ""  # optional LLM-written behavioral summary (Phase 3)
+    # ── ScapeGuard v2.1 (display-only; never affects the gate) ──
+    risk_score: int = 0  # weighted severity sum; higher is worse
+    grade: str = ""  # A/B/C/F letter derived from status + risk_score
 
 
 # ─── Package / manifest (Phase 3+) ─────────────────────────────────────────
@@ -255,7 +258,7 @@ class ProvenanceEntry(BaseModel):
 
 
 class Manifest(BaseModel):
-    schema_version: str = "2.0"
+    schema_version: str = "2.1"
     name: str
     display_name: str
     description: str
@@ -265,6 +268,7 @@ class Manifest(BaseModel):
     files: list[str] = Field(default_factory=list)
     provenance: list[ProvenanceEntry] = Field(default_factory=list)
     scan_status: ScanStatus = ScanStatus.PASS
+    scan_grade: str = ""  # A/B/C/F letter grade (mirrors scan_report.grade)
     framework_compatibility: list[str] = Field(default_factory=list)
     metadata: dict = Field(default_factory=dict)
     source_git_head: Optional[str] = None

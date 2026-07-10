@@ -98,6 +98,7 @@ def build_skill(
         files=manifest_files,
         provenance=assembled.provenance,
         scan_status=scan_report.status,
+        scan_grade=scan_report.grade,
         framework_compatibility=_FRAMEWORKS,
         source_git_head=meta.git_sha,
         built_at=generated_at,
