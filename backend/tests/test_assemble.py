@@ -44,10 +44,29 @@ def test_assemble_produces_skill_and_references():
     assert skill.name == "acme-demo"
     assert skill.skill_md.startswith("---\nname: acme-demo\n")
     assert 'description: "' in skill.skill_md
-    assert "## What this is" in skill.skill_md
-    assert "## API quick-reference" in skill.skill_md
+
+    # Canonical 6-section anatomy
+    assert "## Overview" in skill.skill_md
+    assert "## When to Use" in skill.skill_md
+    assert "## Core Process" in skill.skill_md
+    assert "## Common Rationalizations" in skill.skill_md
+    assert "## Red Flags" in skill.skill_md
+    assert "## Verification" in skill.skill_md
+
+    # API symbols are shown inline in Overview, not in a separate section
     assert "serve" in skill.skill_md  # a real parsed symbol
     assert "A tiny demo project" in skill.skill_md  # README intro used
+
+    # Old non-standard sections must NOT appear
+    assert "## What this is" not in skill.skill_md
+    assert "## Key concepts" not in skill.skill_md
+    assert "## API quick-reference" not in skill.skill_md
+    assert "## Quickstart" not in skill.skill_md
+    assert "## Code Access" not in skill.skill_md
+
+    # When to Use includes NOT/Related per framework spec
+    assert "**When NOT to use:**" in skill.skill_md
+    assert "**Related:**" in skill.skill_md
 
     assert "references/api.md" in skill.references
     assert "references/architecture.md" in skill.references

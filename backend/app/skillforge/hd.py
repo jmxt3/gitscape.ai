@@ -81,18 +81,24 @@ def _structured_context(meta: RepoMeta, extract: Extract) -> str:
 
 def _prompt(meta: RepoMeta, extract: Extract) -> str:
     return (
-        "You are a technical writer producing prose for an Anthropic Agent Skill "
+        "You are a technical writer producing prose for an Agent Skill "
         "(SKILL.md) that describes a code repository. Use ONLY the structured "
         "context below — never invent files, APIs, or facts not present.\n\n"
         "Return STRICT JSON with exactly these keys:\n"
-        '  "description": A description following this exact template (max 1024 chars):\n'
-        '                 "[Third-person capability statement, e.g. \'Guides agents through working with {repo}\']. Use when [trigger condition 1], [trigger condition 2], or when the user mentions \'[phrase 1]\', \'[phrase 2]\' — even if they don\'t explicitly ask for {repo}. NOT for [near-miss exclusion]; for that, see [adjacent-skill-name]."\n'
+        '  "description": Follow this EXACT template (max 1024 chars):\n'
+        '                 "Guides agents through working with the {owner}/{repo} codebase ([languages]). '
+        'Use when [trigger 1], [trigger 2], or when the user mentions \'{repo}\', \'{owner}/{repo}\'. '
+        'Not for [near-miss exclusion]."\n'
+        '                 Requirements: third-person capability statement, at least 2 concrete trigger '
+        'conditions, quoted user phrasings that would activate the skill, and one near-miss exclusion '
+        'explaining what the skill is NOT for.\n'
         '  "what_this_is": a single plain paragraph (3-5 sentences) describing the '
         "project, its purpose, architecture, and stack.\n"
-        '  "when_to_use": an array of 3-5 short bullet strings.\n\n'
+        '  "when_to_use": an array of 3-5 short bullet strings. Each must be a '
+        'concrete trigger scenario, not vague advice.\n\n'
         "No markdown, no code fences, no commentary — JSON only.\n\n"
         "=== STRUCTURED CONTEXT ===\n" + _structured_context(meta, extract)
-    ).replace("{repo}", meta.repo)
+    ).replace("{repo}", meta.repo).replace("{owner}", meta.owner)
 
 
 def _extract_json(text: str) -> dict:
@@ -147,32 +153,52 @@ def _framework_prompt(meta: RepoMeta, extract: Extract) -> str:
         "You are a senior engineering skills author producing a Production-grade Engineering Skill "
         "(SKILL.md) for an AI coding agent working in this repository. "
         "Your goal is to teach the agent HOW TO ACT in this codebase — not just what it contains.\n\n"
+        "CRITICAL FRAMEWORK RULES:\n"
+        "- All instructions must use IMPERATIVE MOOD (\"Write the test first\" not \"The test should be written first\")\n"
+        "- Every step must explain WHY it exists (rationale generalizes, bare rules don't)\n"
+        "- Rationalizations must be REPOSITORY-SPECIFIC excuses, not generic advice\n"
+        "- Verification items must name the specific evidence artifact (test output, build log, diff review)\n"
+        "- Do NOT summarize the workflow in the description — the body contains the workflow\n\n"
         "If the repository is a SKILL COLLECTION (contains a skills/ directory with SKILL.md files), "
         "focus on the collection's purpose, the individual skills it provides, the slash commands, "
         "and the development lifecycle it enforces — NOT on code symbols or dependencies.\n\n"
         "Use ONLY the structured context below. Do not invent files, APIs, or facts not present.\n\n"
         "Return STRICT JSON with exactly these keys:\n"
-        '  "description": A description following this exact template (max 1024 chars):\n'
-        '                 "[Third-person capability statement, e.g. \'Guides agents through working with {repo}\']. Use when [trigger condition 1], [trigger condition 2], or when the user mentions \'[phrase 1]\', \'[phrase 2]\' — even if they don\'t explicitly ask for {repo}. NOT for [near-miss exclusion]; for that, see [adjacent-skill-name]."\n'
+        '  "description": Follow this EXACT template (max 1024 chars):\n'
+        '                 "Guides agents through working with the {owner}/{repo} codebase ([languages]). '
+        'Use when [trigger 1], [trigger 2], or when the user mentions \'{repo}\', \'{owner}/{repo}\'. '
+        'Not for [near-miss exclusion]."\n'
+        '                 Requirements: third-person capability, at least 2 trigger conditions with '
+        'quoted user phrasings, one near-miss exclusion. NEVER include workflow steps.\n'
         '  "summary_title": One sentence capturing the essence/vision/design philosophy of this codebase (max 150 chars). Example: "Distinctive, production-grade frontend interfaces that reject generic AI aesthetics through intentional design choices."\n'
         '  "summary_bullets": Array of exactly 4 concise, high-impact bullet points summarizing the core engineering rules/philosophy of this repository.\n'
-        '  "overview": A short overview (1-2 sentences) explaining what this skill does and why an agent should follow it, followed by a single line stating the core principle (e.g. "Tests are proof — \'seems right\' is not done."). Max 300 characters.\n'
-        '  "when_to_use": Array of 4-6 short strings. Each is a concrete trigger scenario.\n'
-        '  "when_not_to_use": One sentence. The counter-indicator (when NOT to use this skill).\n'
-        '  "related": One sentence outlining an adjacent scenario and the adjacent skill to follow (e.g. "For UI changes, follow the frontend-ui-engineering skill.").\n'
+        '  "overview": 1-2 sentences explaining what this skill does and why an agent should follow it, '
+        'followed by a core principle in one line. Max 300 characters. Must answer: "What does this do and why follow it?"\n'
+        '  "when_to_use": Array of 4-6 strings. Each must be a CONCRETE trigger scenario '
+        '(task type or symptom the agent would encounter), not vague advice.\n'
+        '  "when_not_to_use": One sentence. Explicit exclusion of what this skill is NOT for.\n'
+        '  "related": One sentence naming an adjacent skill for a related-but-different scenario.\n'
         '  "core_process": Array of {"title": string, "content": string} objects. '
-        "3-5 numbered steps that define the workflow. Each step should have a descriptive title "
-        "and 2-4 sentences of content, explaining the reasoning behind the step (WHY it exists), "
-        "using the imperative mood, incorporating exact commands/templates/thresholds where relevant, "
-        "and avoiding shouting MUST/ALWAYS.\n"
+        "3-5 numbered steps defining the workflow. Each step MUST: "
+        "(a) have a descriptive title, "
+        "(b) use imperative mood, "
+        "(c) include 2-4 sentences explaining WHY the step exists and the reasoning behind it, "
+        "(d) reference exact commands, file paths, or thresholds where applicable. "
+        "Avoid generic advice like 'make sure tests work' — be specific: 'Run `pytest` and confirm 0 failures'.\n"
         '  "common_rationalizations": Array of {"excuse": string, "reality": string} objects. '
-        "3-5 rows of shortcuts engineers/agents take and why they fail in this codebase.\n"
-        '  "red_flags": Array of 5-7 short strings. Observable warning signs that the agent '
-        "is going off track.\n"
-        '  "verification": Array of {"criterion": string, "evidence": string} objects. Checklist items an agent checks before declaring work done. Each item must have a specific exit criterion and the name of the artifact/output that proves it.\n\n'
+        "3-5 rows of REPOSITORY-SPECIFIC shortcuts engineers/agents take and why they fail. "
+        "Base these on the actual patterns, conventions, and constraints visible in the structured context. "
+        "Generic rationalizations like 'tests aren't needed' are acceptable only if no repo-specific ones can be inferred.\n"
+        '  "red_flags": Array of 5-7 strings. OBSERVABLE warning signs that the agent '
+        "is going off track — things a reviewer would notice. Each should be phrased as "
+        "a behavior the agent can catch itself doing (e.g., 'You are writing the fix before the reproduction test').\n"
+        '  "verification": Array of {"criterion": string, "evidence": string} objects. '
+        "Checklist items an agent checks before declaring work done. Each MUST have: "
+        "(a) a specific exit criterion, and (b) the name of the artifact/output that proves it "
+        "(e.g., 'pytest output', 'build log', 'diff review', 'screenshot').\n\n"
         "No markdown, no code fences, no commentary — JSON only.\n\n"
         "=== STRUCTURED CONTEXT ===\n" + _structured_context(meta, extract)
-    ).replace("{repo}", meta.repo)
+    ).replace("{repo}", meta.repo).replace("{owner}", meta.owner)
 
 
 def generate_framework_prose(meta: RepoMeta, extract: Extract) -> FrameworkProseFields | None:
@@ -190,7 +216,7 @@ def generate_framework_prose(meta: RepoMeta, extract: Extract) -> FrameworkProse
         "contents": [{"parts": [{"text": _framework_prompt(meta, extract)}]}],
         "generationConfig": {
             "temperature": 0.4,
-            "maxOutputTokens": 2048,
+            "maxOutputTokens": 3072,
             "responseMimeType": "application/json",
             "thinkingConfig": {"thinkingBudget": 0},
         },

@@ -57,7 +57,17 @@ def test_clean_build_passes_and_zips(tmp_path):
     assert "references/api.md" in pkg.references
     assert pkg.exporters  # adk + agno wrappers present
     assert "references/acme_demo_digest.txt" in pkg.manifest.files
+    # Digest link is now inside References section (not a standalone Code Access section)
     assert "[Full Code Digest](references/acme_demo_digest.txt)" in pkg.skill_md
+    assert "## Code Access" not in pkg.skill_md  # old non-standard section removed
+
+    # Canonical 6-section anatomy is present
+    assert "## Overview" in pkg.skill_md
+    assert "## When to Use" in pkg.skill_md
+    assert "## Core Process" in pkg.skill_md
+    assert "## Common Rationalizations" in pkg.skill_md
+    assert "## Red Flags" in pkg.skill_md
+    assert "## Verification" in pkg.skill_md
 
     buf = build_zip(pkg)
     names = zipfile.ZipFile(buf).namelist()
@@ -134,6 +144,11 @@ def test_framework_build_passes_and_zips(tmp_path, monkeypatch):
     assert "## Verification" in pkg.skill_md
     assert "Related:" in pkg.skill_md
     assert "evidence: pytest output" in pkg.skill_md
+    # Code Access is folded into References, not a standalone section
+    assert "## Code Access" not in pkg.skill_md
+    assert "## References" in pkg.skill_md
+    # When NOT to use is always present
+    assert "**When NOT to use:**" in pkg.skill_md
 
 
 def test_cache_key_roundtrip_same_digest():
