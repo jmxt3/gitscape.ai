@@ -16,56 +16,10 @@ from pathlib import PurePosixPath
 from typing import Optional
 
 from ..models import ApiIndex, ContentUnit, FileKind, Symbol
-
-# file suffix -> tree-sitter grammar key used by get_parser
-SUFFIX_TO_LANG: dict[str, str] = {
-    ".py": "python",
-    ".ts": "typescript",
-    ".mts": "typescript",
-    ".cts": "typescript",
-    ".tsx": "tsx",
-    ".js": "javascript",
-    ".jsx": "javascript",
-    ".mjs": "javascript",
-    ".cjs": "javascript",
-    ".go": "go",
-}
+from ..tslang import SUFFIX_TO_LANG, get_parser as _get_parser
 
 _MAX_SYMBOLS_PER_FILE = 40
 _MAX_SIG = 200
-
-# Lazily-built parsers, keyed by grammar.
-_PARSERS: dict[str, object] = {}
-
-
-def _get_parser(lang: str):
-    parser = _PARSERS.get(lang)
-    if parser is not None:
-        return parser
-    from tree_sitter import Language, Parser  # local import keeps native dep lazy
-
-    if lang == "python":
-        import tree_sitter_python as ts
-
-        capsule = ts.language()
-    elif lang in ("typescript", "tsx"):
-        import tree_sitter_typescript as ts
-
-        capsule = ts.language_tsx() if lang == "tsx" else ts.language_typescript()
-    elif lang == "javascript":
-        import tree_sitter_javascript as ts
-
-        capsule = ts.language()
-    elif lang == "go":
-        import tree_sitter_go as ts
-
-        capsule = ts.language()
-    else:  # pragma: no cover - guarded by SUFFIX_TO_LANG
-        raise ValueError(f"unsupported grammar: {lang}")
-
-    parser = Parser(Language(capsule))
-    _PARSERS[lang] = parser
-    return parser
 
 
 # ─── helpers ───────────────────────────────────────────────────────────────
