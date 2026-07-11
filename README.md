@@ -5,9 +5,8 @@
 </p>
 
 <p align="center">
-  <strong>The open-source repository compiler and MCP server for AI agents.</strong><br/>
-  Ingest codebases. Scan for injections. Forge custom Agent Skills instantly.<br/>
-  The complete repo-to-agent pipeline, running locally or on Cloud Run.
+  <strong>The open-source repository compiler and MCP server for AI agents.</br>
+  ​🧪​ Ingest codebases,🔬​ Scan for injections, 🧬 Forge custom Agent Skills instantly.
 </p>
 
 <p align="center">
@@ -129,31 +128,6 @@ graph TD
 │  • Deterministic security scanner    │
 │  • Rate limiting (SlowAPI)           │
 └──────────────────────────────────────┘
-```
-
-### Flow Chart: Skill Generation & Installation
-
-```mermaid
-flowchart TD
-    Start["npx gitscape &lt;repo_url&gt;"] --> ParseURL["Parse Repo URL & Options"]
-    ParseURL --> APIRequest["Call Backend install_skill Tool"]
-    
-    subgraph BackendPipeline ["Backend Pipeline (SkillForge)"]
-        APIRequest --> SparseClone["Sparse clone repository with depth=1"]
-        SparseClone --> GetSHA["Retrieve git HEAD commit SHA"]
-        GetSHA --> DigestGen["Generate Markdown codebase digest"]
-        DigestGen --> ParseUnits["Parse digest into typed ContentUnits"]
-        ParseUnits --> TreeSitter["Extract structure & API symbols via tree-sitter"]
-        TreeSitter --> Assemble["Assemble SKILL.md & references/*.md"]
-        Assemble --> ScapeGuard["Deterministic 8-axis Security Scan (ScapeGuard)"]
-        ScapeGuard --> Manifest["Create signed manifest.json with freshness & provenance metadata"]
-    end
-    
-    Manifest --> ReturnPayload["Return File Payload JSON to CLI/Client"]
-    
-    ReturnPayload --> WriteFiles["Write .agents/skills/&lt;skill-name&gt;/* locally"]
-    WriteFiles --> InjectAgents["Idempotently register skill in AGENTS.md / CLAUDE.md"]
-    InjectAgents --> Done["Done! Skill ready for Agent use"]
 ```
 
 ---
