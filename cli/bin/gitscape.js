@@ -133,12 +133,16 @@ GitScape CLI — Compile any repository into a local agent skill.
 
 Usage:
   npx gitscape <repo_url> [options]   Compile and install a skill locally
+  npx gitscape scan <repo_url>        Security-scan a repo (report only — writes nothing)
   npx gitscape init                   Configure your IDE(s) to use the GitScape MCP server
   npx gitscape remove <skill_name>    Uninstall a skill and clean up references
 
 Options:
   --token <pat>       Optional GitHub Personal Access Token for private repos
+  --accept-risk       Install even if the security scan fails (grade F)
   -h, --help          Show this help message
+
+Run with no arguments for an interactive menu.
 `);
 }
 
@@ -247,16 +251,66 @@ function injectIntoAgentsMd(skillName) {
   }
 }
 
+// Build an API URL, honoring a local-dev override. In prod, routes are under
+// /api; locally the backend serves them at the root.
+function apiUrl(routePath) {
+  const base = process.env.GITSCAPE_SERVER || 'https://gitscape.ai';
+  const isLocal = base.includes('localhost') || base.includes('127.0.0.1');
+  return isLocal ? `${base}${routePath}` : `${base}/api${routePath}`;
+}
+
+// Pretty-print a ScapeGuard scan verdict (shared by scan + gated install).
+function printScanReport(r) {
+  const findings = r.findings || [];
+  console.log('');
+  console.log(`  ScapeGuard: grade ${r.grade || '?'} · ${r.status} · risk ${r.risk_score ?? '?'} · ${findings.length} finding${findings.length === 1 ? '' : 's'}`);
+  const order = ['critical', 'high', 'medium', 'low', 'info'];
+  const bySev = {};
+  for (const f of findings) (bySev[f.severity] = bySev[f.severity] || []).push(f);
+  for (const sev of order) {
+    for (const f of bySev[sev] || []) {
+      const loc = `${f.file || '?'}${f.line ? ':' + f.line : ''}`;
+      console.log(`    [${sev.toUpperCase()}] ${f.id || f.rule} — ${loc}`);
+      if (f.message) console.log(`           ${f.message}`);
+    }
+  }
+  console.log('');
+}
+
+async function handleScan(repoUrl, options) {
+  const token = options.token || process.env.GITHUB_TOKEN || null;
+  console.log(`Scanning ${repoUrl} with ScapeGuard...`);
+  try {
+    const response = await fetch(apiUrl('/scan'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ repo_url: repoUrl, github_token: token }),
+    });
+    if (!response.ok) {
+      throw new Error(`Server returned HTTP ${response.status}: ${await response.text()}`);
+    }
+    const r = await response.json();
+    printScanReport(r);
+    if (r.safe_to_install) {
+      console.log(`✓ Safe to install (grade ${r.grade}). Nothing was written.`);
+      process.exit(0);
+    } else {
+      console.log(`✗ ${r.status} (grade ${r.grade}): this repo's skill would not pass the security gate.`);
+      process.exit(1);  // non-zero so CI can gate on it
+    }
+  } catch (err) {
+    console.error(`Error scanning repo: ${err.message}`);
+    process.exit(1);
+  }
+}
+
 async function handleCompile(repoUrl, options) {
   const token = options.token || process.env.GITHUB_TOKEN || null;
 
   console.log(`Compiling skill for ${repoUrl}...`);
 
-  // Support local dev override via env var
-  const serverBase = process.env.GITSCAPE_SERVER || 'https://gitscape.ai';
-  const isLocal = serverBase.includes('localhost') || serverBase.includes('127.0.0.1');
-  const mcpCallUrl = isLocal ? `${serverBase}/mcp/call` : `${serverBase}/api/mcp/call`;
-  
+  const mcpCallUrl = apiUrl('/mcp/call');
+
   try {
     const response = await fetch(mcpCallUrl, {
       method: 'POST',
@@ -293,9 +347,23 @@ async function handleCompile(repoUrl, options) {
       throw new Error(payload.message || 'Failed to generate skill');
     }
 
-    const { skill_name, scan_grade, pre_write_actions, files } = payload;
+    const { skill_name, scan_grade, scan_status, pre_write_actions, files } = payload;
 
-    console.log(`✓ Skill compiled successfully (Scan Grade: ${scan_grade})`);
+    const statusSuffix = scan_status ? `, ${scan_status}` : '';
+    console.log(`✓ Skill compiled successfully (Scan Grade: ${scan_grade}${statusSuffix})`);
+
+    // Security gate: refuse to write a skill that failed the scan unless the
+    // user explicitly accepts the risk. `safe_to_install` is false on a FAIL.
+    if (payload.safe_to_install === false && !options.acceptRisk) {
+      console.error('');
+      console.error(`✗ Security scan did not pass (grade ${scan_grade}). No files were written.`);
+      console.error(`  See the findings:   npx gitscape scan ${repoUrl}`);
+      console.error(`  Install anyway:      npx gitscape ${repoUrl} --accept-risk`);
+      process.exit(1);
+    }
+    if (payload.safe_to_install === false && options.acceptRisk) {
+      console.warn(`  ⚠ Installing despite a failing scan (grade ${scan_grade}) — --accept-risk was set.`);
+    }
 
     // Execute pre-write actions (e.g. delete old version of skill before writing new files).
     // This ensures stale reference files from a previous install don't linger after an update.
@@ -340,10 +408,37 @@ async function handleCompile(repoUrl, options) {
   }
 }
 
+// Interactive menu shown when `npx gitscape` is run with no arguments in a TTY.
+async function interactiveMenu() {
+  const { createInterface } = await import('node:readline');
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  const ask = (q) => new Promise((resolve) => rl.question(q, resolve));
+  try {
+    console.log('\nGitScape — what would you like to do?\n');
+    console.log('  1) Compile a repo into an Agent Skill');
+    console.log('  2) Security-scan a repo (report only — writes nothing)\n');
+    const choice = (await ask('Enter choice [1-2]: ')).trim();
+    const url = (await ask('GitHub repo URL: ')).trim();
+    rl.close();
+    if (!url) {
+      console.error('No repository URL provided.');
+      process.exit(1);
+    }
+    return choice === '2' ? handleScan(url, {}) : handleCompile(url, {});
+  } finally {
+    rl.close();
+  }
+}
+
 async function main() {
   const args = process.argv.slice(2);
-  
-  if (args.length === 0 || args.includes('--help') || args.includes('-h')) {
+
+  if (args.includes('--help') || args.includes('-h')) {
+    printHelp();
+    process.exit(0);
+  }
+  if (args.length === 0) {
+    if (process.stdin.isTTY) return interactiveMenu();
     printHelp();
     process.exit(0);
   }
@@ -354,8 +449,8 @@ async function main() {
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--token' && i + 1 < args.length) {
       options.token = args[++i];
-
-
+    } else if (args[i] === '--accept-risk') {
+      options.acceptRisk = true;
     } else if (args[i].startsWith('--')) {
       console.warn(`Warning: Unknown option ignored: ${args[i]}`);
     } else {
@@ -366,6 +461,16 @@ async function main() {
   if (cleanArgs[0] === 'init') {
     await handleInit(options);
     process.exit(0);
+  }
+
+  if (cleanArgs[0] === 'scan') {
+    const target = cleanArgs[1];
+    if (!target || (!target.startsWith('http://') && !target.startsWith('https://') && !target.includes('git@'))) {
+      console.error(`Error: Please provide a valid repository URL to scan.`);
+      process.exit(1);
+    }
+    await handleScan(target, options);
+    return;  // handleScan calls process.exit
   }
 
   if (cleanArgs[0] === 'remove' || cleanArgs[0] === 'uninstall') {
