@@ -5,6 +5,28 @@ import path from 'path';
 
 const MCP_URL = 'https://gitscape.ai/api/mcp';
 
+// ─── Terminal colors ────────────────────────────────────────────────────────
+// Raw ANSI (256-color) so the CLI stays zero-dependency. Colors mirror the web
+// UI's grade palette (A emerald · B lime · C amber · F red). Suppressed when
+// output isn't a TTY or NO_COLOR is set; FORCE_COLOR overrides.
+const USE_COLOR = !process.env.NO_COLOR && (process.stdout.isTTY || !!process.env.FORCE_COLOR);
+const RESET = '\x1b[0m';
+function paint(code, s) {
+  return USE_COLOR ? `\x1b[${code}m${s}${RESET}` : String(s);
+}
+// 256-color codes chosen to match the frontend Tailwind grade/severity colors.
+const GRADE_COLOR = { A: '1;38;5;79', B: '1;38;5;155', C: '1;38;5;221', D: '1;38;5;215', E: '1;38;5;209', F: '1;38;5;203' };
+const STATUS_COLOR = { PASS: '38;5;79', WARN: '38;5;221', FAIL: '38;5;203' };
+const SEVERITY_COLOR = {
+  critical: '1;38;5;203', high: '38;5;203', medium: '38;5;221', low: '38;5;179', info: '38;5;245',
+};
+function gradeText(grade) {
+  return paint(GRADE_COLOR[grade] || '1', `grade ${grade || '?'}`);
+}
+function statusText(status) {
+  return paint(STATUS_COLOR[status] || '0', status);
+}
+
 // ─── IDE detection table ───────────────────────────────────────────────────────
 // Each entry describes where to find the IDE's config and what key to use.
 // "url"       → Claude, Cursor, VS Code Continue, IntelliJ, Zed
@@ -263,14 +285,15 @@ function apiUrl(routePath) {
 function printScanReport(r) {
   const findings = r.findings || [];
   console.log('');
-  console.log(`  ScapeGuard: grade ${r.grade || '?'} · ${r.status} · risk ${r.risk_score ?? '?'} · ${findings.length} finding${findings.length === 1 ? '' : 's'}`);
+  console.log(`  ScapeGuard: ${gradeText(r.grade)} · ${statusText(r.status)} · risk ${r.risk_score ?? '?'} · ${findings.length} finding${findings.length === 1 ? '' : 's'}`);
   const order = ['critical', 'high', 'medium', 'low', 'info'];
   const bySev = {};
   for (const f of findings) (bySev[f.severity] = bySev[f.severity] || []).push(f);
   for (const sev of order) {
     for (const f of bySev[sev] || []) {
       const loc = `${f.file || '?'}${f.line ? ':' + f.line : ''}`;
-      console.log(`    [${sev.toUpperCase()}] ${f.id || f.rule} — ${loc}`);
+      const tag = paint(SEVERITY_COLOR[sev] || '0', `[${sev.toUpperCase()}]`);
+      console.log(`    ${tag} ${f.id || f.rule} — ${loc}`);
       if (f.message) console.log(`           ${f.message}`);
     }
   }
@@ -292,10 +315,10 @@ async function handleScan(repoUrl, options) {
     const r = await response.json();
     printScanReport(r);
     if (r.safe_to_install) {
-      console.log(`✓ Safe to install (grade ${r.grade}). Nothing was written.`);
+      console.log(`${paint(STATUS_COLOR.PASS, '✓')} Safe to install (${gradeText(r.grade)}). Nothing was written.`);
       process.exit(0);
     } else {
-      console.log(`✗ ${r.status} (grade ${r.grade}): this repo's skill would not pass the security gate.`);
+      console.log(`${paint(STATUS_COLOR.FAIL, '✗')} ${statusText(r.status)} (${gradeText(r.grade)}): this repo's skill would not pass the security gate.`);
       process.exit(1);  // non-zero so CI can gate on it
     }
   } catch (err) {
@@ -349,14 +372,14 @@ async function handleCompile(repoUrl, options) {
 
     const { skill_name, scan_grade, scan_status, pre_write_actions, files } = payload;
 
-    const statusSuffix = scan_status ? `, ${scan_status}` : '';
-    console.log(`✓ Skill compiled successfully (Scan Grade: ${scan_grade}${statusSuffix})`);
+    const statusSuffix = scan_status ? ` · ${statusText(scan_status)}` : '';
+    console.log(`✓ Skill compiled successfully (${gradeText(scan_grade)}${statusSuffix})`);
 
     // Security gate: refuse to write a skill that failed the scan unless the
     // user explicitly accepts the risk. `safe_to_install` is false on a FAIL.
     if (payload.safe_to_install === false && !options.acceptRisk) {
       console.error('');
-      console.error(`✗ Security scan did not pass (grade ${scan_grade}). No files were written.`);
+      console.error(`${paint(STATUS_COLOR.FAIL, '✗')} Security scan did not pass (${gradeText(scan_grade)}). No files were written.`);
       console.error(`  See the findings:   npx gitscape scan ${repoUrl}`);
       console.error(`  Install anyway:      npx gitscape ${repoUrl} --accept-risk`);
       process.exit(1);
