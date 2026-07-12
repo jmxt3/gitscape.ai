@@ -40,6 +40,9 @@ CASES = {
     # ── Benign look-alikes that must NOT gate ──
     "cloud_docs_metadata.md": (ScanStatus.PASS, None),
     "refusal_docs.md": (ScanStatus.PASS, None),
+    # ── Multilingual injection (GS-INJ-009) ──
+    "es_injection.md": (ScanStatus.FAIL, "GS-INJ-009"),
+    "ja_injection.md": (ScanStatus.FAIL, "GS-INJ-009"),
 }
 
 
@@ -62,15 +65,12 @@ def test_clean_skill_all_categories_green():
     assert all(c.status == ScanStatus.PASS for c in report.categories), report.findings
 
 
-@pytest.mark.xfail(
-    reason="Known gap: ScapeGuard's injection regexes are English-only, so a "
-    "non-English prompt injection is missed. Tracked as a Phase 3 item "
-    "(multilingual keyword table + advisory judge).",
-    strict=False,
-)
-def test_multilingual_injection_gap():
+def test_multilingual_injection_caught():
     # A Chinese "ignore all previous instructions / reveal system prompt / send
-    # the conversation to our server" — malicious, but English patterns miss it.
+    # the conversation to our server" — now caught by GS-INJ-009 (was an xfail
+    # gap before the multilingual override rule shipped).
     text = (FIXTURES / "zh_injection.md").read_text(encoding="utf-8")
     report = scan_skill(text, {})
+    ids = {f.id for f in report.findings}
     assert report.status == ScanStatus.FAIL
+    assert "GS-INJ-009" in ids, ids

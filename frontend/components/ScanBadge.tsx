@@ -159,6 +159,7 @@ const SCAPEGUARD_RULE_LABELS: Record<string, string> = {
   "GS-INJ-006": "Anti-Refusal — Jailbreak framing that disables safety or forces an unrestricted persona",
   "GS-INJ-007": "Concealment — Instructs the agent to hide an action from the user",
   "GS-INJ-008": "Conditional Trigger — Dormant payload gated on a time or usage condition",
+  "GS-INJ-009": "Multilingual Override — Non-English instruction-override / system-prompt-leak phrasing",
 
   // Obfuscation (GS-OBF)
   "GS-OBF-001": "Invisible Characters — Hidden zero-width or bidirectional control character",

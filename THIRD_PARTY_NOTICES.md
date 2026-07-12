@@ -18,8 +18,9 @@ registry and deterministic gate. Derived material includes:
 
 - **Detection patterns / keyword tables** in:
   - `backend/app/skillforge/scan/rules/injection.py` — anti-refusal / jailbreak,
-    concealment ("do not tell the user"), and conditional-trigger cues
-    (GS-INJ-006, GS-INJ-007, GS-INJ-008).
+    concealment ("do not tell the user"), conditional-trigger cues, and the
+    multilingual instruction-override phrases (GS-INJ-006 … GS-INJ-009), the
+    latter informed by SkillSpector's multilingual test corpus.
   - `backend/app/skillforge/scan/rules/exfil.py` — cloud-metadata / SSRF
     internal-endpoint signatures (GS-EXF-006).
   - `backend/app/skillforge/scan/rules/agency.py` — memory-poisoning and
