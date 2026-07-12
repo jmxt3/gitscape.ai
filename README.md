@@ -272,22 +272,30 @@ cd cli && npm link
     ```bash
     npx gitscape https://github.com/owner/repo
     ```
+    If the ScapeGuard scan **fails** (grade `F`), the CLI blocks the install and writes nothing — re-run with `--accept-risk` to override.
 
-3.  **CLI Command Options**
+3.  **Scan a Repository (Without Installing)**
+    Runs ScapeGuard against a repo and prints the security verdict (grade, risk score, findings) **without building or installing a skill** — nothing is written. Exits non-zero on a failing scan, so it doubles as a CI gate:
+    ```bash
+    npx gitscape scan https://github.com/owner/repo
+    ```
+
+4.  **CLI Command Options**
 
 | Option | Description |
 | :--- | :--- |
 | `--token <pat>` | GitHub Personal Access Token (for private repositories) |
+| `--accept-risk` | Install even if the security scan fails (grade `F`). Off by default |
 | `--type <type>` | Skill type: `code` or `framework` (default: `code`) |
 | `--server <url>` | Override compiler API (default: `https://gitscape-143600285956.us-central1.run.app`) |
 
-4.  **Updating a Skill**
+5.  **Updating a Skill**
     Just re-run the install command. The CLI automatically wipes the target directory to avoid stale files while keeping your `AGENTS.md` registrations intact:
     ```bash
     npx gitscape https://github.com/owner/repo
     ```
 
-5.  **Removing a Skill**
+6.  **Removing a Skill**
     Deletes the directory and cleans up `AGENTS.md` and `CLAUDE.md`:
     ```bash
     npx gitscape remove <skill_name>
