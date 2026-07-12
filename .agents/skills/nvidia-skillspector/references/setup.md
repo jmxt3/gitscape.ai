@@ -23,4 +23,7 @@ make install-dev
 make docker-build
 docker run --rm -v "$PWD:/scan" skillspector scan ./my-skill/ --no-llm
 docker run --rm \
+python -m contrib.batch_scan.batch_scan ./my-skills/ --no-llm
+python -m contrib.batch_scan.batch_scan ./my-skills/ --workers 20 -f json -o report.json
+python -m contrib.batch_scan.batch_scan ./tests/fixtures/ -f terminal --workers 20
 ```

@@ -678,6 +678,30 @@
               }
             },
             {
+              "id": "GS-EXE-010",
+              "name": "execution.behavioral_dangerous_call",
+              "shortDescription": {
+                "text": "Dynamic code execution / dangerous call detected by AST analysis."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "category": "malicious_execution",
+                "owasp-ast": [
+                  "AST02"
+                ],
+                "owasp-llm": [
+                  "LLM05"
+                ],
+                "tags": [
+                  "malicious_execution",
+                  "AST02",
+                  "LLM05"
+                ]
+              }
+            },
+            {
               "id": "GS-EXF-001",
               "name": "exfil.send_secrets",
               "shortDescription": {
@@ -1370,12 +1394,141 @@
           ]
         }
       },
-      "results": [],
+      "results": [
+        {
+          "ruleId": "GS-EXE-010",
+          "level": "note",
+          "message": {
+            "text": "Dangerous dynamic execution via `subprocess.run` (AST-detected)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/mcp_clean_skill/scripts/format.py"
+                },
+                "region": {
+                  "startLine": 78
+                }
+              }
+            }
+          ],
+          "properties": {
+            "category": "malicious_execution",
+            "confidence": "low",
+            "severity": "low",
+            "owasp-ast": [
+              "AST02"
+            ],
+            "owasp-llm": [
+              "LLM05"
+            ],
+            "skillFile": "references/examples.md"
+          },
+          "ruleIndex": 27
+        },
+        {
+          "ruleId": "GS-EXE-010",
+          "level": "note",
+          "message": {
+            "text": "Dangerous dynamic execution via `subprocess.run` (AST-detected)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/mcp_underdeclared_skill/scripts/agent.py"
+                },
+                "region": {
+                  "startLine": 120
+                }
+              }
+            }
+          ],
+          "properties": {
+            "category": "malicious_execution",
+            "confidence": "low",
+            "severity": "low",
+            "owasp-ast": [
+              "AST02"
+            ],
+            "owasp-llm": [
+              "LLM05"
+            ],
+            "skillFile": "references/examples.md"
+          },
+          "ruleIndex": 27
+        },
+        {
+          "ruleId": "GS-EXE-010",
+          "level": "note",
+          "message": {
+            "text": "Dangerous dynamic execution via `subprocess.run` (AST-detected)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/sdi/sdi2_inappropriate/formatter.py"
+                },
+                "region": {
+                  "startLine": 154
+                }
+              }
+            }
+          ],
+          "properties": {
+            "category": "malicious_execution",
+            "confidence": "low",
+            "severity": "low",
+            "owasp-ast": [
+              "AST02"
+            ],
+            "owasp-llm": [
+              "LLM05"
+            ],
+            "skillFile": "references/examples.md"
+          },
+          "ruleIndex": 27
+        },
+        {
+          "ruleId": "GS-EXE-010",
+          "level": "note",
+          "message": {
+            "text": "Dangerous dynamic execution via `subprocess.run` (AST-detected)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/sdi/sdi2_inappropriate/formatter.py"
+                },
+                "region": {
+                  "startLine": 153
+                }
+              }
+            }
+          ],
+          "properties": {
+            "category": "malicious_execution",
+            "confidence": "low",
+            "severity": "low",
+            "owasp-ast": [
+              "AST02"
+            ],
+            "owasp-llm": [
+              "LLM05"
+            ],
+            "skillFile": "references/examples.md"
+          },
+          "ruleIndex": 27
+        }
+      ],
       "properties": {
-        "skillHash": "sha256:06663b511cf0fbc2a207b5132e171e5f7e103dbcd90bbc20e9a474c235c4e9f9",
-        "status": "PASS",
-        "riskScore": 0,
-        "grade": "A",
+        "skillHash": "sha256:7e20fcdbe763b750fe6439aee72b1cfaa79b08caf0363a3b4317103310ada683",
+        "status": "WARN",
+        "riskScore": 5,
+        "grade": "B",
         "filesScanned": 6
       }
     }

@@ -2,16 +2,16 @@
 
 Generated from parsed symbols — names, signatures, and the one-line purpose from each docstring/comment.
 
-## `contrib/multilingual/annotation.py`
-*source: contrib/multilingual/annotation.py*
+## `contrib/batch_scan/annotation.py`
+*source: contrib/batch_scan/annotation.py*
 
 - **`is_language_compatible`** — `def is_language_compatible(rule_id: str, detected_language: str) -> bool`
   Return ``True`` when *rule_id* is reliable for *detected_language*.
 - **`annotate_findings`** — `def annotate_findings( issues: list[dict[str, object]], detected_language: str, ) -> list[dict[str, object]]`
   Add a ``language_compatible`` field to each issue dict.
 
-## `contrib/multilingual/api_pool.py`
-*source: contrib/multilingual/api_pool.py*
+## `contrib/batch_scan/api_pool.py`
+*source: contrib/batch_scan/api_pool.py*
 
 - **`ApiKey`** — `class ApiKey`
   A single API key with concurrency and rate-limit metadata.
@@ -50,28 +50,28 @@ Generated from parsed symbols — names, signatures, and the one-line purpose fr
 - **`create_api_key_pool_from_env`** — `def create_api_key_pool_from_env( max_concurrent_per_key: int = _DEFAULT_MAX_CONCURRENT_PER_KEY, ) -> ApiKeyPool | None`
   Build an :class:`ApiKeyPool` from environment variables.
 
-## `contrib/multilingual/batch_scan.py`
-*source: contrib/multilingual/batch_scan.py*
+## `contrib/batch_scan/batch_scan.py`
+*source: contrib/batch_scan/batch_scan.py*
 
 - **`main`** — `def main() -> None`
   Entry point for the batch scanner CLI.
 
-## `contrib/multilingual/detection.py`
-*source: contrib/multilingual/detection.py*
+## `contrib/batch_scan/detection.py`
+*source: contrib/batch_scan/detection.py*
 
 - **`detect_language`** — `def detect_language(content: str) -> str`
   Heuristic single-file language detection.
 - **`detect_skill_language`** — `def detect_skill_language(file_cache: dict[str, str]) -> str`
   Determine the dominant language across all files in a skill.
 
-## `contrib/multilingual/discovery.py`
-*source: contrib/multilingual/discovery.py*
+## `contrib/batch_scan/discovery.py`
+*source: contrib/batch_scan/discovery.py*
 
 - **`discover_skills`** — `def discover_skills(root: Path) -> list[Path]`
   Recursively find all skill directories under *root*.
 
-## `contrib/multilingual/gap_fill.py`
-*source: contrib/multilingual/gap_fill.py*
+## `contrib/batch_scan/gap_fill.py`
+*source: contrib/batch_scan/gap_fill.py*
 
 - **`GapFillFinding`** — `class GapFillFinding(BaseModel)`
   A single vulnerability finding from a gap-fill LLM call.
@@ -89,14 +89,14 @@ Generated from parsed symbols — names, signatures, and the one-line purpose fr
 - **`run_gap_fill`** — `def run_gap_fill( file_cache: dict[str, str], language: str, model: str | None = None, api_pool: "ApiKeyPool | None" = None, ) -> list[Finding]`
   Run a single targeted LLM pass covering the 8 gap-fill rules.
 
-## `contrib/multilingual/reports.py`
-*source: contrib/multilingual/reports.py*
+## `contrib/batch_scan/reports.py`
+*source: contrib/batch_scan/reports.py*
 
 - **`sorted_results`** — `def sorted_results(results: list[dict[str, object]]) -> list[dict[str, object]]`
   Return *results* sorted by risk score descending.
 
-## `contrib/multilingual/runner.py`
-*source: contrib/multilingual/runner.py*
+## `contrib/batch_scan/runner.py`
+*source: contrib/batch_scan/runner.py*
 
 - **`set_api_pool`** — `def set_api_pool(pool: "ApiKeyPool | None") -> None`
   Replace the LLM chat-model factory with a pooled version.

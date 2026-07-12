@@ -8,7 +8,7 @@ Directory structure:
     │       ├── ci.yml
     │       └── scorecard.yml
     ├── contrib
-    │   └── multilingual
+    │   └── batch_scan
     │       ├── docs
     │       │   ├── archive
     │       │   │   ├── ARCHITECTURE_DEEP_DIVE.md
@@ -918,6 +918,33 @@ skillspector scan ./my-skill/ --format markdown --output report.md
 skillspector scan ./my-skill/ --format sarif --output report.sarif
 ```
 
+### Batch Scanning
+
+Scan entire directories of skills in parallel from `contrib/batch_scan/`:
+
+```bash
+python -m contrib.batch_scan.batch_scan ./my-skills/ --no-llm
+python -m contrib.batch_scan.batch_scan ./my-skills/ --workers 20 -f json -o report.json 
+python -m contrib.batch_scan.batch_scan ./tests/fixtures/ -f terminal --workers 20
+```
+
+Supports multilingual detection (zh/ja/ko) and terminal/JSON/Markdown output.
+
+For LLM scans with higher concurrency, configure multiple API keys following
+[`.env.example`](contrib/batch_scan/.env.example) — the pool improves throughput
+and resilience, provided the keys don't share an account-level rate limit.
+
+See the [contrib guide](contrib/batch_scan/docs/) for details.
+
+> **Note on LLM support:** The default configuration targets DeepSeek as the
+> cheapest public option. DeepSeek-Chat is
+> [expected to sunset](https://api-docs.deepseek.com/), and the contributor
+> does not have hardware to test against local models. The batch scanner was
+> originally tested with OpenAI-compatible endpoints — DeepSeek's lack of
+> structured-output support required manual JSON-parsing patches. If you can
+> contribute a more universal backend (Ollama, vLLM, or a different provider),
+> PRs are very welcome.
+
 ### Suppressing False Positives (baseline)
 
 Suppress known/accepted findings so the risk score reflects only un-triaged
@@ -1668,7 +1695,7 @@ at the root of this repository.
 
 
 ================================================
-FILE: contrib/multilingual/CONTRIBUTING.md
+FILE: contrib/batch_scan/CONTRIBUTING.md
 ================================================
 # Contributing — Multilingual Batch Scanner
 
@@ -1682,12 +1709,12 @@ FILE: contrib/multilingual/CONTRIBUTING.md
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e .
-cp contrib/multilingual/.env.example .env   # edit with your API keys
+cp contrib/batch_scan/.env.example .env   # edit with your API keys
 ```
 
 Verify everything works:
 ```bash
-python -m contrib.multilingual.batch_scan ./tests/fixtures/ -f terminal --workers 8
+python -m contrib.batch_scan.batch_scan ./tests/fixtures/ -f terminal --workers 8
 ```
 
 ---
@@ -1695,7 +1722,7 @@ python -m contrib.multilingual.batch_scan ./tests/fixtures/ -f terminal --worker
 ## Project Map
 
 ```
-contrib/multilingual/
+contrib/batch_scan/
 ├── batch_scan.py          # CLI entry + ThreadPoolExecutor (start here)
 ├── runner.py              # graph.invoke() wrapper + 7 patches + pool wiring (core)
 ├── gap_fill.py            # GapFillAnalyzer — LLM pass for 8 uncovered rules
@@ -1735,30 +1762,30 @@ contrib/multilingual/
 
 ```bash
 # All 164 tests
-python contrib/multilingual/tests/tests-pro/random_numbered.py       # 120 unit (seed=42)
-python contrib/multilingual/tests/test_pool_wiring.py                 # 4 smoke checks
-python contrib/multilingual/tests/test_monkeypatch_invasiveness.py    # 14 thematic
-python contrib/multilingual/tests/test_monkeypatch_fragility.py       # 26 thematic
+python contrib/batch_scan/tests/tests-pro/random_numbered.py       # 120 unit (seed=42)
+python contrib/batch_scan/tests/test_pool_wiring.py                 # 4 smoke checks
+python contrib/batch_scan/tests/test_monkeypatch_invasiveness.py    # 14 thematic
+python contrib/batch_scan/tests/test_monkeypatch_fragility.py       # 26 thematic
 
 # Review-themed only
 python -m unittest \
-  contrib.multilingual.tests.test_monkeypatch_invasiveness \
-  contrib.multilingual.tests.test_monkeypatch_fragility -v
-python contrib/multilingual/tests/test_pool_wiring.py
+  contrib.batch_scan.tests.test_monkeypatch_invasiveness \
+  contrib.batch_scan.tests.test_monkeypatch_fragility -v
+python contrib/batch_scan/tests/test_pool_wiring.py
 
 # Mutation test
-python contrib/multilingual/tests/tests-pro/mutation_max.py
+python contrib/batch_scan/tests/tests-pro/mutation_max.py
 
 # End-to-end (fixture suite)
-python -m contrib.multilingual.batch_scan ./tests/fixtures/ -f terminal --workers 8
-python -m contrib.multilingual.batch_scan ./tests/fixtures/ -f terminal --workers 8 --no-llm
+python -m contrib.batch_scan.batch_scan ./tests/fixtures/ -f terminal --workers 8
+python -m contrib.batch_scan.batch_scan ./tests/fixtures/ -f terminal --workers 8 --no-llm
 ```
 
 **Three commands catch most regressions:**
 ```bash
-python contrib/multilingual/tests/tests-pro/random_numbered.py
-python contrib/multilingual/tests/test_pool_wiring.py
-python -m contrib.multilingual.batch_scan ./tests/fixtures/ -f terminal --workers 8
+python contrib/batch_scan/tests/tests-pro/random_numbered.py
+python contrib/batch_scan/tests/test_pool_wiring.py
+python -m contrib.batch_scan.batch_scan ./tests/fixtures/ -f terminal --workers 8
 ```
 
 ---
@@ -1822,7 +1849,7 @@ See `docs/archive/FUTURE_WORK.md` for 12 future directions with effort estimates
 
 
 ================================================
-FILE: contrib/multilingual/__init__.py
+FILE: contrib/batch_scan/__init__.py
 ================================================
 # SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
@@ -1896,7 +1923,7 @@ __all__ = [
 
 
 ================================================
-FILE: contrib/multilingual/annotation.py
+FILE: contrib/batch_scan/annotation.py
 ================================================
 # SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
@@ -2001,7 +2028,7 @@ def annotate_findings(
 
 
 ================================================
-FILE: contrib/multilingual/api_pool.py
+FILE: contrib/batch_scan/api_pool.py
 ================================================
 # SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
@@ -2625,7 +2652,7 @@ def create_api_key_pool_from_env(
 
 
 ================================================
-FILE: contrib/multilingual/batch_scan.py
+FILE: contrib/batch_scan/batch_scan.py
 ================================================
 # SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
@@ -2669,9 +2696,9 @@ alike.  The pool is wired in via :func:`~.runner.set_api_pool` (monkey-patches
 
 Usage::
 
-    python -m contrib.multilingual.batch_scan ./skills/ --no-llm
-    python -m contrib.multilingual.batch_scan ./skills/ -f json -o report.json
-    python -m contrib.multilingual.batch_scan ./skills/ --lang zh --workers 8
+    python -m contrib.batch_scan.batch_scan ./skills/ --no-llm
+    python -m contrib.batch_scan.batch_scan ./skills/ -f json -o report.json
+    python -m contrib.batch_scan.batch_scan ./skills/ --lang zh --workers 8
 """
 
 from __future__ import annotations
@@ -3098,7 +3125,7 @@ if __name__ == "__main__":
 
 
 ================================================
-FILE: contrib/multilingual/detection.py
+FILE: contrib/batch_scan/detection.py
 ================================================
 # SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
@@ -3194,7 +3221,7 @@ def detect_skill_language(file_cache: dict[str, str]) -> str:
 
 
 ================================================
-FILE: contrib/multilingual/discovery.py
+FILE: contrib/batch_scan/discovery.py
 ================================================
 # SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
@@ -3238,7 +3265,7 @@ def discover_skills(root: Path) -> list[Path]:
 
 
 ================================================
-FILE: contrib/multilingual/docs/DESIGN.md
+FILE: contrib/batch_scan/docs/DESIGN.md
 ================================================
 # Design — Multilingual Batch Scanner
 
@@ -3250,7 +3277,7 @@ FILE: contrib/multilingual/docs/DESIGN.md
 
 ```
 CLI
- │  python -m contrib.multilingual.batch_scan ./tests/fixtures/ --workers 7
+ │  python -m contrib.batch_scan.batch_scan ./tests/fixtures/ --workers 7
  │
  ▼
 batch_scan.py :: main()
@@ -3429,7 +3456,7 @@ HTTP-level timeouts (Patch 6) prevent most hangs from reaching the 90s ceiling.
 ## File layout
 
 ```
-contrib/multilingual/
+contrib/batch_scan/
 ├── __init__.py          # package init + dotenv preload
 ├── batch_scan.py        # CLI + ThreadPoolExecutor
 ├── runner.py            # graph wrapper + setup_deepseek_compat()
@@ -3562,7 +3589,7 @@ that have zero recall on non-English text.
 
 
 ================================================
-FILE: contrib/multilingual/docs/README.md
+FILE: contrib/batch_scan/docs/README.md
 ================================================
 # Multilingual Batch Scanner for SkillSpector
 
@@ -3581,7 +3608,7 @@ Zero changes to upstream `src/skillspector/`.
 ## What it does
 
 ```
-python -m contrib.multilingual.batch_scan ./tests/fixtures/ -f terminal --workers 7
+python -m contrib.batch_scan.batch_scan ./tests/fixtures/ -f terminal --workers 7
 ```
 
 1. Finds all `SKILL.md`-containing directories under the input root
@@ -3604,7 +3631,7 @@ source .venv/bin/activate
 pip install -e .
 
 # Copy and edit the environment template
-cp contrib/multilingual/.env.example .env
+cp contrib/batch_scan/.env.example .env
 ```
 
 The `.env` file needs these keys (see `.env.example` for the full template):
@@ -3626,19 +3653,19 @@ The `.env` file needs these keys (see `.env.example` for the full template):
 ### Static-only (fast, no API keys needed)
 
 ```bash
-python -m contrib.multilingual.batch_scan ./tests/fixtures/ --no-llm
+python -m contrib.batch_scan.batch_scan ./tests/fixtures/ --no-llm
 ```
 
 ### Full LLM scan
 
 ```bash
-python -m contrib.multilingual.batch_scan ./tests/fixtures/ -f terminal --workers 7
+python -m contrib.batch_scan.batch_scan ./tests/fixtures/ -f terminal --workers 7
 ```
 
 ### Test with built-in fixtures
 
 ```bash
-python -m contrib.multilingual.batch_scan ./tests/fixtures/ -f terminal --workers 8
+python -m contrib.batch_scan.batch_scan ./tests/fixtures/ -f terminal --workers 8
 ```
 
 23 skills designed to exercise every detection rule.
@@ -3763,7 +3790,7 @@ static rules, LLM finds 2–8 additional issues per skill.
 skillspector scan ./tests/fixtures/malicious_skill/ -f json -o upstream.json
 
 # Batch — scan all skills
-python -m contrib.multilingual.batch_scan ./tests/fixtures/ -f json -o batch.json
+python -m contrib.batch_scan.batch_scan ./tests/fixtures/ -f json -o batch.json
 ```
 
 Key differences in batch output:
@@ -3777,49 +3804,49 @@ Key differences in batch output:
 ### Scan (LLM mode)
 
 ```bash
-python -m contrib.multilingual.batch_scan ./tests/fixtures/ -f terminal --workers 7    # default
-python -m contrib.multilingual.batch_scan ./tests/fixtures/ -f terminal --workers 1    # sequential, easy to read
-python -m contrib.multilingual.batch_scan ./tests/fixtures/ -f terminal --workers 20   # high throughput
+python -m contrib.batch_scan.batch_scan ./tests/fixtures/ -f terminal --workers 7    # default
+python -m contrib.batch_scan.batch_scan ./tests/fixtures/ -f terminal --workers 1    # sequential, easy to read
+python -m contrib.batch_scan.batch_scan ./tests/fixtures/ -f terminal --workers 20   # high throughput
 ```
 
 ### Scan (static-only, no API keys)
 
 ```bash
-python -m contrib.multilingual.batch_scan ./tests/fixtures/ --no-llm
-python -m contrib.multilingual.batch_scan ./tests/fixtures/ --no-require-llm --no-llm  # skip LLM even for non-English
+python -m contrib.batch_scan.batch_scan ./tests/fixtures/ --no-llm
+python -m contrib.batch_scan.batch_scan ./tests/fixtures/ --no-require-llm --no-llm  # skip LLM even for non-English
 ```
 
 ### Output formats
 
 ```bash
-python -m contrib.multilingual.batch_scan ./tests/fixtures/ -f terminal                # default (Rich)
-python -m contrib.multilingual.batch_scan ./tests/fixtures/ -f json -o report.json
-python -m contrib.multilingual.batch_scan ./tests/fixtures/ -f markdown -o report.md
+python -m contrib.batch_scan.batch_scan ./tests/fixtures/ -f terminal                # default (Rich)
+python -m contrib.batch_scan.batch_scan ./tests/fixtures/ -f json -o report.json
+python -m contrib.batch_scan.batch_scan ./tests/fixtures/ -f markdown -o report.md
 ```
 
 ### Fixture test (built-in 23 skills)
 
 ```bash
-python -m contrib.multilingual.batch_scan ./tests/fixtures/ -f terminal --workers 8
-python -m contrib.multilingual.batch_scan ./tests/fixtures/ -f terminal --workers 8 --no-llm
-python -m contrib.multilingual.batch_scan ./tests/fixtures/ -f json -o report.json --workers 8
+python -m contrib.batch_scan.batch_scan ./tests/fixtures/ -f terminal --workers 8
+python -m contrib.batch_scan.batch_scan ./tests/fixtures/ -f terminal --workers 8 --no-llm
+python -m contrib.batch_scan.batch_scan ./tests/fixtures/ -f json -o report.json --workers 8
 ```
 
 ### Language override
 
 ```bash
-python -m contrib.multilingual.batch_scan ./tests/fixtures/ --lang auto --workers 4    # detect (default)
-python -m contrib.multilingual.batch_scan ./tests/fixtures/ --lang zh -f terminal --workers 4
-python -m contrib.multilingual.batch_scan ./tests/fixtures/ --lang ja -f terminal --workers 4
-python -m contrib.multilingual.batch_scan ./tests/fixtures/ --lang ko -f terminal --workers 4
-python -m contrib.multilingual.batch_scan ./tests/fixtures/ --lang en -f terminal --workers 4   # skip gap-fill
+python -m contrib.batch_scan.batch_scan ./tests/fixtures/ --lang auto --workers 4    # detect (default)
+python -m contrib.batch_scan.batch_scan ./tests/fixtures/ --lang zh -f terminal --workers 4
+python -m contrib.batch_scan.batch_scan ./tests/fixtures/ --lang ja -f terminal --workers 4
+python -m contrib.batch_scan.batch_scan ./tests/fixtures/ --lang ko -f terminal --workers 4
+python -m contrib.batch_scan.batch_scan ./tests/fixtures/ --lang en -f terminal --workers 4   # skip gap-fill
 ```
 
 ### Debugging
 
 ```bash
-python -m contrib.multilingual.batch_scan ./tests/fixtures/ --workers 1 -V             # single worker + verbose
-python -m contrib.multilingual.batch_scan ./tests/fixtures/ --workers 4 -V
+python -m contrib.batch_scan.batch_scan ./tests/fixtures/ --workers 1 -V             # single worker + verbose
+python -m contrib.batch_scan.batch_scan ./tests/fixtures/ --workers 4 -V
 skillspector scan ./tests/fixtures/malicious_skill/ --no-llm                   # verify upstream works
 ```
 
@@ -3827,13 +3854,13 @@ skillspector scan ./tests/fixtures/malicious_skill/ --no-llm                   #
 
 ```bash
 skillspector scan ./tests/fixtures/malicious_skill/ -f json -o upstream.json
-python -m contrib.multilingual.batch_scan ./tests/fixtures/ -f json -o batch.json --workers 4
+python -m contrib.batch_scan.batch_scan ./tests/fixtures/ -f json -o batch.json --workers 4
 ```
 
 ### CI
 
 ```bash
-python -m contrib.multilingual.batch_scan ./tests/fixtures/ -f json -o report.json --workers 8
+python -m contrib.batch_scan.batch_scan ./tests/fixtures/ -f json -o report.json --workers 8
 if [ $? -eq 0 ]; then echo "All clean"; fi
 ```
 
@@ -3860,7 +3887,7 @@ if [ $? -eq 0 ]; then echo "All clean"; fi
 
 ```bash
 # Single worker + verbose output — easiest to read
-python -m contrib.multilingual.batch_scan ./tests/fixtures/ --workers 1 -V
+python -m contrib.batch_scan.batch_scan ./tests/fixtures/ --workers 1 -V
 
 # Verify upstream still works
 skillspector scan ./tests/fixtures/malicious_skill/ --no-llm
@@ -3870,7 +3897,7 @@ skillspector scan ./tests/fixtures/malicious_skill/ --no-llm
 
 ```bash
 # Static-only + skip LLM requirement even for non-English skills
-python -m contrib.multilingual.batch_scan ./tests/fixtures/ --no-require-llm --no-llm
+python -m contrib.batch_scan.batch_scan ./tests/fixtures/ --no-require-llm --no-llm
 ```
 
 ## Exit codes
@@ -3884,7 +3911,7 @@ python -m contrib.multilingual.batch_scan ./tests/fixtures/ --no-require-llm --n
 CI usage:
 
 ```bash
-python -m contrib.multilingual.batch_scan ./tests/fixtures/ -f json -o report.json
+python -m contrib.batch_scan.batch_scan ./tests/fixtures/ -f json -o report.json
 if [ $? -eq 0 ]; then
     echo "All clean"
 fi
@@ -3920,30 +3947,30 @@ See `DESIGN.md` for architecture details and `docs/archive/FUTURE_WORK.md` for s
 # === All 164 tests ===
 
 # Unit tests — random order (seed=42, 120 tests)
-python contrib/multilingual/tests/tests-pro/random_numbered.py
+python contrib/batch_scan/tests/tests-pro/random_numbered.py
 
 # Pool wiring smoke test (4 checks)
-python contrib/multilingual/tests/test_pool_wiring.py
+python contrib/batch_scan/tests/test_pool_wiring.py
 
 # Monkey-patch invasiveness (14 tests)
-python contrib/multilingual/tests/test_monkeypatch_invasiveness.py
+python contrib/batch_scan/tests/test_monkeypatch_invasiveness.py
 
 # Monkey-patch fragility (26 tests)
-python contrib/multilingual/tests/test_monkeypatch_fragility.py
+python contrib/batch_scan/tests/test_monkeypatch_fragility.py
 
 # === Convenience ===
 
 # All review-themed tests in one command
 python -m unittest \
-  contrib.multilingual.tests.test_monkeypatch_invasiveness \
-  contrib.multilingual.tests.test_monkeypatch_fragility -v
-python contrib/multilingual/tests/test_pool_wiring.py
+  contrib.batch_scan.tests.test_monkeypatch_invasiveness \
+  contrib.batch_scan.tests.test_monkeypatch_fragility -v
+python contrib/batch_scan/tests/test_pool_wiring.py
 
 # Mutation test — 30 injected bugs across 4 risk areas
-python contrib/multilingual/tests/tests-pro/mutation_max.py
+python contrib/batch_scan/tests/tests-pro/mutation_max.py
 
 # Sequential pytest (if pytest installed)
-pytest contrib/multilingual/tests/tests-pro/ -v
+pytest contrib/batch_scan/tests/tests-pro/ -v
 ```
 
 ## For PR Reviewers
@@ -4000,7 +4027,7 @@ tests/
 
 
 ================================================
-FILE: contrib/multilingual/docs/REVIEW_RESPONSE.md
+FILE: contrib/batch_scan/docs/REVIEW_RESPONSE.md
 ================================================
 # Response to PR #100 Review
 
@@ -4174,7 +4201,7 @@ to remove the directory despite `ignore_errors=True`.
 
 
 ================================================
-FILE: contrib/multilingual/docs/archive/ARCHITECTURE_DEEP_DIVE.md
+FILE: contrib/batch_scan/docs/archive/ARCHITECTURE_DEEP_DIVE.md
 ================================================
 # SkillSpector Architecture Deep Dive — Concurrency, Safety, and the Contrib Layer
 
@@ -4438,7 +4465,7 @@ SKILLSPECTOR_PROVIDER env var
 The contrib layer sits entirely outside upstream. It imports upstream classes as parents and wraps upstream functions:
 
 ```
-contrib/multilingual/
+contrib/batch_scan/
 ├── batch_scan.py      ← CLI + ThreadPoolExecutor
 ├── runner.py          ← graph.invoke() wrapper + 7 safety patches
 ├── gap_fill.py        ← GapFillAnalyzer(LLMAnalyzerBase)
@@ -4501,7 +4528,7 @@ Until then: **prove value first, discuss merging later.**
 
 
 ================================================
-FILE: contrib/multilingual/docs/archive/DESIGN_HISTORY.md
+FILE: contrib/batch_scan/docs/archive/DESIGN_HISTORY.md
 ================================================
 # Design History — From Concept to Implementation
 
@@ -4519,7 +4546,7 @@ FILE: contrib/multilingual/docs/archive/DESIGN_HISTORY.md
 1. Zero changes to `src/skillspector/`
 2. Subclass and wrap, don't rewrite
 3. Output comparable with standard single-skill scan
-4. All extensions in `contrib/multilingual/`
+4. All extensions in `contrib/batch_scan/`
 
 ---
 
@@ -4528,7 +4555,7 @@ FILE: contrib/multilingual/docs/archive/DESIGN_HISTORY.md
 ### Four-layer model
 
 ```
-CLI layer          python -m contrib.multilingual.batch_scan
+CLI layer          python -m contrib.batch_scan.batch_scan
 Scheduling layer   ThreadPoolExecutor(max_workers=N)
 API Pool layer     ApiKeyPool (multi-key scheduler)
 Graph layer        graph.invoke() per skill (upstream, untouched)
@@ -4601,7 +4628,7 @@ Chose stdlib `unicodedata` over ML-based detectors (e.g., `langdetect`, `fasttex
 ### Files created (9 source + tests + docs)
 
 ```
-contrib/multilingual/
+contrib/batch_scan/
 ├── __init__.py                       # Package init + dotenv pre-loading
 ├── discovery.py                      # Recursive SKILL.md finder
 ├── detection.py                      # Unicode script-ratio detection
@@ -4650,7 +4677,7 @@ contrib/multilingual/
 
 
 ================================================
-FILE: contrib/multilingual/docs/archive/FLOW_DIAGRAM.md
+FILE: contrib/batch_scan/docs/archive/FLOW_DIAGRAM.md
 ================================================
 # Contrib Architecture Flow Diagram
 
@@ -4658,7 +4685,7 @@ FILE: contrib/multilingual/docs/archive/FLOW_DIAGRAM.md
 
 ```
 CLI
- │  python -m contrib.multilingual.batch_scan ./tests/fixtures/ --workers 4 [--no-llm]
+ │  python -m contrib.batch_scan.batch_scan ./tests/fixtures/ --workers 4 [--no-llm]
  │
  ▼
 ┌──────────────────────────────────────────────────────────────────────┐
@@ -4844,7 +4871,7 @@ exit restores the originals.
 
 
 ================================================
-FILE: contrib/multilingual/docs/archive/FUTURE_WORK.md
+FILE: contrib/batch_scan/docs/archive/FUTURE_WORK.md
 ================================================
 # Future Work — Known Limitations & Suggested Directions
 
@@ -5037,7 +5064,7 @@ For code conventions and commit style, see `../CONTRIBUTING.md`.
 
 
 ================================================
-FILE: contrib/multilingual/docs/archive/PITFALLS.md
+FILE: contrib/batch_scan/docs/archive/PITFALLS.md
 ================================================
 # Pitfalls & Lessons Learned
 
@@ -5224,9 +5251,9 @@ declaring a change complete.
 ### The fixture suite is your safety net
 
 ```bash
-python -m contrib.multilingual.batch_scan ./tests/fixtures/ -f terminal --workers 8
-cd contrib/multilingual/tests/tests-pro && python random_numbered.py
-python contrib/multilingual/tests/tests-pro/mutation_max.py
+python -m contrib.batch_scan.batch_scan ./tests/fixtures/ -f terminal --workers 8
+cd contrib/batch_scan/tests/tests-pro && python random_numbered.py
+python contrib/batch_scan/tests/tests-pro/mutation_max.py
 ```
 
 Three commands catch most regressions: batch scan → unit tests → mutation tests.
@@ -5234,7 +5261,7 @@ Run all three after any change to `api_pool.py`, `runner.py`, or `gap_fill.py`.
 
 
 ================================================
-FILE: contrib/multilingual/gap_fill.py
+FILE: contrib/batch_scan/gap_fill.py
 ================================================
 # SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
@@ -5544,7 +5571,7 @@ def run_gap_fill(
 
 
 ================================================
-FILE: contrib/multilingual/reports.py
+FILE: contrib/batch_scan/reports.py
 ================================================
 # SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
@@ -5565,7 +5592,7 @@ FILE: contrib/multilingual/reports.py
 
 All three formatters accept the same ``list[dict]`` result list and
 produce a string.  The entry shape is defined by
-:func:`~contrib.multilingual.runner.entry_from_result`.
+:func:`~contrib.batch_scan.runner.entry_from_result`.
 """
 
 from __future__ import annotations
@@ -5961,7 +5988,7 @@ def _format_markdown(results: list[dict[str, object]]) -> str:
 
 
 ================================================
-FILE: contrib/multilingual/runner.py
+FILE: contrib/batch_scan/runner.py
 ================================================
 # SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
@@ -6758,7 +6785,7 @@ def _rel_name(skill_dir: Path, root: Path) -> str:
 
 
 ================================================
-FILE: contrib/multilingual/tests/conftest.py
+FILE: contrib/batch_scan/tests/conftest.py
 ================================================
 # SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
@@ -6775,7 +6802,7 @@ FILE: contrib/multilingual/tests/conftest.py
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Pytest configuration for contrib.multilingual tests."""
+"""Pytest configuration for contrib.batch_scan tests."""
 
 from __future__ import annotations
 
@@ -6783,7 +6810,7 @@ import pytest
 
 
 def pytest_configure(config: pytest.Config) -> None:
-    """Register custom markers for the contrib.multilingual test suite."""
+    """Register custom markers for the contrib.batch_scan test suite."""
     config.addinivalue_line(
         "markers",
         "slow: tests that take longer than 5 seconds (e.g. subprocess isolation)",
@@ -6791,7 +6818,7 @@ def pytest_configure(config: pytest.Config) -> None:
 
 
 ================================================
-FILE: contrib/multilingual/tests/docs/BUGS_FOUND.md
+FILE: contrib/batch_scan/tests/docs/BUGS_FOUND.md
 ================================================
 # Production Code Bugs Found & Fixed
 
@@ -6856,9 +6883,9 @@ FILE: contrib/multilingual/tests/docs/BUGS_FOUND.md
 
 
 ================================================
-FILE: contrib/multilingual/tests/docs/TEST_DESIGN.md
+FILE: contrib/batch_scan/tests/docs/TEST_DESIGN.md
 ================================================
-# Test Design Document — contrib/multilingual
+# Test Design Document — contrib/batch_scan
 
 > **WHY & HOW.** The design rationale behind every test suite — how each
 > answers a specific concern from the PR #100 review. For coverage maps
@@ -7048,9 +7075,9 @@ Each test design decision follows from a specific constraint:
 
 
 ================================================
-FILE: contrib/multilingual/tests/docs/TEST_GUIDE.md
+FILE: contrib/batch_scan/tests/docs/TEST_GUIDE.md
 ================================================
-# Test Guide — contrib/multilingual
+# Test Guide — contrib/batch_scan
 
 > **WHAT & WHERE.** Coverage map and quick reference. For design rationale
 > — why each suite exists and how it was designed — see `TEST_DESIGN.md`.
@@ -7062,16 +7089,16 @@ FILE: contrib/multilingual/tests/docs/TEST_GUIDE.md
 
 ```bash
 # All 164 tests
-python contrib/multilingual/tests/tests-pro/random_numbered.py    # 120 unit (seed=42)
-python contrib/multilingual/tests/test_pool_wiring.py              # 4 smoke checks
-python contrib/multilingual/tests/test_monkeypatch_invasiveness.py # 14 thematic
-python contrib/multilingual/tests/test_monkeypatch_fragility.py    # 26 thematic
+python contrib/batch_scan/tests/tests-pro/random_numbered.py    # 120 unit (seed=42)
+python contrib/batch_scan/tests/test_pool_wiring.py              # 4 smoke checks
+python contrib/batch_scan/tests/test_monkeypatch_invasiveness.py # 14 thematic
+python contrib/batch_scan/tests/test_monkeypatch_fragility.py    # 26 thematic
 
 # Review-themed only (44 total)
 python -m unittest \
-  contrib.multilingual.tests.test_monkeypatch_invasiveness \
-  contrib.multilingual.tests.test_monkeypatch_fragility -v
-python contrib/multilingual/tests/test_pool_wiring.py
+  contrib.batch_scan.tests.test_monkeypatch_invasiveness \
+  contrib.batch_scan.tests.test_monkeypatch_fragility -v
+python contrib/batch_scan/tests/test_pool_wiring.py
 ```
 
 ---
@@ -7225,7 +7252,7 @@ Answers reviewer: *"Several patches depend on internal details that can break on
 
 
 ================================================
-FILE: contrib/multilingual/tests/test_monkeypatch_fragility.py
+FILE: contrib/batch_scan/tests/test_monkeypatch_fragility.py
 ================================================
 # SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
@@ -7281,7 +7308,7 @@ from skillspector.llm_analyzer_base import (
 )
 from skillspector.nodes.meta_analyzer import LLMMetaAnalyzer, MetaAnalyzerResult
 
-from contrib.multilingual.runner import (
+from contrib.batch_scan.runner import (
     _check_signature,
     _original_asyncio_run,
     _original_base_init,
@@ -7302,7 +7329,7 @@ from contrib.multilingual.runner import (
 
 def _force_restore() -> None:
     """Safety-net: restore all patches regardless of depth counter."""
-    import contrib.multilingual.runner as _runner
+    import contrib.batch_scan.runner as _runner
     while _runner._patches_depth > 0:
         _runner._restore_patches()
 
@@ -7423,7 +7450,7 @@ class TestGuardPassesCurrentUpstream(unittest.TestCase):
 
     def test_guard_after_setup_and_manual_restore_still_passes(self) -> None:
         """Guard should pass after setup_deepseek_compat() + manual restore."""
-        from contrib.multilingual.runner import setup_deepseek_compat
+        from contrib.batch_scan.runner import setup_deepseek_compat
         setup_deepseek_compat()
         _force_restore()
         try:
@@ -7745,7 +7772,7 @@ class TestOriginalCapturedAtImportTime(unittest.TestCase):
         )
 
     def test_original_chatopenai_init_is_not_none(self) -> None:
-        from contrib.multilingual.runner import _original_chatopenai_init
+        from contrib.batch_scan.runner import _original_chatopenai_init
         self.assertIsNotNone(
             _original_chatopenai_init,
             "_original_chatopenai_init must be captured at import time",
@@ -7775,7 +7802,7 @@ if __name__ == "__main__":
 
 
 ================================================
-FILE: contrib/multilingual/tests/test_monkeypatch_invasiveness.py
+FILE: contrib/batch_scan/tests/test_monkeypatch_invasiveness.py
 ================================================
 # SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
@@ -7850,7 +7877,7 @@ except ImportError:
 
 from skillspector.llm_analyzer_base import LLMAnalyzerBase
 
-from contrib.multilingual.runner import (
+from contrib.batch_scan.runner import (
     _apply_patches,
     _original_asyncio_run,
     _original_base_build_prompt,
@@ -7895,7 +7922,7 @@ def _force_restore() -> None:
     Call in tearDown / tearDownClass to prevent test-order leakage when
     random-order runners (random_numbered.py) shuffle test classes.
     """
-    import contrib.multilingual.runner as _runner
+    import contrib.batch_scan.runner as _runner
     while _runner._patches_depth > 0:
         _runner._restore_patches()
 
@@ -7906,7 +7933,7 @@ def _force_restore() -> None:
 
 
 class TestImportNoSideEffect(unittest.TestCase):
-    """Prove that ``import contrib.multilingual.runner`` does NOT apply patches.
+    """Prove that ``import contrib.batch_scan.runner`` does NOT apply patches.
 
     Reviewer concern: "Import-time global monkey-patching is invasive."
     Resolution: patches fire only via explicit ``deepseek_compat()`` or
@@ -7926,7 +7953,7 @@ class TestImportNoSideEffect(unittest.TestCase):
                 sys.executable, "-X", "utf8", "-c",
                 "from skillspector.llm_analyzer_base import LLMAnalyzerBase; "
                 "orig = LLMAnalyzerBase.__init__; "
-                "import contrib.multilingual.runner; "
+                "import contrib.batch_scan.runner; "
                 "assert LLMAnalyzerBase.__init__ is orig, 'Import applied patches!'",
             ],
             capture_output=True, text=True, timeout=30,
@@ -8230,7 +8257,7 @@ if __name__ == "__main__":
 
 
 ================================================
-FILE: contrib/multilingual/tests/test_pool_wiring.py
+FILE: contrib/batch_scan/tests/test_pool_wiring.py
 ================================================
 # SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
@@ -8267,7 +8294,7 @@ from pathlib import Path
 if sys.platform == "win32":
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[attr-defined]
 
-# Ensure project root is on sys.path (test lives under contrib/multilingual/tests/)
+# Ensure project root is on sys.path (test lives under contrib/batch_scan/tests/)
 _project_root = Path(__file__).resolve().parents[3]
 if str(_project_root) not in sys.path:
     sys.path.insert(0, str(_project_root))
@@ -8280,13 +8307,13 @@ os.environ["SKILLSPECTOR_API_KEYS"] = (
 )
 
 # -- Build pool ------------------------------------------------------------
-from contrib.multilingual.api_pool import create_api_key_pool_from_env
+from contrib.batch_scan.api_pool import create_api_key_pool_from_env
 pool = create_api_key_pool_from_env()
 assert pool is not None, "2 keys should produce a pool"
 print(f"✅ Pool created: {pool.keys_configured} keys")
 
 # -- Scoped patches + pool wiring -----------------------------------------
-from contrib.multilingual.runner import set_api_pool, deepseek_compat
+from contrib.batch_scan.runner import set_api_pool, deepseek_compat
 
 with deepseek_compat():
     set_api_pool(pool)
@@ -8306,7 +8333,7 @@ with deepseek_compat():
     print(f"✅ LLMAnalyzerBase._llm → {type(analyzer._llm).__name__} (graph path)")
 
     # Path 3: gap-fill pass
-    from contrib.multilingual.gap_fill import GapFillAnalyzer
+    from contrib.batch_scan.gap_fill import GapFillAnalyzer
     gf = GapFillAnalyzer(language="zh", api_pool=pool)
     assert type(gf.chat_model).__name__ == "PooledChatModel"
     print(f"✅ GapFillAnalyzer → {type(gf.chat_model).__name__} (gap-fill path)")
@@ -8330,7 +8357,7 @@ print("\n\U0001F389 All LLM paths go through ApiKeyPool now.")
 
 
 ================================================
-FILE: contrib/multilingual/tests/tests-pro/__init__.py
+FILE: contrib/batch_scan/tests/tests-pro/__init__.py
 ================================================
 # SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
@@ -8347,13 +8374,13 @@ FILE: contrib/multilingual/tests/tests-pro/__init__.py
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Unit tests for contrib.multilingual — API pool, gap-fill, runner patches, annotation."""
+"""Unit tests for contrib.batch_scan — API pool, gap-fill, runner patches, annotation."""
 
 from __future__ import annotations
 
 
 ================================================
-FILE: contrib/multilingual/tests/tests-pro/mutation_max.py
+FILE: contrib/batch_scan/tests/tests-pro/mutation_max.py
 ================================================
 # SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
@@ -8400,7 +8427,7 @@ def mutate(label: str, module: str, target: str, broken_fn, test_specs: list[tup
     try:
         for test_mod, test_cls in test_specs:
             suite = unittest.TestLoader().loadTestsFromName(
-                f"contrib.multilingual.tests.tests-pro.{test_mod}.{test_cls}"
+                f"contrib.batch_scan.tests.tests-pro.{test_mod}.{test_cls}"
             )
             r = unittest.TextTestRunner(verbosity=0).run(suite)
             caught = not r.wasSuccessful()
@@ -8414,7 +8441,7 @@ def mutate(label: str, module: str, target: str, broken_fn, test_specs: list[tup
 # ═══════════════════════════════════════════════════════════════════════
 
 # Mutation 1a: acquire forgets to increment active_requests
-import contrib.multilingual.api_pool as _ap
+import contrib.batch_scan.api_pool as _ap
 _orig_acquire = _ap.ApiKeyPool.acquire
 
 
@@ -8439,7 +8466,7 @@ def _broken_acquire_no_increment(self, timeout=None):
 
 
 _ap.ApiKeyPool.acquire = _broken_acquire_no_increment
-mutate("acquire forgets active_requests++", "contrib.multilingual.api_pool",
+mutate("acquire forgets active_requests++", "contrib.batch_scan.api_pool",
        "ApiKeyPool.acquire", _broken_acquire_no_increment,
        [("test_api_pool", "TestAcquireRelease")])
 _ap.ApiKeyPool.acquire = _orig_acquire
@@ -8464,7 +8491,7 @@ def _broken_release_no_decrement(self, key, *, success=True):
 
 
 _ap.ApiKeyPool.release = _broken_release_no_decrement
-mutate("release forgets active_requests--", "contrib.multilingual.api_pool",
+mutate("release forgets active_requests--", "contrib.batch_scan.api_pool",
        "ApiKeyPool.release", _broken_release_no_decrement,
        [("test_api_pool", "TestAcquireRelease"),
         ("test_api_pool", "TestResourceLeakRecovery")])
@@ -8500,7 +8527,7 @@ def _broken_acquire_no_load_balance(self, timeout=None):
 
 
 _ap.ApiKeyPool.acquire = _broken_acquire_no_load_balance
-mutate("least-loaded scheduling broken", "contrib.multilingual.api_pool",
+mutate("least-loaded scheduling broken", "contrib.batch_scan.api_pool",
        "ApiKeyPool.acquire", _broken_acquire_no_load_balance,
        [("test_api_pool", "TestEdgeCases")])  # test_released_slot_returns_least_loaded_key
 _ap.ApiKeyPool.acquire = _orig_acquire2
@@ -8526,7 +8553,7 @@ def _broken_try_acquire(self):
 
 
 _ap.ApiKeyPool.try_acquire = _broken_try_acquire
-mutate("try_acquire recovery broken", "contrib.multilingual.api_pool",
+mutate("try_acquire recovery broken", "contrib.batch_scan.api_pool",
        "ApiKeyPool.try_acquire", _broken_try_acquire,
        [("test_api_pool", "TestRecoveredKeyScheduling")])
 _ap.ApiKeyPool.try_acquire = _orig_try_acquire
@@ -8554,7 +8581,7 @@ def _broken_release_fixed_backoff(self, key, *, success=True):
 
 
 _ap.ApiKeyPool.release = _broken_release_fixed_backoff
-mutate("backoff always 5s", "contrib.multilingual.api_pool",
+mutate("backoff always 5s", "contrib.batch_scan.api_pool",
        "ApiKeyPool.release", _broken_release_fixed_backoff,
        [("test_api_pool", "TestRateLimitBackoff")])
 _ap.ApiKeyPool.release = _orig_release2
@@ -8568,7 +8595,7 @@ def _broken_recover(self, now):
 
 
 _ap.ApiKeyPool._recover_expired_keys = _broken_recover
-mutate("recovery never runs", "contrib.multilingual.api_pool",
+mutate("recovery never runs", "contrib.batch_scan.api_pool",
        "ApiKeyPool._recover_expired_keys", _broken_recover,
        [("test_api_pool", "TestRateLimitBackoff")])  # TestRecoveredKeyScheduling hangs: acquire() blocks forever w/o recovery
 _ap.ApiKeyPool._recover_expired_keys = _orig_recover
@@ -8578,7 +8605,7 @@ _ap.ApiKeyPool._recover_expired_keys = _orig_recover
 # ═══════════════════════════════════════════════════════════════════════
 
 # Mutation 3a: Patch 1 broken — doesn't set response_schema=None
-import contrib.multilingual.runner as _runner
+import contrib.batch_scan.runner as _runner
 
 _orig_patched_init = _runner._patched_base_init
 
@@ -8623,7 +8650,7 @@ def _broken_apply_no_patch1():
 
 
 _runner._apply_patches = _broken_apply_no_patch1
-mutate("Patch 1 not applied", "contrib.multilingual.runner",
+mutate("Patch 1 not applied", "contrib.batch_scan.runner",
        "_apply_patches", _broken_apply_no_patch1,
        [("test_runner_patches", "TestContextManagerApplyRestore")])
 _runner._apply_patches = _orig_apply
@@ -8638,7 +8665,7 @@ def _broken_co_init(self, **kwargs):
 
 
 _runner._patched_chatopenai_init = _broken_co_init
-mutate("Patch 6 no timeout", "contrib.multilingual.runner",
+mutate("Patch 6 no timeout", "contrib.batch_scan.runner",
        "_patched_chatopenai_init", _broken_co_init,
        [("test_runner_patches", "TestPatch6ChatOpenAITimeout")])
 _runner._patched_chatopenai_init = _orig_patched_co
@@ -8647,7 +8674,7 @@ _runner._patched_chatopenai_init = _orig_patched_co
 # Area 4: GapFillAnalyzer.parse_response
 # ═══════════════════════════════════════════════════════════════════════
 
-import contrib.multilingual.gap_fill as _gf
+import contrib.batch_scan.gap_fill as _gf
 
 # Mutation 4a: confidence filter broken — threshold 0.7 → 0.0
 _orig_parse = _gf.GapFillAnalyzer.parse_response
@@ -8681,7 +8708,7 @@ def _broken_parse_no_filter(self, response, batch):
 
 # Apply directly to class since mutation test targets the class method
 _gf.GapFillAnalyzer.parse_response = _broken_parse_no_filter
-mutate("confidence filter removed", "contrib.multilingual.gap_fill",
+mutate("confidence filter removed", "contrib.batch_scan.gap_fill",
        "GapFillAnalyzer.parse_response", _broken_parse_no_filter,
        [("test_gap_fill", "TestParseResponseFiltering")])
 _gf.GapFillAnalyzer.parse_response = _orig_parse
@@ -8708,7 +8735,7 @@ def _broken_parse_no_fence_strip(self, response, batch):
 
 
 _gf.GapFillAnalyzer.parse_response = _broken_parse_no_fence_strip
-mutate("fence stripping broken", "contrib.multilingual.gap_fill",
+mutate("fence stripping broken", "contrib.batch_scan.gap_fill",
        "GapFillAnalyzer.parse_response", _broken_parse_no_fence_strip,
        [("test_gap_fill", "TestParseResponseMarkdownFences")])
 _gf.GapFillAnalyzer.parse_response = _orig_parse2
@@ -8726,7 +8753,7 @@ def _broken_patched_parse(self, response, batch):
 
 _runner._patched_base_parse = _broken_patched_parse
 _runner.LLMAnalyzerBase.parse_response = _broken_patched_parse
-mutate("Patch 2 parse always empty", "contrib.multilingual.runner",
+mutate("Patch 2 parse always empty", "contrib.batch_scan.runner",
        "_patched_base_parse", _broken_patched_parse,
        [("test_runner_patches", "TestContextManagerApplyRestore")])
 _runner._patched_base_parse = _orig_patched_parse
@@ -8756,7 +8783,7 @@ def _broken_meta_parse(self, response, batch):
 
 _runner._patched_meta_parse = _broken_meta_parse
 _runner.LLMMetaAnalyzer.parse_response = _broken_meta_parse
-mutate("Patch 3 sanitize broken", "contrib.multilingual.runner",
+mutate("Patch 3 sanitize broken", "contrib.batch_scan.runner",
        "_patched_meta_parse", _broken_meta_parse,
        [("test_runner_patches", "TestSanitizeMetaFinding")])
 _runner._patched_meta_parse = _orig_meta_parse
@@ -8772,7 +8799,7 @@ def _broken_base_build(self, batch, **kwargs):
 
 _runner._patched_base_build_prompt = _broken_base_build
 _runner.LLMAnalyzerBase.build_prompt = _broken_base_build
-mutate("Patch 4 JSON prompt missing", "contrib.multilingual.runner",
+mutate("Patch 4 JSON prompt missing", "contrib.batch_scan.runner",
        "_patched_base_build_prompt", _broken_base_build,
        [("test_runner_patches", "TestContextManagerApplyRestore")])
 _runner._patched_base_build_prompt = _orig_base_build
@@ -8787,7 +8814,7 @@ def _broken_meta_build(self, batch, **kwargs):
 
 _runner._patched_meta_build_prompt = _broken_meta_build
 _runner.LLMMetaAnalyzer.build_prompt = _broken_meta_build
-mutate("Patch 5 JSON meta prompt missing", "contrib.multilingual.runner",
+mutate("Patch 5 JSON meta prompt missing", "contrib.batch_scan.runner",
        "_patched_meta_build_prompt", _broken_meta_build,
        [("test_runner_patches", "TestContextManagerApplyRestore")])
 _runner._patched_meta_build_prompt = _orig_meta_build
@@ -8802,7 +8829,7 @@ def _broken_asyncio_run(main, *, debug=None, loop_factory=None):
 
 
 _runner._patched_asyncio_run = _broken_asyncio_run
-mutate("Patch 7 asyncio not patched", "contrib.multilingual.runner",
+mutate("Patch 7 asyncio not patched", "contrib.batch_scan.runner",
        "_patched_asyncio_run", _broken_asyncio_run,
        [("test_runner_patches", "TestPatch7AsyncioQuietLoop")])
 _runner._patched_asyncio_run = _orig_patched_asyncio
@@ -8838,7 +8865,7 @@ def _broken_parse_no_rule_filter(self, response, batch):
 
 
 _gf.GapFillAnalyzer.parse_response = _broken_parse_no_rule_filter
-mutate("rule_id filter removed", "contrib.multilingual.gap_fill",
+mutate("rule_id filter removed", "contrib.batch_scan.gap_fill",
        "GapFillAnalyzer.parse_response", _broken_parse_no_rule_filter,
        [("test_gap_fill", "TestParseResponseFiltering")])
 _gf.GapFillAnalyzer.parse_response = _orig_parse3
@@ -8864,7 +8891,7 @@ def _broken_parse_no_json_catch(self, response, batch):
 
 
 _gf.GapFillAnalyzer.parse_response = _broken_parse_no_json_catch
-mutate("JSON decode error not caught", "contrib.multilingual.gap_fill",
+mutate("JSON decode error not caught", "contrib.batch_scan.gap_fill",
        "GapFillAnalyzer.parse_response", _broken_parse_no_json_catch,
        [("test_gap_fill", "TestParseResponseInvalidInput")])
 _gf.GapFillAnalyzer.parse_response = _orig_parse4
@@ -8893,7 +8920,7 @@ def _broken_parse_no_pydantic_catch(self, response, batch):
 
 
 _gf.GapFillAnalyzer.parse_response = _broken_parse_no_pydantic_catch
-mutate("Pydantic validation error not caught", "contrib.multilingual.gap_fill",
+mutate("Pydantic validation error not caught", "contrib.batch_scan.gap_fill",
        "GapFillAnalyzer.parse_response", _broken_parse_no_pydantic_catch,
        [("test_gap_fill", "TestParseResponseInvalidInput")])
 _gf.GapFillAnalyzer.parse_response = _orig_parse5
@@ -8911,7 +8938,7 @@ def _broken_next_avail(self, now):
 _ap.ApiKeyPool._next_available_in = _broken_next_avail
 # Note: this mutation can't be directly tested without a rate-limited+full pool scenario
 # which is Q16's blind spot.  Test validates the function exists but not this branch.
-mutate("_next_available_in always None", "contrib.multilingual.api_pool",
+mutate("_next_available_in always None", "contrib.batch_scan.api_pool",
        "ApiKeyPool._next_available_in", _broken_next_avail,
        [])  # No matching test — documented as Q16/Q17 blind spot
 _ap.ApiKeyPool._next_available_in = _orig_next_avail
@@ -8936,7 +8963,7 @@ def _broken_restore():
 
 
 _runner._restore_patches = _broken_restore
-mutate("_restore_patches skips Patch 6+7", "contrib.multilingual.runner",
+mutate("_restore_patches skips Patch 6+7", "contrib.batch_scan.runner",
        "_restore_patches", _broken_restore,
        [("test_runner_patches", "TestContextManagerApplyRestore")])
 _runner._restore_patches = _orig_restore
@@ -8950,7 +8977,7 @@ def _broken_verify():
 
 
 _runner._verify_patch_targets = _broken_verify
-mutate("_verify_patch_targets no-op", "contrib.multilingual.runner",
+mutate("_verify_patch_targets no-op", "contrib.batch_scan.runner",
        "_verify_patch_targets", _broken_verify,
        [])  # Q13: no test asserts guard actually ran — documented blind spot
 _runner._verify_patch_targets = _orig_verify
@@ -8964,7 +8991,7 @@ def _broken_check(func, expected, label, num):
 
 
 _runner._check_signature = _broken_check
-mutate("_check_signature no-op", "contrib.multilingual.runner",
+mutate("_check_signature no-op", "contrib.batch_scan.runner",
        "_check_signature", _broken_check,
        [])  # No test directly calls _check_signature — documented
 _runner._check_signature = _orig_check
@@ -8980,7 +9007,7 @@ def _broken_set_api(pool):
     import skillspector.llm_utils as _u
     def _bad_wrapper(model=None):
         if _runner._api_pool:
-            from contrib.multilingual.api_pool import PooledChatModel
+            from contrib.batch_scan.api_pool import PooledChatModel
             return PooledChatModel(_runner._api_pool)
         # BUG: fallback calls patched version instead of original
         return _u.get_chat_model(model)
@@ -8988,13 +9015,13 @@ def _broken_set_api(pool):
 
 
 _runner.set_api_pool = _broken_set_api
-mutate("set_api_pool broken fallback", "contrib.multilingual.runner",
+mutate("set_api_pool broken fallback", "contrib.batch_scan.runner",
        "set_api_pool", _broken_set_api,
        [("test_runner_patches", "TestSetApiPoolRestore")])
 _runner.set_api_pool = _orig_set_api
 
 # Mutation 5f: annotate_findings broken — always returns incompatible
-import contrib.multilingual.annotation as _ann
+import contrib.batch_scan.annotation as _ann
 _orig_annotate = _ann.annotate_findings
 
 
@@ -9008,7 +9035,7 @@ def _broken_annotate(issues, detected_language):
 
 
 _ann.annotate_findings = _broken_annotate
-mutate("annotate_findings always incompatible", "contrib.multilingual.annotation",
+mutate("annotate_findings always incompatible", "contrib.batch_scan.annotation",
        "annotate_findings", _broken_annotate,
        [("test_annotation", "TestAnnotateFindings")])
 _ann.annotate_findings = _orig_annotate
@@ -9022,7 +9049,7 @@ def _broken_is_compat(rule_id, detected_language):
 
 
 _ann.is_language_compatible = _broken_is_compat
-mutate("is_language_compatible always True", "contrib.multilingual.annotation",
+mutate("is_language_compatible always True", "contrib.batch_scan.annotation",
        "is_language_compatible", _broken_is_compat,
        [("test_annotation", "TestAnnotateFindings")])
 _ann.is_language_compatible = _orig_is_compat
@@ -9040,7 +9067,7 @@ def _broken_build_prompt(self, batch, **kwargs):
 
 
 _gf.GapFillAnalyzer.build_prompt = _broken_build_prompt
-mutate("build_prompt missing file content", "contrib.multilingual.gap_fill",
+mutate("build_prompt missing file content", "contrib.batch_scan.gap_fill",
        "GapFillAnalyzer.build_prompt", _broken_build_prompt,
        [("test_gap_fill", "TestBuildPrompt")])
 _gf.GapFillAnalyzer.build_prompt = _orig_build
@@ -9054,7 +9081,7 @@ def _broken_get_batches(self, file_paths, file_cache, findings=None):
 
 
 _gf.GapFillAnalyzer.get_batches = _broken_get_batches
-mutate("get_batches always empty", "contrib.multilingual.gap_fill",
+mutate("get_batches always empty", "contrib.batch_scan.gap_fill",
        "GapFillAnalyzer.get_batches", _broken_get_batches,
        [("test_gap_fill", "TestGetBatchesAndCollectFindings")])
 _gf.GapFillAnalyzer.get_batches = _orig_batches
@@ -9068,7 +9095,7 @@ def _broken_collect_findings(self, batch_results):
 
 
 _gf.GapFillAnalyzer.collect_findings = _broken_collect_findings
-mutate("collect_findings always empty", "contrib.multilingual.gap_fill",
+mutate("collect_findings always empty", "contrib.batch_scan.gap_fill",
        "GapFillAnalyzer.collect_findings", _broken_collect_findings,
        [("test_gap_fill", "TestGetBatchesAndCollectFindings")])
 _gf.GapFillAnalyzer.collect_findings = _orig_collect
@@ -9082,7 +9109,7 @@ def _broken_run_gap_fill(file_cache, language, model=None, api_pool=None):
 
 
 _gf.run_gap_fill = _broken_run_gap_fill
-mutate("run_gap_fill always empty", "contrib.multilingual.gap_fill",
+mutate("run_gap_fill always empty", "contrib.batch_scan.gap_fill",
        "run_gap_fill", _broken_run_gap_fill,
        [("test_gap_fill", "TestRunGapFill")])
 _gf.run_gap_fill = _orig_run_gf
@@ -9096,7 +9123,7 @@ def _broken_is_rl(exc):
 
 
 _ap.PooledChatModel._is_rate_limit = staticmethod(_broken_is_rl)
-mutate("_is_rate_limit always False", "contrib.multilingual.api_pool",
+mutate("_is_rate_limit always False", "contrib.batch_scan.api_pool",
        "PooledChatModel._is_rate_limit", staticmethod(_broken_is_rl),
        [("test_api_pool", "TestIsRateLimit")])
 _ap.PooledChatModel._is_rate_limit = _orig_is_rl
@@ -9110,7 +9137,7 @@ def _broken_create_pool(max_concurrent_per_key=5):
 
 
 _ap.create_api_key_pool_from_env = _broken_create_pool
-mutate("create_api_key_pool_from_env always None", "contrib.multilingual.api_pool",
+mutate("create_api_key_pool_from_env always None", "contrib.batch_scan.api_pool",
        "create_api_key_pool_from_env", _broken_create_pool,
        [("test_api_pool", "TestCreateApiKeyPoolFromEnv")])
 _ap.create_api_key_pool_from_env = _orig_create_pool
@@ -9131,7 +9158,7 @@ def _broken_ds_compat():
 
 
 _runner.deepseek_compat = _broken_ds_compat
-mutate("deepseek_compat no restore on exception", "contrib.multilingual.runner",
+mutate("deepseek_compat no restore on exception", "contrib.batch_scan.runner",
        "deepseek_compat", _broken_ds_compat,
        [("test_runner_patches", "TestContextManagerApplyRestore")])
 _runner.deepseek_compat = _orig_ds_compat
@@ -9155,7 +9182,7 @@ else:
 
 
 ================================================
-FILE: contrib/multilingual/tests/tests-pro/random_numbered.py
+FILE: contrib/batch_scan/tests/tests-pro/random_numbered.py
 ================================================
 # SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
@@ -9202,7 +9229,7 @@ for mod in [
 ]:
     flatten(
         loader.loadTestsFromName(
-            f"contrib.multilingual.tests.tests-pro.{mod}"
+            f"contrib.batch_scan.tests.tests-pro.{mod}"
         )
     )
 
@@ -9233,7 +9260,7 @@ print(f"Time: {dt:.0f}s | {r.testsRun} run | {len(r.failures)} fail |", "PASS" i
 
 
 ================================================
-FILE: contrib/multilingual/tests/tests-pro/test_annotation.py
+FILE: contrib/batch_scan/tests/tests-pro/test_annotation.py
 ================================================
 # SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
@@ -9267,7 +9294,7 @@ if str(_project_root) not in sys.path:
 
 from skillspector.models import Finding
 
-from contrib.multilingual.annotation import annotate_findings, is_language_compatible
+from contrib.batch_scan.annotation import annotate_findings, is_language_compatible
 
 
 def _make_finding(rule_id: str = "P1", file: str = "test.md") -> dict:
@@ -9365,7 +9392,7 @@ if __name__ == "__main__":
 
 
 ================================================
-FILE: contrib/multilingual/tests/tests-pro/test_api_pool.py
+FILE: contrib/batch_scan/tests/tests-pro/test_api_pool.py
 ================================================
 # SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
@@ -9402,7 +9429,7 @@ _project_root = Path(__file__).resolve().parents[3]
 if str(_project_root) not in sys.path:
     sys.path.insert(0, str(_project_root))
 
-from contrib.multilingual.api_pool import (
+from contrib.batch_scan.api_pool import (
     ApiKey,
     ApiKeyPool,
     PooledChatModel,
@@ -9833,7 +9860,7 @@ if __name__ == "__main__":
 
 
 ================================================
-FILE: contrib/multilingual/tests/tests-pro/test_gap_fill.py
+FILE: contrib/batch_scan/tests/tests-pro/test_gap_fill.py
 ================================================
 # SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
@@ -9870,7 +9897,7 @@ if str(_project_root) not in sys.path:
 from skillspector.llm_analyzer_base import Batch
 from skillspector.models import Finding
 
-from contrib.multilingual.gap_fill import (
+from contrib.batch_scan.gap_fill import (
     GapFillAnalyzer,
     GapFillFinding,
     GapFillResult,
@@ -10263,7 +10290,7 @@ import time  # noqa: E402 (placed here to group with test class usage)
 
 
 ================================================
-FILE: contrib/multilingual/tests/tests-pro/test_runner_patches.py
+FILE: contrib/batch_scan/tests/tests-pro/test_runner_patches.py
 ================================================
 # SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
@@ -10332,7 +10359,7 @@ except ImportError:
 from skillspector.llm_analyzer_base import LLMAnalyzerBase
 from skillspector.nodes.meta_analyzer import LLMMetaAnalyzer
 
-from contrib.multilingual.runner import (
+from contrib.batch_scan.runner import (
     _original_asyncio_run,
     _original_base_init,
     _original_base_parse,
@@ -10510,7 +10537,7 @@ class TestSetupFunction(unittest.TestCase):
         """Restore global state mutated by setup_deepseek_compat().
         Calls _restore_patches until depth reaches 0 (setup may be called
         multiple times across test methods)."""
-        import contrib.multilingual.runner as _runner
+        import contrib.batch_scan.runner as _runner
         while _runner._patches_depth > 0:
             _runner._restore_patches()
 
@@ -10545,7 +10572,7 @@ class TestSetupContextInteraction(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        import contrib.multilingual.runner as _runner
+        import contrib.batch_scan.runner as _runner
         while _runner._patches_depth > 0:
             _runner._restore_patches()
 
@@ -10555,7 +10582,7 @@ class TestSetupContextInteraction(unittest.TestCase):
         with deepseek_compat():
             self.assertIsNot(LLMAnalyzerBase.__init__, _original_base_init)
         self.assertIsNot(LLMAnalyzerBase.__init__, _original_base_init)
-        from contrib.multilingual.runner import _restore_patches
+        from contrib.batch_scan.runner import _restore_patches
         _restore_patches()
         self.assertIs(LLMAnalyzerBase.__init__, _original_base_init)
 
@@ -10578,7 +10605,7 @@ class TestImportNoSideEffect(unittest.TestCase):
                 sys.executable, "-X", "utf8", "-c",
                 "from skillspector.llm_analyzer_base import LLMAnalyzerBase; "
                 "orig = LLMAnalyzerBase.__init__; "
-                "import contrib.multilingual.runner; "
+                "import contrib.batch_scan.runner; "
                 "assert LLMAnalyzerBase.__init__ is orig, 'Import applied patches!'",
             ],
             capture_output=True, text=True, timeout=30,
@@ -10597,7 +10624,7 @@ class TestPatch2OriginalCapture(unittest.TestCase):
 
     def test_original_chatopenai_init_is_captured_at_import_time(self):
         """Verify P2 fix: _original_chatopenai_init is not None after import."""
-        from contrib.multilingual.runner import _original_chatopenai_init
+        from contrib.batch_scan.runner import _original_chatopenai_init
         self.assertIsNotNone(
             _original_chatopenai_init,
             "_original_chatopenai_init should be captured at module-load time",
@@ -10608,21 +10635,21 @@ class TestCheckSignature(unittest.TestCase):
     """_check_signature() — previously untested."""
 
     def test_check_signature_passes_when_all_params_present(self):
-        from contrib.multilingual.runner import _check_signature
+        from contrib.batch_scan.runner import _check_signature
         def _sample(self, a, b, c):
             pass
         # Should not raise
         _check_signature(_sample, ["self", "a", "b", "c"], "test_func", 99)
 
     def test_check_signature_raises_when_param_missing(self):
-        from contrib.multilingual.runner import _check_signature
+        from contrib.batch_scan.runner import _check_signature
         def _sample(self, a, b):
             pass
         with self.assertRaises(RuntimeError):
             _check_signature(_sample, ["self", "a", "b", "c"], "test_func", 99)
 
     def test_check_signature_raises_when_param_becomes_keyword_only(self):
-        from contrib.multilingual.runner import _check_signature
+        from contrib.batch_scan.runner import _check_signature
         def _sample(self, *, a, b, c):
             pass
         with self.assertRaises(RuntimeError):
@@ -10634,7 +10661,7 @@ class TestVerifyPatchTargets(unittest.TestCase):
 
     def test_guard_passes_against_current_upstream_version(self):
         """Entering context manager must not raise."""
-        from contrib.multilingual.runner import _verify_patch_targets, _apply_patches
+        from contrib.batch_scan.runner import _verify_patch_targets, _apply_patches
         try:
             _verify_patch_targets()
         except RuntimeError as e:
@@ -10708,7 +10735,7 @@ class TestPatch7AsyncioQuietLoop(unittest.TestCase):
 
     def test_quiet_loop_handler_suppresses_event_loop_closed_error(self):
         """#C8: Verify _patched_asyncio_run installs quiet handler via loop_factory."""
-        from contrib.multilingual.runner import _patched_asyncio_run, _original_asyncio_run
+        from contrib.batch_scan.runner import _patched_asyncio_run, _original_asyncio_run
         # Create a loop via _patched_asyncio_run — it calls _make_quiet_loop internally
         loop = None
         def _capture_loop():
@@ -10842,7 +10869,7 @@ class TestSetApiPoolRestore(unittest.TestCase):
 
         original = _llm_utils.get_chat_model
         # Act — wire pool
-        from contrib.multilingual.api_pool import create_api_key_pool_from_env
+        from contrib.batch_scan.api_pool import create_api_key_pool_from_env
         pool = create_api_key_pool_from_env()
         set_api_pool(pool)
         self.assertIsNot(_llm_utils.get_chat_model, original)
@@ -10862,14 +10889,14 @@ class TestScanState(unittest.TestCase):
     """scan_state() — pure function, previously zero coverage."""
 
     def test_scan_state_returns_correct_keys_with_llm_enabled(self):
-        from contrib.multilingual.runner import scan_state
+        from contrib.batch_scan.runner import scan_state
         state = scan_state(Path("/tmp/test_skill"), use_llm=True)
         self.assertEqual(state["input_path"], str(Path("/tmp/test_skill")))
         self.assertEqual(state["output_format"], "json")
         self.assertTrue(state["use_llm"])
 
     def test_scan_state_returns_correct_keys_with_llm_disabled(self):
-        from contrib.multilingual.runner import scan_state
+        from contrib.batch_scan.runner import scan_state
         state = scan_state(Path("/tmp/test_skill"), use_llm=False)
         self.assertFalse(state["use_llm"])
 
@@ -10878,13 +10905,13 @@ class TestRelName(unittest.TestCase):
     """_rel_name() — pure function, previously zero coverage."""
 
     def test_rel_name_returns_relative_path_when_skill_is_under_root(self):
-        from contrib.multilingual.runner import _rel_name
+        from contrib.batch_scan.runner import _rel_name
         result = _rel_name(Path("/root/sub/skill"), Path("/root"))
         self.assertIn("sub", result)
         self.assertIn("skill", result)
 
     def test_rel_name_falls_back_to_skill_name_when_unrelated_paths(self):
-        from contrib.multilingual.runner import _rel_name
+        from contrib.batch_scan.runner import _rel_name
         result = _rel_name(Path("/other/skill"), Path("/root"))
         self.assertEqual(result, "skill")
 
@@ -10897,7 +10924,7 @@ class TestEntryFromResult(unittest.TestCase):
         self.root = Path("/tmp")
 
     def test_entry_from_minimal_result_has_all_required_keys(self):
-        from contrib.multilingual.runner import entry_from_result
+        from contrib.batch_scan.runner import entry_from_result
         result = {"findings": []}
         entry = entry_from_result(result, self.skill_dir, self.root)
         self.assertIn("skill", entry)
@@ -10908,20 +10935,20 @@ class TestEntryFromResult(unittest.TestCase):
         self.assertIn("enhancements", entry)
 
     def test_entry_defaults_risk_to_low_zero_when_not_provided(self):
-        from contrib.multilingual.runner import entry_from_result
+        from contrib.batch_scan.runner import entry_from_result
         entry = entry_from_result({}, self.skill_dir, self.root)
         self.assertEqual(entry["risk_assessment"]["score"], 0)
         self.assertEqual(entry["risk_assessment"]["severity"], "LOW")
 
     def test_entry_preserves_explicit_risk_score_and_severity(self):
-        from contrib.multilingual.runner import entry_from_result
+        from contrib.batch_scan.runner import entry_from_result
         result = {"risk_score": 85, "risk_severity": "HIGH", "findings": []}
         entry = entry_from_result(result, self.skill_dir, self.root)
         self.assertEqual(entry["risk_assessment"]["score"], 85)
         self.assertEqual(entry["risk_assessment"]["severity"], "HIGH")
 
     def test_entry_marks_gap_fill_applied_in_enhancements(self):
-        from contrib.multilingual.runner import entry_from_result
+        from contrib.batch_scan.runner import entry_from_result
         entry = entry_from_result(
             {"findings": []}, self.skill_dir, self.root,
             detected_language="zh", gap_fill_applied=True, gap_fill_findings=3,
@@ -10930,32 +10957,32 @@ class TestEntryFromResult(unittest.TestCase):
         self.assertEqual(entry["enhancements"]["gap_fill_findings"], 3)
 
     def test_entry_counts_english_keyword_rules_skipped_for_non_english(self):
-        from contrib.multilingual.runner import entry_from_result
+        from contrib.batch_scan.runner import entry_from_result
         entry = entry_from_result(
             {"findings": []}, self.skill_dir, self.root, detected_language="zh",
         )
         self.assertGreater(entry["enhancements"]["english_keyword_rules_skipped"], 0)
 
     def test_entry_zero_english_keyword_rules_skipped_for_english(self):
-        from contrib.multilingual.runner import entry_from_result
+        from contrib.batch_scan.runner import entry_from_result
         entry = entry_from_result(
             {"findings": []}, self.skill_dir, self.root, detected_language="en",
         )
         self.assertEqual(entry["enhancements"]["english_keyword_rules_skipped"], 0)
 
     def test_entry_uses_manifest_name_when_available(self):
-        from contrib.multilingual.runner import entry_from_result
+        from contrib.batch_scan.runner import entry_from_result
         result = {"manifest": {"name": "my-skill"}, "findings": []}
         entry = entry_from_result(result, self.skill_dir, self.root)
         self.assertEqual(entry["skill"]["name"], "my-skill")
 
     def test_entry_falls_back_to_directory_name_when_no_manifest(self):
-        from contrib.multilingual.runner import entry_from_result
+        from contrib.batch_scan.runner import entry_from_result
         entry = entry_from_result({"findings": []}, self.skill_dir, self.root)
         self.assertEqual(entry["skill"]["name"], "test_skill")
 
     def test_entry_handles_value_error_on_relative_to_for_different_drives(self):
-        from contrib.multilingual.runner import entry_from_result
+        from contrib.batch_scan.runner import entry_from_result
         # On Windows, relative_to raises ValueError for different drives
         try:
             entry = entry_from_result({"findings": []}, Path("D:/skill"), Path("C:/root"))
@@ -11198,7 +11225,7 @@ The rules are designed to avoid redundant or contradictory findings:
 | Fixture directory                 | Expected findings | Purpose                          |
 |-----------------------------------|-------------------|----------------------------------|
 | `mcp_clean_skill/`               | None              | Negative test -- all caps declared |
-| `mcp_underdeclared_skill/`        | LP1, LP3          | Missing permissions + undeclared caps |
+| `mcp_underdeclared_skill/`        | LP3               | Missing permissions + detected caps |
 | `mcp_overprivileged_skill/`      | LP2, LP4          | Wildcard + overdeclared permissions |
 
 ---
@@ -45310,6 +45337,9 @@ FILE: tests/unit/test_mcp_server.py
 
 """Tests for the MCP server wrapper (run_scan core + scan_skill tool)."""
 
+import asyncio
+import os
+import sys
 from pathlib import Path
 
 import pytest
@@ -45385,6 +45415,28 @@ async def test_build_server_registers_scan_skill() -> None:
     server = mcp_server.build_server()
     tools = await server.list_tools()
     assert "scan_skill" in {tool.name for tool in tools}
+
+
+async def test_mcp_stdio_initialize_registers_scan_skill() -> None:
+    """The real stdio CLI must initialize and expose the scan_skill tool."""
+    pytest.importorskip("mcp")
+
+    from mcp import ClientSession, StdioServerParameters
+    from mcp.client.stdio import stdio_client
+
+    repo_root = Path(__file__).resolve().parents[2]
+    server_params = StdioServerParameters(
+        command=sys.executable,
+        args=["-m", "skillspector.cli", "mcp"],
+        env={**os.environ, "PYTHONPATH": str(repo_root / "src")},
+    )
+
+    async with stdio_client(server_params) as (read, write):
+        async with ClientSession(read, write) as session:
+            await asyncio.wait_for(session.initialize(), timeout=15)
+            tools = await asyncio.wait_for(session.list_tools(), timeout=15)
+
+    assert "scan_skill" in {tool.name for tool in tools.tools}
 
 
 ================================================

@@ -1,19 +1,19 @@
 # Examples
 
-## Example 1 — `contrib/multilingual/docs/archive/ARCHITECTURE_DEEP_DIVE.md`
+## Example 1 — `contrib/batch_scan/docs/archive/ARCHITECTURE_DEEP_DIVE.md`
 
 ```python
 results = map(graph.invoke, states)
 ```
 
-## Example 2 — `contrib/multilingual/docs/archive/ARCHITECTURE_DEEP_DIVE.md`
+## Example 2 — `contrib/batch_scan/docs/archive/ARCHITECTURE_DEEP_DIVE.md`
 
 ```python
 with ThreadPoolExecutor(max_workers=4) as pool:
     results = pool.map(graph.invoke, states)
 ```
 
-## Example 3 — `contrib/multilingual/docs/archive/PITFALLS.md`
+## Example 3 — `contrib/batch_scan/docs/archive/PITFALLS.md`
 
 ```python
 try:

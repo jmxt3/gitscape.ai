@@ -7,20 +7,20 @@
 ## Entry Points
 
 - `src/skillspector/cli.py` — application entry point
-- `contrib/multilingual/batch_scan.py` — script entry point
+- `contrib/batch_scan/batch_scan.py` — script entry point
 
 ## Module Map
 
 | Module | Purpose | Symbols | Key exports |
 |---|---|---|---|
-| `contrib/multilingual/annotation.py` | — | 2 | `is_language_compatible`, `annotate_findings` |
-| `contrib/multilingual/api_pool.py` | — | 19 | `ApiKey`, `ApiKey.available`, `ApiKeyPool` (+16 more) |
-| `contrib/multilingual/batch_scan.py` | — | 1 | `main` |
-| `contrib/multilingual/detection.py` | — | 2 | `detect_language`, `detect_skill_language` |
-| `contrib/multilingual/discovery.py` | — | 1 | `discover_skills` |
-| `contrib/multilingual/gap_fill.py` | — | 8 | `GapFillFinding`, `GapFillFinding.to_finding`, `GapFillResult` (+5 more) |
-| `contrib/multilingual/reports.py` | — | 1 | `sorted_results` |
-| `contrib/multilingual/runner.py` | — | 7 | `set_api_pool`, `setup_deepseek_compat`, `deepseek_compat` (+4 more) |
+| `contrib/batch_scan/annotation.py` | — | 2 | `is_language_compatible`, `annotate_findings` |
+| `contrib/batch_scan/api_pool.py` | — | 19 | `ApiKey`, `ApiKey.available`, `ApiKeyPool` (+16 more) |
+| `contrib/batch_scan/batch_scan.py` | — | 1 | `main` |
+| `contrib/batch_scan/detection.py` | — | 2 | `detect_language`, `detect_skill_language` |
+| `contrib/batch_scan/discovery.py` | — | 1 | `discover_skills` |
+| `contrib/batch_scan/gap_fill.py` | — | 8 | `GapFillFinding`, `GapFillFinding.to_finding`, `GapFillResult` (+5 more) |
+| `contrib/batch_scan/reports.py` | — | 1 | `sorted_results` |
+| `contrib/batch_scan/runner.py` | — | 7 | `set_api_pool`, `setup_deepseek_compat`, `deepseek_compat` (+4 more) |
 | `src/skillspector/cleanup.py` | — | 1 | `cleanup_result` |
 | `src/skillspector/cli.py` | — | 7 | `FormatChoice`, `TransportChoice`, `version_callback` (+4 more) |
 | `src/skillspector/graph.py` | — | 1 | `create_graph` |
@@ -87,7 +87,7 @@
 
 ```mermaid
 graph TD
-    contrib_multilingual["contrib/multilingual/"]
+    contrib_batch_scan["contrib/batch_scan/"]
     src_skillspector_nodes_analyzers["src/skillspector/nodes/analyzers/"]
     src_skillspector_providers["src/skillspector/providers/"]
     src_skillspector_providers_anthropic["src/skillspector/providers/anthropic/"]
@@ -113,7 +113,7 @@ graph TD
 ## Conventions
 
 - Primary languages: Python, TypeScript, Shell
-- Tests located in: `contrib/multilingual/tests`, `contrib/multilingual/tests/docs`, `contrib/multilingual/tests/tests-pro`
+- Tests located in: `contrib/batch_scan/tests`, `contrib/batch_scan/tests/docs`, `contrib/batch_scan/tests/tests-pro`
 - Configuration files: `Dockerfile`, `Makefile`
 - 282 public symbols across 69 source modules
 
@@ -123,7 +123,7 @@ graph TD
 ├── .github/
 │   └── workflows/
 ├── contrib/
-│   └── multilingual/
+│   └── batch_scan/
 ├── docs/
 │   └── plans/
 ├── extensions/

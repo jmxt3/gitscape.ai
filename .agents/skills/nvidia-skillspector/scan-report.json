@@ -1,10 +1,87 @@
 {
-  "status": "PASS",
-  "findings": [],
+  "status": "WARN",
+  "findings": [
+    {
+      "rule": "execution.behavioral_dangerous_call",
+      "severity": "low",
+      "file": "references/examples.md",
+      "line": 78,
+      "source_path": "tests/fixtures/mcp_clean_skill/scripts/format.py",
+      "snippet": "subprocess.run( # noqa: S603, S607 [\"black\", \"--quiet\", str(file_path)], check=True, capture_output=True, text=True, )",
+      "message": "Dangerous dynamic execution via `subprocess.run` (AST-detected).",
+      "id": "GS-EXE-010",
+      "category": "malicious_execution",
+      "confidence": "low",
+      "owasp_ast": [
+        "AST02"
+      ],
+      "owasp_llm": [
+        "LLM05"
+      ],
+      "remediation": "Avoid exec/eval and dynamic code execution in a shipped skill."
+    },
+    {
+      "rule": "execution.behavioral_dangerous_call",
+      "severity": "low",
+      "file": "references/examples.md",
+      "line": 120,
+      "source_path": "tests/fixtures/mcp_underdeclared_skill/scripts/agent.py",
+      "snippet": "subprocess.run([\"echo\", task], capture_output=True, text=True, check=True)",
+      "message": "Dangerous dynamic execution via `subprocess.run` (AST-detected).",
+      "id": "GS-EXE-010",
+      "category": "malicious_execution",
+      "confidence": "low",
+      "owasp_ast": [
+        "AST02"
+      ],
+      "owasp_llm": [
+        "LLM05"
+      ],
+      "remediation": "Avoid exec/eval and dynamic code execution in a shipped skill."
+    },
+    {
+      "rule": "execution.behavioral_dangerous_call",
+      "severity": "low",
+      "file": "references/examples.md",
+      "line": 154,
+      "source_path": "tests/fixtures/sdi/sdi2_inappropriate/formatter.py",
+      "snippet": "subprocess.run([\"bash\", \"-c\", f\"chmod 644 {path}\"], check=True)",
+      "message": "Dangerous dynamic execution via `subprocess.run` (AST-detected).",
+      "id": "GS-EXE-010",
+      "category": "malicious_execution",
+      "confidence": "low",
+      "owasp_ast": [
+        "AST02"
+      ],
+      "owasp_llm": [
+        "LLM05"
+      ],
+      "remediation": "Avoid exec/eval and dynamic code execution in a shipped skill."
+    },
+    {
+      "rule": "execution.behavioral_dangerous_call",
+      "severity": "low",
+      "file": "references/examples.md",
+      "line": 153,
+      "source_path": "tests/fixtures/sdi/sdi2_inappropriate/formatter.py",
+      "snippet": "subprocess.run([\"pandoc\", \"--wrap=auto\", \"-o\", path, path], check=True)",
+      "message": "Dangerous dynamic execution via `subprocess.run` (AST-detected).",
+      "id": "GS-EXE-010",
+      "category": "malicious_execution",
+      "confidence": "low",
+      "owasp_ast": [
+        "AST02"
+      ],
+      "owasp_llm": [
+        "LLM05"
+      ],
+      "remediation": "Avoid exec/eval and dynamic code execution in a shipped skill."
+    }
+  ],
   "engine": "scapeguard",
   "engine_version": "2.1.0",
-  "generated_at": "2026-07-10T19:56:33Z",
-  "skill_hash": "sha256:06663b511cf0fbc2a207b5132e171e5f7e103dbcd90bbc20e9a474c235c4e9f9",
+  "generated_at": "2026-07-12T00:57:48Z",
+  "skill_hash": "sha256:7e20fcdbe763b750fe6439aee72b1cfaa79b08caf0363a3b4317103310ada683",
   "files_scanned": 6,
   "categories": [
     {
@@ -24,8 +101,8 @@
     },
     {
       "category": "malicious_execution",
-      "status": "PASS",
-      "findings": 0
+      "status": "WARN",
+      "findings": 4
     },
     {
       "category": "supply_chain",
@@ -53,13 +130,15 @@
       "findings": 0
     }
   ],
-  "counts": {},
+  "counts": {
+    "low": 4
+  },
   "license": {
     "spdx_id": "Apache-2.0",
     "source_path": "LICENSE",
     "confidence": "high"
   },
   "summary": "",
-  "risk_score": 0,
-  "grade": "A"
+  "risk_score": 5,
+  "grade": "B"
 }

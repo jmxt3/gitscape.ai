@@ -5,7 +5,7 @@
   "description": "Guides agents through working with the NVIDIA/SkillSpector codebase (Python, TypeScript, Shell). Use when extending, debugging, or navigating SkillSpector, or when the user mentions 'SkillSpector', 'NVIDIA/SkillSpector', or asks about its architecture, modules, or public API. Not for general Python, TypeScript, Shell questions unrelated to SkillSpector.",
   "version": "1.0.0",
   "builder_version": "1.0.0",
-  "digest_hash": "ddf6866659aaf662bbd855a791a9ae28e36eacf78a2c0f0cf7761e3c2c855797",
+  "digest_hash": "4ff7608d260d613d0fc220635a8de77553ec1c8083d422598be644a1bdb251cf",
   "files": [
     "SKILL.md",
     "references/api.md",
@@ -24,14 +24,14 @@
     {
       "chunk": "references/api.md",
       "source_paths": [
-        "contrib/multilingual/annotation.py",
-        "contrib/multilingual/api_pool.py",
-        "contrib/multilingual/batch_scan.py",
-        "contrib/multilingual/detection.py",
-        "contrib/multilingual/discovery.py",
-        "contrib/multilingual/gap_fill.py",
-        "contrib/multilingual/reports.py",
-        "contrib/multilingual/runner.py",
+        "contrib/batch_scan/annotation.py",
+        "contrib/batch_scan/api_pool.py",
+        "contrib/batch_scan/batch_scan.py",
+        "contrib/batch_scan/detection.py",
+        "contrib/batch_scan/discovery.py",
+        "contrib/batch_scan/gap_fill.py",
+        "contrib/batch_scan/reports.py",
+        "contrib/batch_scan/runner.py",
         "src/skillspector/cleanup.py",
         "src/skillspector/cli.py",
         "src/skillspector/graph.py",
@@ -98,14 +98,14 @@
     {
       "chunk": "references/architecture.md",
       "source_paths": [
-        "contrib/multilingual/annotation.py",
-        "contrib/multilingual/api_pool.py",
-        "contrib/multilingual/batch_scan.py",
-        "contrib/multilingual/detection.py",
-        "contrib/multilingual/discovery.py",
-        "contrib/multilingual/gap_fill.py",
-        "contrib/multilingual/reports.py",
-        "contrib/multilingual/runner.py",
+        "contrib/batch_scan/annotation.py",
+        "contrib/batch_scan/api_pool.py",
+        "contrib/batch_scan/batch_scan.py",
+        "contrib/batch_scan/detection.py",
+        "contrib/batch_scan/discovery.py",
+        "contrib/batch_scan/gap_fill.py",
+        "contrib/batch_scan/reports.py",
+        "contrib/batch_scan/runner.py",
         "src/skillspector/cleanup.py",
         "src/skillspector/cli.py",
         "src/skillspector/graph.py",
@@ -172,9 +172,9 @@
     {
       "chunk": "references/examples.md",
       "source_paths": [
-        "contrib/multilingual/docs/archive/ARCHITECTURE_DEEP_DIVE.md",
-        "contrib/multilingual/docs/archive/ARCHITECTURE_DEEP_DIVE.md",
-        "contrib/multilingual/docs/archive/PITFALLS.md",
+        "contrib/batch_scan/docs/archive/ARCHITECTURE_DEEP_DIVE.md",
+        "contrib/batch_scan/docs/archive/ARCHITECTURE_DEEP_DIVE.md",
+        "contrib/batch_scan/docs/archive/PITFALLS.md",
         "tests/fixtures/malicious_skill/scripts/helper.py",
         "tests/fixtures/mcp_clean_skill/scripts/format.py",
         "tests/fixtures/mcp_mismatched_skill/scripts/greet.py",
@@ -190,7 +190,7 @@
       "chunk": "references/setup.md",
       "source_paths": [
         "README.md",
-        "contrib/multilingual/docs/README.md"
+        "contrib/batch_scan/docs/README.md"
       ]
     },
     {
@@ -201,8 +201,8 @@
       ]
     }
   ],
-  "scan_status": "PASS",
-  "scan_grade": "A",
+  "scan_status": "WARN",
+  "scan_grade": "B",
   "framework_compatibility": [
     "claude-skills",
     "google-adk",
@@ -215,7 +215,7 @@
     "source_repo": "https://github.com/NVIDIA/SkillSpector",
     "generated_by": "GitScape.ai",
     "generated_by_url": "https://gitscape.ai",
-    "generated_at": "2026-07-10T19:56:32Z",
+    "generated_at": "2026-07-12T00:57:47Z",
     "files_analyzed": 217,
     "primary_languages": [
       "Python",
@@ -226,7 +226,7 @@
     "modules_indexed": 69,
     "scan_engine": "scapeguard",
     "scan_engine_version": "2.1.0",
-    "skill_hash": "sha256:06663b511cf0fbc2a207b5132e171e5f7e103dbcd90bbc20e9a474c235c4e9f9",
+    "skill_hash": "sha256:7e20fcdbe763b750fe6439aee72b1cfaa79b08caf0363a3b4317103310ada683",
     "license": {
       "spdx_id": "Apache-2.0",
       "source_path": "LICENSE",
@@ -240,7 +240,7 @@
       "Executing automated tests and verifying codebase changes."
     ]
   },
-  "source_git_head": "c2d09df019e358d3dc12d980b82c798b87cb9f56",
-  "built_at": "2026-07-10T19:56:32Z",
+  "source_git_head": "a68496dc9220c78c3daa13cfb2f18036f1a79494",
+  "built_at": "2026-07-12T00:57:47Z",
   "model": "gemini-3.1-flash-lite"
 }
