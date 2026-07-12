@@ -269,11 +269,12 @@ export const DevTools: React.FC<DevToolsProps> = ({ onSelectTab }) => {
             <div className="flex flex-col gap-3 mt-1">
               <CheckRow>Zero install, runs via <code className="font-mono text-[0.85em] text-slate-200">npx gitscape</code></CheckRow>
               <CheckRow>Auto-registers skills in your rules registry files</CheckRow>
+              <CheckRow>Scan-only mode — <code className="font-mono text-[0.85em] text-slate-200">gitscape scan</code> grades a repo without installing</CheckRow>
               <CheckRow>Supports private repositories using your custom PAT token</CheckRow>
-              <CheckRow>Stateless and runs entirely client-side</CheckRow>
             </div>
             <div className="mt-3 flex flex-col gap-2">
               <CodeSnippet title="install a skill" accent="violet" prompt code="npx gitscape https://github.com/owner/repo" />
+              <CodeSnippet title="scan a repo — no install" accent="violet" prompt code="npx gitscape scan https://github.com/owner/repo" />
             </div>
             <div className="flex justify-start mt-1 pl-1">
               <button

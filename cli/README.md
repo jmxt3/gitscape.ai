@@ -75,10 +75,12 @@ Clones the repository, analyzes its structure, runs the ScapeGuard security scan
 
 Each compile prints the skill's **ScapeGuard security grade** (`A`–`F`); the full report ships alongside the skill as `scan-report.json` and `scan-report.sarif`.
 
+> **Security gate:** if the scan **fails** (grade `F`), the CLI does **not** write any files. Review the findings with `npx gitscape scan <url>`, or re-run with `--accept-risk` to install anyway.
+
 **Example:**
 ```bash
 npx gitscape https://github.com/google/adk-python
-# ✓ Skill compiled successfully (Scan Grade: A)
+# ✓ Skill compiled successfully (Scan Grade: A, PASS)
 #   write .agents/skills/google-adk-python/SKILL.md
 #   ...
 #   ✓ Skill google-adk-python installed to .agents/skills/google-adk-python
@@ -86,10 +88,42 @@ npx gitscape https://github.com/google/adk-python
 
 **Options:**
 * `--token <pat>`: Optional GitHub Personal Access Token (PAT) for compiling private repositories.
+* `--accept-risk`: Install the skill even if the security scan fails (grade `F`). Off by default.
 
 ---
 
-### 2. Initialize Workspace MCP
+### 2. Scan a Repo (Without Installing)
+```bash
+npx gitscape scan <repository_url>
+```
+Runs ScapeGuard against a repository and prints the security verdict **without building or installing a skill** — nothing is written to disk. Use it to vet a repo before installing, or as a **CI gate** (the command exits non-zero when the scan fails).
+
+**Example:**
+```bash
+npx gitscape scan https://github.com/google/adk-python
+#   ScapeGuard: grade A · PASS · risk 0 · 0 findings
+#
+# ✓ Safe to install (grade A). Nothing was written.
+```
+
+A failing scan prints each finding and exits with code `1`:
+```bash
+npx gitscape scan https://github.com/acme/suspicious-repo
+#   ScapeGuard: grade F · FAIL · risk 100 · 1 finding
+#     [CRITICAL] GS-INJ-001 — SKILL.md:3
+#            Prompt-injection: attempt to override prior instructions.
+#
+# ✗ FAIL (grade F): this repo's skill would not pass the security gate.
+```
+
+**Options:**
+* `--token <pat>`: Optional GitHub Personal Access Token (PAT) for scanning private repositories.
+
+> **Tip:** Run `npx gitscape` with **no arguments** in a terminal for an interactive menu that lets you choose between compiling and scanning.
+
+---
+
+### 3. Initialize Workspace MCP
 ```bash
 npx gitscape init
 ```
@@ -97,7 +131,7 @@ Creates a local `.mcp.json` file inside your current working directory to regist
 
 ---
 
-### 3. Remove/Uninstall a Skill
+### 4. Remove/Uninstall a Skill
 ```bash
 npx gitscape remove <skill_name>
 # OR
@@ -107,7 +141,7 @@ Deletes the skill folder under `.agents/skills/<name>/` and cleanly removes all 
 
 ---
 
-### 4. Update an Already-Installed Skill
+### 5. Update an Already-Installed Skill
 ```bash
 npx gitscape <repository_url>
 ```
