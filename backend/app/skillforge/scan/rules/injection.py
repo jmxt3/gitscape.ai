@@ -106,4 +106,31 @@ RULES: list[Rule] = [
             re.I),
         message="Prompt-injection: conditional/dormant trigger for a delayed action.",
     ),
+    Rule(
+        # Multilingual instruction-override / system-prompt-leak phrases. The
+        # English rules (GS-INJ-001/002) are keyword-based and miss non-English
+        # injections; this covers the highest-frequency phrasings in the most
+        # common languages. Deterministic partial mitigation of the multilingual
+        # gap (the advisory judge covers the long tail).
+        id="GS-INJ-009", name="injection.multilingual_override", category=C,
+        severity=Severity.CRITICAL, confidence=Confidence.HIGH,
+        pattern=re.compile(
+            # Chinese — ignore (previous/all) instructions/rules; reveal system prompt
+            r"忽略.{0,12}(指令|指示|命令|提示|规则)"
+            r"|(揭示|显示|泄露|透露|说出).{0,8}(系统|开发者).{0,4}提示词?"
+            # Japanese — ignore the (previous) instructions
+            r"|(以前|これまで|上記|前).{0,8}(指示|命令).{0,6}無視"
+            r"|指示を無視"
+            # Korean — ignore previous instructions
+            r"|이전.{0,8}(지시|지침|명령).{0,6}무시"
+            r"|지시를? ?무시"
+            # Spanish / Portuguese — ignore previous instructions
+            r"|ignora[r]?\s+(?:las\s+|todas\s+las\s+)?instrucciones\s+(?:anteriores|previas)"
+            r"|ignore\s+(?:as\s+)?instru[çc][õo]es\s+anteriores"
+            # Russian — ignore previous instructions
+            r"|игнорир\w*\s+(?:все\s+)?(?:предыдущие\s+)?(?:инструкции|указания)",
+            re.I),
+        message="Prompt-injection: non-English instruction-override / system-prompt-leak phrasing.",
+        remediation="Remove the override instruction from the source doc; it must not reach the agent.",
+    ),
 ]
