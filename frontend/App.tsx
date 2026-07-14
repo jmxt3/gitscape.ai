@@ -13,7 +13,7 @@ import { OutputTabs } from "./components/OutputTabs";
 import { transformGithubTreeToD3Hierarchy } from "./components/diagramUtils";
 // DiagramFullscreenModal import removed — Code Map tab hidden
 import { Hero } from "./components/Hero";
-import { HowItWorks, Security, OpenSource, FaqSection } from "./components/LandingSections";
+import { HowItWorks, Security, OpenSource, FaqSection, FeatureComparison } from "./components/LandingSections";
 import { CliPanel, McpPanel, DevTools } from "./components/DevToolsSection";
 import {
   GITHUB_TOKEN_LOCAL_STORAGE_KEY,
@@ -1314,6 +1314,7 @@ const App: React.FC = () => {
             }}
           />
           <Security />
+          <FeatureComparison />
           <OpenSource />
           <FaqSection />
         </div>

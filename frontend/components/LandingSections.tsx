@@ -52,6 +52,83 @@ const STEPS = [
   },
 ];
 
+export const SearchOrCompileExplainer: React.FC = () => (
+  <div className="mt-14 p-6 sm:p-8 rounded-2xl border border-slate-800/80 bg-slate-900/40 max-w-4xl mx-auto">
+    <div className="flex flex-col items-center gap-2 text-center mb-8">
+      <span className="text-[10px] font-bold tracking-[0.1em] text-violet-400 uppercase">Search-or-Compile Wedge</span>
+      <h3 className="m-0 text-xl sm:text-2xl font-extrabold text-slate-100">
+        How GitScape Secures the Skill Ecosystem
+      </h3>
+      <p className="m-0 text-xs sm:text-sm text-slate-400 max-w-lg">
+        Whether a repository has an owner-authored skill or not, ScapeGuard is the constant safety gate.
+      </p>
+    </div>
+
+    {/* Diagram Flow container */}
+    <div className="flex flex-col md:flex-row items-stretch justify-between gap-6 relative">
+      {/* Step 1: Input */}
+      <div className="flex flex-col items-center justify-center p-5 rounded-xl bg-slate-950/85 border border-slate-850 text-center flex-1 z-10">
+        <div className="w-9 h-9 rounded-lg bg-violet-500/10 flex items-center justify-center text-violet-400 border border-violet-500/20 mb-3">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" />
+          </svg>
+        </div>
+        <span className="text-[13px] font-bold text-slate-200">GitHub Repository</span>
+        <span className="text-[11px] text-slate-500 mt-1">Target repo URL input</span>
+      </div>
+
+      {/* Connection arrow 1 */}
+      <div className="hidden md:flex flex-col justify-center items-center text-slate-700 select-none">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <line x1="5" y1="12" x2="19" y2="12" />
+          <polyline points="12 5 19 12 12 19" />
+        </svg>
+      </div>
+
+      {/* Branches Container */}
+      <div className="flex flex-col gap-4.5 flex-[2]">
+        {/* Branch A: Pre-Authored */}
+        <div className="flex flex-col sm:flex-row items-center gap-3.5 p-4 rounded-xl bg-emerald-950/10 border border-emerald-500/20 text-center sm:text-left">
+          <div className="w-7 h-7 rounded-full bg-emerald-500/15 flex items-center justify-center text-emerald-400 font-extrabold text-xs shrink-0">A</div>
+          <div>
+            <span className="text-[12.5px] font-bold text-emerald-300 block">Owner-Authored Skill Found</span>
+            <span className="text-[11.5px] text-slate-400 block mt-0.5">Detects <code>skills/**/SKILL.md</code>. Skips compilation to respect owner's conventions.</span>
+          </div>
+        </div>
+
+        {/* Branch B: Un-authored */}
+        <div className="flex flex-col sm:flex-row items-center gap-3.5 p-4 rounded-xl bg-violet-950/10 border border-violet-500/20 text-center sm:text-left">
+          <div className="w-7 h-7 rounded-full bg-violet-500/15 flex items-center justify-center text-violet-400 font-extrabold text-xs shrink-0">B</div>
+          <div>
+            <span className="text-[12.5px] font-bold text-violet-300 block">No Pre-Authored Skill Found</span>
+            <span className="text-[11.5px] text-slate-400 block mt-0.5">GitScape Compiler automatically ingests codebase & builds custom conventions.</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Connection arrow 2 */}
+      <div className="hidden md:flex flex-col justify-center items-center text-slate-700 select-none">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <line x1="5" y1="12" x2="19" y2="12" />
+          <polyline points="12 5 19 12 12 19" />
+        </svg>
+      </div>
+
+      {/* Unified Security Check */}
+      <div className="flex flex-col items-center justify-center p-5 rounded-xl bg-emerald-950/20 border border-emerald-500/35 text-center flex-1 z-10">
+        <div className="w-9 h-9 rounded-lg bg-emerald-500/15 flex items-center justify-center text-emerald-400 border border-emerald-500/30 mb-3">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            <path d="M9 12l2 2 4-4" />
+          </svg>
+        </div>
+        <span className="text-[13px] font-bold text-emerald-300">ScapeGuard Scan</span>
+        <span className="text-[11px] text-slate-400 mt-1">Deterministic AST, Secrets &amp; OSV audit</span>
+      </div>
+    </div>
+  </div>
+);
+
 export const HowItWorks: React.FC = () => (
   <section
     id="how-it-works"
@@ -100,6 +177,9 @@ export const HowItWorks: React.FC = () => (
           </div>
         ))}
       </div>
+
+      <SearchOrCompileExplainer />
+
       <p className="m-0 text-center text-[13px] text-slate-500">
         The same pipeline runs behind the{" "}
         <a href="#developer-tools" className="text-violet-400 hover:text-violet-300 transition-colors font-medium">
@@ -156,9 +236,7 @@ export const Security: React.FC = () => (
           Every skill is scanned by <span className="text-emerald-400">ScapeGuard</span>.
         </h2>
         <p className="m-0 text-[15px] leading-relaxed text-slate-400">
-          A skill is code your agent trusts. GitScape runs each one through <span className="text-emerald-400 font-semibold">ScapeGuard</span>,
-          a deterministic scanner with 55+ rules across 9 threat categories, and assigns an
-          <span className="text-slate-200 font-semibold"> A–F grade</span> before it can leave the page.
+          A skill is code your agent trusts. Whether a skill is pre-authored by the repository maintainer or compiled on-the-fly by GitScape, ScapeGuard deterministic-scans it across 55+ rules and 9 threat categories, assigning a verifiable <span className="text-slate-200 font-semibold">A–F grade</span> before it touches your project.
         </p>
         {/* Grade legend — teaches the A–F scale at a glance */}
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-1 text-[12px]">
@@ -301,6 +379,14 @@ export const OpenSource: React.FC = () => {
 
 const FAQ_ITEMS = [
   {
+    q: "How does GitScape interoperate with Vercel's npx skills?",
+    a: "GitScape's compiled skills are 100% compatible with the Vercel Labs npx skills format. They write to the same .agents/skills/ location and list name/description frontmatter correctly. GitScape acts as the compiler and trust gate: while npx skills installs maintainer-authored skills, GitScape lets you scan those skills before installation and compiles any missing repository on the fly."
+  },
+  {
+    q: "What is the Search-or-Compile workflow?",
+    a: "Search-or-Compile is GitScape's workflow to respect pre-authored repository conventions. When you target a repository, GitScape first searches for an existing owner-authored SKILL.md. If one exists, we run ScapeGuard security audits on it directly. If none exists, we automatically compile a new skill from the repository source code and audit that output. Either way, ScapeGuard assigns a safety grade before installation."
+  },
+  {
     q: "What is GitScape AI?",
     a: "GitScape AI is a free tool that converts any GitHub repository into AI-ready context — including a clean text code digest, an interactive file-tree diagram, and a structured SKILL.md file your AI agents can load and act on."
   },
@@ -349,6 +435,70 @@ const FAQ_ITEMS = [
     a: "Yes, GitScape AI is completely free to use for public repositories. No account or sign-up is required."
   }
 ];
+
+export const FeatureComparison: React.FC = () => (
+  <section
+    id="comparison"
+    className="px-6 sm:px-10 py-16 sm:py-[72px]"
+    style={{ borderTop: "1px solid rgba(71,85,105,0.25)" }}
+  >
+    <div className="max-w-[900px] mx-auto flex flex-col gap-10">
+      <div className="flex flex-col items-center gap-2.5 text-center">
+        <span className="text-[11px] font-bold tracking-[0.1em] text-violet-400">SIDE-BY-SIDE</span>
+        <h2 className="m-0 text-3xl sm:text-[38px] font-extrabold tracking-[-0.025em] text-slate-100">
+          GitScape vs. npx skills
+        </h2>
+        <p className="m-0 text-[15px] text-slate-400">
+          Why GitScape is the safety gate and long-tail engine for your agent skills.
+        </p>
+      </div>
+
+      <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950/40">
+        <table className="w-full text-left border-collapse text-[13.5px]">
+          <thead>
+            <tr className="border-b border-slate-800 bg-slate-900/60 font-semibold text-slate-300">
+              <th className="p-4 sm:p-5">Capability</th>
+              <th className="p-4 sm:p-5 text-slate-400">npx skills (Vercel Labs)</th>
+              <th className="p-4 sm:p-5 text-violet-300 font-bold">GitScape</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-800/60 text-slate-400">
+            <tr>
+              <td className="p-4 sm:p-5 font-semibold text-slate-200">Authored Skill Support</td>
+              <td className="p-4 sm:p-5">✓ Symlinks pre-existing SKILL.md</td>
+              <td className="p-4 sm:p-5 text-slate-100 font-semibold">✓ Detects, scans, and installs pre-existing files</td>
+            </tr>
+            <tr>
+              <td className="p-4 sm:p-5 font-semibold text-slate-200">Long-tail Compilation</td>
+              <td className="p-4 sm:p-5">✗ No (creates blank templates only)</td>
+              <td className="p-4 sm:p-5 text-slate-100 font-semibold">✓ Generates custom skills for any repository on the fly</td>
+            </tr>
+            <tr>
+              <td className="p-4 sm:p-5 font-semibold text-slate-200">Deterministic Security Scan</td>
+              <td className="p-4 sm:p-5">✗ No (manual read warning only)</td>
+              <td className="p-4 sm:p-5 text-emerald-400 font-bold">✓ ScapeGuard checks 55+ rules / 9 categories</td>
+            </tr>
+            <tr>
+              <td className="p-4 sm:p-5 font-semibold text-slate-200">AST Behavioral Check</td>
+              <td className="p-4 sm:p-5">✗ No</td>
+              <td className="p-4 sm:p-5 text-slate-100 font-semibold">✓ tree-sitter AST audits on fenced code blocks</td>
+            </tr>
+            <tr>
+              <td className="p-4 sm:p-5 font-semibold text-slate-200">Dependency Auditing</td>
+              <td className="p-4 sm:p-5">✗ No</td>
+              <td className="p-4 sm:p-5 text-slate-100 font-semibold">✓ Live OSV.dev database vulnerability checks</td>
+            </tr>
+            <tr>
+              <td className="p-4 sm:p-5 font-semibold text-slate-200">Verifiable Provenance</td>
+              <td className="p-4 sm:p-5">✗ No</td>
+              <td className="p-4 sm:p-5 text-slate-100 font-semibold">✓ Complete <code>manifest.json</code> with digests and hashes</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+);
 
 export const FaqSection: React.FC = () => {
   const [openIndex, setOpenIndex] = useState<number | null>(null);

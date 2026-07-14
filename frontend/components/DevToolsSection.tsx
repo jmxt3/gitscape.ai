@@ -92,12 +92,16 @@ const SURFACES: { key: SurfaceKey; label: string; activeColor: string; underline
 export const CliPanel: React.FC = () => (
   <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-start">
     <div className="flex flex-col gap-4">
-      <h3 className="m-0 text-xl sm:text-2xl font-bold tracking-[-0.015em] text-slate-100">
-        One command. No install, no signup.
-      </h3>
+      <div className="flex items-center justify-between">
+        <h3 className="m-0 text-xl sm:text-2xl font-bold tracking-[-0.015em] text-slate-100">
+          One command. No install, no signup.
+        </h3>
+        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-300 border border-violet-500/25 shrink-0 ml-2">
+          Pairs with npx skills
+        </span>
+      </div>
       <p className="m-0 text-[14.5px] leading-relaxed text-slate-400">
-        Point the CLI at any GitHub repository and it compiles the skill server-side,
-        then writes the files straight into your project — ready for your agent's next run.
+        Point the CLI at any GitHub repository to compile and install on-the-fly, or scan an existing pre-authored skill before it touches your project.
       </p>
       <div className="flex flex-col gap-3 mt-1">
         <CheckRow>Writes SKILL.md, manifest.json and references/ into <code className="font-mono text-[0.9em] text-slate-200">.agents/skills/&lt;owner-repo&gt;/</code></CheckRow>
@@ -115,6 +119,12 @@ export const CliPanel: React.FC = () => (
       </a>
     </div>
     <div className="flex flex-col gap-3">
+      <CodeSnippet
+        title="scan a skill before install"
+        accent="violet"
+        prompt
+        code="npx gitscape scan https://github.com/google/adk-python"
+      />
       <CodeSnippet
         title="compile & install a skill"
         accent="violet"
@@ -259,22 +269,27 @@ export const DevTools: React.FC<DevToolsProps> = ({ onSelectTab }) => {
               boxShadow: "0 10px 30px rgba(0,0,0,0.5)",
             }}
           >
-            <span className="text-[11px] font-bold tracking-[0.1em] text-violet-400">LOCAL COMPILER</span>
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold tracking-[0.1em] text-violet-400">LOCAL COMPILER</span>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-300 border border-violet-500/25">
+                Pairs with npx skills
+              </span>
+            </div>
             <h3 className="m-0 text-2xl font-bold tracking-[-0.015em] text-slate-100">
               GitScape CLI
             </h3>
             <p className="m-0 text-[14.5px] leading-relaxed text-slate-400">
-              Compile skills straight from your terminal. Point the CLI at any repository (public or private) and it will download, scan, and output the SKILL.md and manifest files directly into your project's configuration directory.
+              Compile skills straight from your terminal or scan pre-authored ones. Point the CLI at any repository (public or private) to check safety grades before installation and output the SKILL.md and manifest files.
             </p>
             <div className="flex flex-col gap-3 mt-1">
               <CheckRow>Zero install, runs via <code className="font-mono text-[0.85em] text-slate-200">npx gitscape</code></CheckRow>
               <CheckRow>Auto-registers skills in your rules registry files</CheckRow>
-              <CheckRow>Scan-only mode — <code className="font-mono text-[0.85em] text-slate-200">gitscape scan</code> grades a repo without installing</CheckRow>
+              <CheckRow>Scan-only mode — <code className="font-mono text-[0.85em] text-slate-200">gitscape scan</code> audits any skill pre-install</CheckRow>
               <CheckRow>Supports private repositories using your custom PAT token</CheckRow>
             </div>
             <div className="mt-3 flex flex-col gap-2">
+              <CodeSnippet title="scan a skill before install" accent="violet" prompt code="npx gitscape scan https://github.com/owner/repo" />
               <CodeSnippet title="install a skill" accent="violet" prompt code="npx gitscape https://github.com/owner/repo" />
-              <CodeSnippet title="scan a repo — no install" accent="violet" prompt code="npx gitscape scan https://github.com/owner/repo" />
             </div>
             <div className="flex justify-start mt-1 pl-1">
               <button

@@ -24,17 +24,13 @@ export const Hero: React.FC<HeroProps> = ({ onSelectMcp }) => (
       </div>
 
       <h1 className="m-0 text-5xl sm:text-6xl lg:text-[62px] font-extrabold tracking-[-0.035em] leading-[1.04] text-slate-100 lg:whitespace-nowrap">
-        Turn any repo into an{" "}
-        <span className="text-gradient">AI Skill.</span>
+        The Trust Layer for{" "}
+        <span className="text-gradient">Agent Skills.</span>
       </h1>
 
       <p className="m-0 text-lg sm:text-[19px] leading-relaxed text-slate-400 max-w-4xl">
-        Paste a GitHub URL. GitScape automates codebase ingestion, runs a
-        security scanner, and forges a ready-to-load{" "}
-        <code className="font-mono text-[0.85em] text-violet-300">
-          SKILL.md
-        </code>{" "}
-        — so your agents act like they wrote it.
+        Scan any agent skill — authored or compiled — for prompt injection, secrets,
+        and malicious execution before it touches your agent. Or compile the long tail on the fly.
       </p>
 
       <div className="flex flex-wrap items-center justify-center gap-3 mt-3">
