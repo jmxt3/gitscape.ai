@@ -293,7 +293,14 @@ def get_registry_detail(
     repo_url = urllib.parse.unquote(repo_url)
     
     try:
-        owner, repo = converter.parse_github_url(repo_url)
+        url_path = urllib.parse.urlparse(repo_url).path.strip("/")
+        parts = url_path.split("/")
+        if len(parts) < 2:
+            raise ValueError()
+        owner = parts[0]
+        repo = parts[1]
+        if repo.endswith(".git"):
+            repo = repo[:-4]
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid GitHub repository URL.")
         

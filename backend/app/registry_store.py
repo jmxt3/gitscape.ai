@@ -16,10 +16,10 @@ STATIC_REGISTRY_SKILLS = [
         "description": "Official Stripe Node.js SDK agent skill.",
         "primary_languages": ["TypeScript", "JavaScript"],
         "files_analyzed": 240,
-        "grade": "C",
-        "status": "WARN",
-        "risk_score": 30,
-        "findings_count": 4,
+        "grade": "F",
+        "status": "FAIL",
+        "risk_score": 25,
+        "findings_count": 2,
         "freshness": "fresh",
     },
     {
@@ -77,11 +77,12 @@ STATIC_REGISTRY_SKILLS = [
         "risk_score": 8,
         "findings_count": 1,
         "freshness": "fresh",
-    }
+    },
 ]
 
 # Ephemeral fallback cache for local dev / offline runs
 IN_MEMORY_SCANS = []
+
 
 def _get_storage_client() -> Optional[storage.Client]:
     if not os.environ.get("GITSCAPE_REGISTRY_BUCKET"):
@@ -89,8 +90,11 @@ def _get_storage_client() -> Optional[storage.Client]:
     try:
         return storage.Client()
     except Exception as e:
-        logger.warning(f"Could not initialize Google Cloud Storage client: {e}. Falling back to in-memory store.")
+        logger.warning(
+            f"Could not initialize Google Cloud Storage client: {e}. Falling back to in-memory store."
+        )
         return None
+
 
 def list_registry_skills() -> List[dict]:
     """
@@ -99,7 +103,7 @@ def list_registry_skills() -> List[dict]:
     """
     bucket_name = os.environ.get("GITSCAPE_REGISTRY_BUCKET")
     client = _get_storage_client()
-    
+
     dynamic_skills = []
     if client and bucket_name:
         try:
@@ -108,7 +112,9 @@ def list_registry_skills() -> List[dict]:
             if blob.exists():
                 data_str = blob.download_as_text(encoding="utf-8")
                 dynamic_skills = json.loads(data_str)
-                logger.info(f"Loaded {len(dynamic_skills)} dynamic scans from GCS registry index.")
+                logger.info(
+                    f"Loaded {len(dynamic_skills)} dynamic scans from GCS registry index."
+                )
         except Exception as e:
             logger.error(f"Error fetching GCS registry index scans_index.json: {e}")
             dynamic_skills = IN_MEMORY_SCANS
@@ -122,8 +128,9 @@ def list_registry_skills() -> List[dict]:
         if item["repo_url"].lower() not in seen_urls:
             combined.append(item)
             seen_urls.add(item["repo_url"].lower())
-            
+
     return combined
+
 
 def get_scanned_detail(owner: str, repo: str) -> Optional[dict]:
     """
@@ -131,17 +138,20 @@ def get_scanned_detail(owner: str, repo: str) -> Optional[dict]:
     """
     bucket_name = os.environ.get("GITSCAPE_REGISTRY_BUCKET")
     client = _get_storage_client()
-    
+
     if client and bucket_name:
         try:
             bucket = client.bucket(bucket_name)
             blob = bucket.blob(f"scans/{owner.lower()}-{repo.lower()}.json")
             if blob.exists():
-                logger.info(f"Registry cache hit for scans/{owner.lower()}-{repo.lower()}.json")
+                logger.info(
+                    f"Registry cache hit for scans/{owner.lower()}-{repo.lower()}.json"
+                )
                 return json.loads(blob.download_as_text(encoding="utf-8"))
         except Exception as e:
             logger.error(f"Error checking registry cache for {owner}/{repo}: {e}")
     return None
+
 
 def save_scanned_skill(owner: str, repo: str, detail_data: dict):
     """
@@ -149,7 +159,7 @@ def save_scanned_skill(owner: str, repo: str, detail_data: dict):
     """
     bucket_name = os.environ.get("GITSCAPE_REGISTRY_BUCKET")
     client = _get_storage_client()
-    
+
     # Exclude detailed findings to keep index lightweight
     summary_data = {
         "repo_url": detail_data["repo_url"],
@@ -165,42 +175,52 @@ def save_scanned_skill(owner: str, repo: str, detail_data: dict):
         "findings_count": len(detail_data.get("findings", [])),
         "freshness": "fresh",
     }
-    
+
     if client and bucket_name:
         try:
             bucket = client.bucket(bucket_name)
-            
+
             # 1. Save full details
             detail_blob = bucket.blob(f"scans/{owner.lower()}-{repo.lower()}.json")
             detail_blob.upload_from_string(
-                json.dumps(detail_data, indent=2),
-                content_type="application/json"
+                json.dumps(detail_data, indent=2), content_type="application/json"
             )
-            
+
             # 2. Append to index
             index_blob = bucket.blob("scans_index.json")
             existing_index = []
             if index_blob.exists():
                 try:
-                    existing_index = json.loads(index_blob.download_as_text(encoding="utf-8"))
+                    existing_index = json.loads(
+                        index_blob.download_as_text(encoding="utf-8")
+                    )
                 except Exception:
                     existing_index = []
-            
+
             # Remove any older duplicate entry in index
-            existing_index = [item for item in existing_index if item["repo_url"].lower() != detail_data["repo_url"].lower()]
+            existing_index = [
+                item
+                for item in existing_index
+                if item["repo_url"].lower() != detail_data["repo_url"].lower()
+            ]
             existing_index.append(summary_data)
-            
+
             index_blob.upload_from_string(
-                json.dumps(existing_index, indent=2),
-                content_type="application/json"
+                json.dumps(existing_index, indent=2), content_type="application/json"
             )
             logger.info(f"Saved {owner}/{repo} scan to GCS bucket successfully.")
             return
         except Exception as e:
-            logger.error(f"Failed to write scan to GCS bucket: {e}. Falling back to in-memory.")
-            
+            logger.error(
+                f"Failed to write scan to GCS bucket: {e}. Falling back to in-memory."
+            )
+
     # In-memory fallback
     global IN_MEMORY_SCANS
-    IN_MEMORY_SCANS = [item for item in IN_MEMORY_SCANS if item["repo_url"].lower() != detail_data["repo_url"].lower()]
+    IN_MEMORY_SCANS = [
+        item
+        for item in IN_MEMORY_SCANS
+        if item["repo_url"].lower() != detail_data["repo_url"].lower()
+    ]
     IN_MEMORY_SCANS.append(summary_data)
     logger.info(f"Saved {owner}/{repo} scan to in-memory fallback list.")

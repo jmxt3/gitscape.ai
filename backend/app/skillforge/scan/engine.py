@@ -198,19 +198,25 @@ def scan_skill(
     for f in findings:
         f.source_path = _attribute(f.snippet, units)
 
-    # Mitigate severity for findings in non-executable reference/example files
+    # Filter findings: skip non-injection / non-obfuscation findings in reference/example files
+    filtered_findings = []
     for f in findings:
         is_ref_or_example = (
             f.file.startswith("references/") or 
             f.file.startswith("examples/") or 
             "references/" in f.file or 
             "examples/" in f.file or
-            (f.file.endswith((".md", ".txt")) and f.file != "SKILL.md")
+            (f.file.endswith(".md") and f.file != "SKILL.md")
         )
         if is_ref_or_example:
-            if f.severity in (Severity.CRITICAL, Severity.HIGH):
-                logger.info(f"Downgrading finding {f.rule} in reference file {f.file} from {f.severity} to MEDIUM.")
-                f.severity = Severity.MEDIUM
+            if f.category in (Category.PROMPT_INJECTION.value, Category.OBFUSCATION.value):
+                filtered_findings.append(f)
+            else:
+                logger.info(f"Skipping non-security finding {f.rule} in reference file {f.file}.")
+        else:
+            filtered_findings.append(f)
+            
+    findings = filtered_findings
 
     status = _status_for(findings)
     score = compute_score(findings)
