@@ -250,79 +250,8 @@ def check_freshness(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+from app import registry_store
 
-REGISTRY_SKILLS = [
-    {
-        "repo_url": "https://github.com/stripe/stripe-node",
-        "name": "stripe-node",
-        "owner": "stripe",
-        "repo": "stripe-node",
-        "description": "Official Stripe Node.js SDK agent skill.",
-        "primary_languages": ["TypeScript", "JavaScript"],
-        "files_analyzed": 240,
-        "grade": "F",
-        "status": "FAIL",
-        "risk_score": 64,
-        "findings_count": 4,
-        "freshness": "fresh",
-    },
-    {
-        "repo_url": "https://github.com/pydantic/pydantic",
-        "name": "pydantic",
-        "owner": "pydantic",
-        "repo": "pydantic",
-        "description": "Data validation and settings management using Python type hints.",
-        "primary_languages": ["Python"],
-        "files_analyzed": 380,
-        "grade": "A",
-        "status": "PASS",
-        "risk_score": 0,
-        "findings_count": 1,
-        "freshness": "fresh",
-    },
-    {
-        "repo_url": "https://github.com/fastapi/fastapi",
-        "name": "fastapi",
-        "owner": "fastapi",
-        "repo": "fastapi",
-        "description": "FastAPI framework, high performance, easy to learn, fast to code, ready for production.",
-        "primary_languages": ["Python"],
-        "files_analyzed": 190,
-        "grade": "A",
-        "status": "PASS",
-        "risk_score": 0,
-        "findings_count": 0,
-        "freshness": "fresh",
-    },
-    {
-        "repo_url": "https://github.com/expressjs/express",
-        "name": "express",
-        "owner": "expressjs",
-        "repo": "express",
-        "description": "Fast, unopinionated, minimalist web framework for Node.js.",
-        "primary_languages": ["JavaScript"],
-        "files_analyzed": 90,
-        "grade": "A",
-        "status": "PASS",
-        "risk_score": 0,
-        "findings_count": 1,
-        "freshness": "fresh",
-    },
-    {
-        "repo_url": "https://github.com/psf/requests",
-        "name": "requests",
-        "owner": "psf",
-        "repo": "requests",
-        "description": "A simple, pleasant HTTP library for Python.",
-        "primary_languages": ["Python"],
-        "files_analyzed": 75,
-        "grade": "B",
-        "status": "WARN",
-        "risk_score": 8,
-        "findings_count": 1,
-        "freshness": "fresh",
-    }
-]
 
 @router.get("/registry/search")
 @limiter.limit("20/minute")
@@ -334,12 +263,13 @@ def search_registry(
     Search indexed skills in the GitScape registry.
     If no query is provided, returns all indexed skills.
     """
+    skills = registry_store.list_registry_skills()
     if not query:
-        return REGISTRY_SKILLS
+        return skills
         
     q = query.lower()
     results = []
-    for skill in REGISTRY_SKILLS:
+    for skill in skills:
         if (q in skill["name"].lower() or 
             q in skill["owner"].lower() or 
             q in skill["repo"].lower() or 
@@ -361,7 +291,19 @@ def get_registry_detail(
     This provides infinite long-tail coverage via dynamic compilation.
     """
     repo_url = urllib.parse.unquote(repo_url)
-    static_info = next((s for s in REGISTRY_SKILLS if s["repo_url"].lower() == repo_url.lower()), None)
+    
+    try:
+        owner, repo = converter.parse_github_url(repo_url)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid GitHub repository URL.")
+        
+    # Check cache first
+    cached = registry_store.get_scanned_detail(owner, repo)
+    if cached:
+        return cached
+        
+    skills = registry_store.list_registry_skills()
+    static_info = next((s for s in skills if s["repo_url"].lower() == repo_url.lower()), None)
     
     try:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -371,8 +313,6 @@ def get_registry_detail(
                 repo_url, clone_path, return_metadata=True
             )
             
-            owner = metadata["owner"]
-            repo = metadata["repo"]
             languages = metadata["primary_languages"]
             files_analyzed = metadata["files_analyzed"]
             readme = metadata.get("readme", "")
@@ -394,30 +334,12 @@ def get_registry_detail(
                 digest_content=digest_str, skill_type="code"
             )
             
-            # Dynamic Registry Append (Stateless Warm-instance Cache)
-            if not static_info:
-                new_skill_entry = {
-                    "repo_url": repo_url,
-                    "name": pkg.name,
-                    "owner": owner,
-                    "repo": repo,
-                    "description": pkg.manifest.description or f"Agent skill for {owner}/{repo}.",
-                    "primary_languages": languages,
-                    "files_analyzed": files_analyzed,
-                    "grade": pkg.scan_report.grade,
-                    "status": pkg.scan_report.status.value,
-                    "risk_score": pkg.scan_report.risk_score,
-                    "findings_count": len(pkg.scan_report.findings),
-                    "freshness": "fresh",
-                }
-                REGISTRY_SKILLS.append(new_skill_entry)
-
-            return {
+            detail_payload = {
                 "repo_url": repo_url,
                 "name": pkg.name,
                 "owner": owner,
                 "repo": repo,
-                "description": static_info["description"] if static_info else pkg.manifest.description,
+                "description": static_info["description"] if static_info else (pkg.manifest.description or f"Agent skill for {owner}/{repo}."),
                 "primary_languages": languages,
                 "files_analyzed": files_analyzed,
                 "grade": pkg.scan_report.grade,
@@ -428,6 +350,11 @@ def get_registry_detail(
                 "skill_md": pkg.skill_md,
                 "manifest": pkg.manifest.model_dump(mode="json")
             }
+            
+            # Save scan dynamically (GCS or fallback to in-memory)
+            registry_store.save_scanned_skill(owner, repo, detail_payload)
+            
+            return detail_payload
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -438,7 +365,8 @@ def get_repo_badge(owner: str, repo: str):
     Generate a dynamic ScapeGuard badge SVG for a given repository.
     """
     matching_skill = None
-    for skill in REGISTRY_SKILLS:
+    skills = registry_store.list_registry_skills()
+    for skill in skills:
         if skill["owner"].lower() == owner.lower() and skill["repo"].lower() == repo.lower():
             matching_skill = skill
             break

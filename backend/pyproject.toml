@@ -18,6 +18,7 @@ dependencies = [
     "tree-sitter-typescript>=0.23",
     "tree-sitter-javascript>=0.23",
     "tree-sitter-go>=0.23",
+    "google-cloud-storage>=2.16.0",
 ]
 
 [dependency-groups]
