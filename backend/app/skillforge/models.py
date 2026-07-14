@@ -269,6 +269,9 @@ class Manifest(BaseModel):
     provenance: list[ProvenanceEntry] = Field(default_factory=list)
     scan_status: ScanStatus = ScanStatus.PASS
     scan_grade: str = ""  # A/B/C/F letter grade (mirrors scan_report.grade)
+    # "compiled" (GitScape generated the skill) or "authored" (the repo already
+    # shipped a maintainer-written SKILL.md, which we scanned as-is).
+    source: str = "compiled"
     framework_compatibility: list[str] = Field(default_factory=list)
     metadata: dict = Field(default_factory=dict)
     source_git_head: Optional[str] = None
@@ -282,6 +285,7 @@ class SkillPackage(BaseModel):
     references: dict[str, str] = Field(default_factory=dict)  # filename -> content
     manifest: Manifest
     scan_report: ScanReport = Field(default_factory=ScanReport)
+    source: str = "compiled"  # "compiled" | "authored" (see Manifest.source)
     exporters: dict[str, str] = Field(default_factory=dict)  # filename -> content
     digest_filename: Optional[str] = None
     digest_content: Optional[str] = None

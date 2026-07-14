@@ -185,6 +185,9 @@ def scan_repo(request: Request, body: ScanRequest):
         report = pkg.scan_report
         return {
             "repo_url": repo_url,
+            # "authored" = the repo already shipped a SKILL.md we scanned as-is;
+            # "compiled" = GitScape generated the skill from source.
+            "source": pkg.source,
             "grade": report.grade,
             "status": report.status.value,
             "risk_score": report.risk_score,
