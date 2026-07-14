@@ -1,0 +1,60 @@
+{
+  "status": "PASS",
+  "findings": [],
+  "engine": "scapeguard",
+  "engine_version": "2.1.0",
+  "generated_at": "2026-07-14T02:21:33Z",
+  "skill_hash": "sha256:2c81411e289f087868c94563cdfab4740af3af1a73e6d3437b034285d61a9041",
+  "files_scanned": 2,
+  "categories": [
+    {
+      "category": "prompt_injection",
+      "status": "PASS",
+      "findings": 0
+    },
+    {
+      "category": "secrets",
+      "status": "PASS",
+      "findings": 0
+    },
+    {
+      "category": "data_exfiltration",
+      "status": "PASS",
+      "findings": 0
+    },
+    {
+      "category": "malicious_execution",
+      "status": "PASS",
+      "findings": 0
+    },
+    {
+      "category": "supply_chain",
+      "status": "PASS",
+      "findings": 0
+    },
+    {
+      "category": "obfuscation",
+      "status": "PASS",
+      "findings": 0
+    },
+    {
+      "category": "content_exposure",
+      "status": "PASS",
+      "findings": 0
+    },
+    {
+      "category": "excessive_agency",
+      "status": "PASS",
+      "findings": 0
+    }
+  ],
+  "counts": {},
+  "license": {
+    "spdx_id": "Apache-2.0",
+    "source_path": "LICENSE",
+    "confidence": "high"
+  },
+  "summary": "",
+  "risk_score": 0,
+  "grade": "A"
+}

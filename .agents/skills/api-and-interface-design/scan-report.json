@@ -1,0 +1,60 @@
+{
+  "status": "PASS",
+  "findings": [],
+  "engine": "scapeguard",
+  "engine_version": "2.1.0",
+  "generated_at": "2026-07-14T02:22:10Z",
+  "skill_hash": "sha256:293db2903b41316a5109a1e0ce3e1740eeafae31735bc1f9143dafbfd1187363",
+  "files_scanned": 1,
+  "categories": [
+    {
+      "category": "prompt_injection",
+      "status": "PASS",
+      "findings": 0
+    },
+    {
+      "category": "secrets",
+      "status": "PASS",
+      "findings": 0
+    },
+    {
+      "category": "data_exfiltration",
+      "status": "PASS",
+      "findings": 0
+    },
+    {
+      "category": "malicious_execution",
+      "status": "PASS",
+      "findings": 0
+    },
+    {
+      "category": "supply_chain",
+      "status": "PASS",
+      "findings": 0
+    },
+    {
+      "category": "obfuscation",
+      "status": "PASS",
+      "findings": 0
+    },
+    {
+      "category": "content_exposure",
+      "status": "PASS",
+      "findings": 0
+    },
+    {
+      "category": "excessive_agency",
+      "status": "PASS",
+      "findings": 0
+    }
+  ],
+  "counts": {},
+  "license": {
+    "spdx_id": "MIT",
+    "source_path": "LICENSE",
+    "confidence": "high"
+  },
+  "summary": "",
+  "risk_score": 0,
+  "grade": "A"
+}

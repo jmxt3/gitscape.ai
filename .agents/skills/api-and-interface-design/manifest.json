@@ -1,0 +1,45 @@
+{
+  "schema_version": "2.1",
+  "name": "api-and-interface-design",
+  "display_name": "addyosmani/agent-skills",
+  "description": "Guides stable API and interface design. Use when designing APIs, module boundaries, or any public interface. Use when creating REST or GraphQL endpoints, defining type contracts between modules, or establishing boundaries between frontend and backend.",
+  "version": "1.0.0",
+  "builder_version": "1.0.0",
+  "digest_hash": "c3dc8e8c611799d3ac90da996220b289b6d5bb691d6c68048260d311e15f096c",
+  "files": [
+    "SKILL.md",
+    "manifest.json",
+    "scan-report.json",
+    "scan-report.sarif"
+  ],
+  "provenance": [],
+  "scan_status": "PASS",
+  "scan_grade": "A",
+  "source": "authored",
+  "framework_compatibility": [
+    "claude-skills",
+    "google-adk",
+    "agno",
+    "openai-agents",
+    "langchain",
+    "langgraph"
+  ],
+  "metadata": {
+    "source_repo": "https://github.com/addyosmani/agent-skills",
+    "generated_by": "GitScape.ai",
+    "generated_by_url": "https://gitscape.ai",
+    "generated_at": "2026-07-14T02:22:10Z",
+    "authored_skill_dir": "skills/api-and-interface-design",
+    "scan_engine": "scapeguard",
+    "scan_engine_version": "2.1.0",
+    "skill_hash": "sha256:293db2903b41316a5109a1e0ce3e1740eeafae31735bc1f9143dafbfd1187363",
+    "license": {
+      "spdx_id": "MIT",
+      "source_path": "LICENSE",
+      "confidence": "high"
+    }
+  },
+  "source_git_head": "98967c45a42b88d6b8fb3a88b7ff6273920763d6",
+  "built_at": "2026-07-14T02:22:10Z",
+  "model": null
+}

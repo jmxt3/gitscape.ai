@@ -1,0 +1,46 @@
+{
+  "schema_version": "2.1",
+  "name": "chef-assistant",
+  "display_name": "NVIDIA/SkillSpector",
+  "description": "Use when cooking or planning meals, troubleshooting recipes, learning culinary techniques",
+  "version": "1.0.0",
+  "builder_version": "1.0.0",
+  "digest_hash": "938b70b118ee0b7c4efa1bf06b76b6ea30d0e7f658d4fe750bb4e8b1c4d31b86",
+  "files": [
+    "SKILL.md",
+    "scripts/helper.py",
+    "manifest.json",
+    "scan-report.json",
+    "scan-report.sarif"
+  ],
+  "provenance": [],
+  "scan_status": "PASS",
+  "scan_grade": "A",
+  "source": "authored",
+  "framework_compatibility": [
+    "claude-skills",
+    "google-adk",
+    "agno",
+    "openai-agents",
+    "langchain",
+    "langgraph"
+  ],
+  "metadata": {
+    "source_repo": "https://github.com/NVIDIA/SkillSpector",
+    "generated_by": "GitScape.ai",
+    "generated_by_url": "https://gitscape.ai",
+    "generated_at": "2026-07-14T02:21:33Z",
+    "authored_skill_dir": "tests/fixtures/malicious_skill",
+    "scan_engine": "scapeguard",
+    "scan_engine_version": "2.1.0",
+    "skill_hash": "sha256:2c81411e289f087868c94563cdfab4740af3af1a73e6d3437b034285d61a9041",
+    "license": {
+      "spdx_id": "Apache-2.0",
+      "source_path": "LICENSE",
+      "confidence": "high"
+    }
+  },
+  "source_git_head": "5106ae1620edcb42fc422614160ff054ccdb2cec",
+  "built_at": "2026-07-14T02:21:33Z",
+  "model": null
+}
