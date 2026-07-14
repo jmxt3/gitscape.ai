@@ -149,6 +149,18 @@ def build_skill(
         },
     )
 
+    # Manifest signing step
+    import json
+    from .signing import sign_manifest
+    manifest_json_str = json.dumps(manifest.model_dump(mode="json"), indent=2)
+    sig_result = sign_manifest(manifest_json_str)
+    if sig_result:
+        sig_content, bundle_content = sig_result
+        assembled.references["manifest.json.sig"] = sig_content
+        assembled.references["manifest.json.bundle"] = bundle_content
+        manifest.files.append("manifest.json.sig")
+        manifest.files.append("manifest.json.bundle")
+
     return SkillPackage(
         name=assembled.name,
         skill_md=assembled.skill_md,
@@ -212,6 +224,19 @@ def _build_from_authored(authored, units, meta: RepoMeta, *, digest_hash="", dig
             "license": scan_report.license.model_dump(mode="json"),
         },
     )
+
+    # Manifest signing step
+    import json
+    from .signing import sign_manifest
+    manifest_json_str = json.dumps(manifest.model_dump(mode="json"), indent=2)
+    sig_result = sign_manifest(manifest_json_str)
+    if sig_result:
+        sig_content, bundle_content = sig_result
+        authored.references["manifest.json.sig"] = sig_content
+        authored.references["manifest.json.bundle"] = bundle_content
+        manifest.files.append("manifest.json.sig")
+        manifest.files.append("manifest.json.bundle")
+
     return SkillPackage(
         name=name,
         skill_md=authored.skill_md,

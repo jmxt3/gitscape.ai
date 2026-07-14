@@ -205,6 +205,286 @@ def scan_repo(request: Request, body: ScanRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/freshness")
+@limiter.limit("10/minute")
+def check_freshness(
+    request: Request,
+    repo_url: str = Query(..., description="Git repository URL to analyze"),
+    last_git_head: str = Query(..., description="The last checked git HEAD SHA"),
+    github_token: str = Query(
+        None,
+        description="GitHub Personal Access Token for private repos or increased rate limits",
+    ),
+):
+    """
+    Check if a repository has git drift since a given git head SHA.
+    Returns the freshness status, the current remote git HEAD SHA, and the changed files.
+    """
+    try:
+        repo_url = urllib.parse.unquote(repo_url)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            clone_path = os.path.join(tmpdir, "repo")
+            converter.clone_repository(repo_url, clone_path, github_token=github_token)
+            current_head = converter.get_git_sha(clone_path)
+
+            if last_git_head == current_head:
+                return {
+                    "status": "fresh",
+                    "git_head": current_head,
+                    "changes_since_last": []
+                }
+
+            from app.skillforge.freshness import compute_drift, is_noop_drift
+            changed_files = compute_drift(Path(clone_path), last_git_head)
+
+            if is_noop_drift(changed_files):
+                status = "fresh"
+            else:
+                status = "stale"
+
+            return {
+                "status": status,
+                "git_head": current_head,
+                "changes_since_last": changed_files
+            }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+REGISTRY_SKILLS = [
+    {
+        "repo_url": "https://github.com/stripe/stripe-node",
+        "name": "stripe-node",
+        "owner": "stripe",
+        "repo": "stripe-node",
+        "description": "Official Stripe Node.js SDK agent skill.",
+        "primary_languages": ["TypeScript", "JavaScript"],
+        "files_analyzed": 240,
+        "grade": "F",
+        "status": "FAIL",
+        "risk_score": 64,
+        "findings_count": 4,
+        "freshness": "fresh",
+    },
+    {
+        "repo_url": "https://github.com/pydantic/pydantic",
+        "name": "pydantic",
+        "owner": "pydantic",
+        "repo": "pydantic",
+        "description": "Data validation and settings management using Python type hints.",
+        "primary_languages": ["Python"],
+        "files_analyzed": 380,
+        "grade": "A",
+        "status": "PASS",
+        "risk_score": 0,
+        "findings_count": 1,
+        "freshness": "fresh",
+    },
+    {
+        "repo_url": "https://github.com/fastapi/fastapi",
+        "name": "fastapi",
+        "owner": "fastapi",
+        "repo": "fastapi",
+        "description": "FastAPI framework, high performance, easy to learn, fast to code, ready for production.",
+        "primary_languages": ["Python"],
+        "files_analyzed": 190,
+        "grade": "A",
+        "status": "PASS",
+        "risk_score": 0,
+        "findings_count": 0,
+        "freshness": "fresh",
+    },
+    {
+        "repo_url": "https://github.com/expressjs/express",
+        "name": "express",
+        "owner": "expressjs",
+        "repo": "express",
+        "description": "Fast, unopinionated, minimalist web framework for Node.js.",
+        "primary_languages": ["JavaScript"],
+        "files_analyzed": 90,
+        "grade": "A",
+        "status": "PASS",
+        "risk_score": 0,
+        "findings_count": 1,
+        "freshness": "fresh",
+    },
+    {
+        "repo_url": "https://github.com/psf/requests",
+        "name": "requests",
+        "owner": "psf",
+        "repo": "requests",
+        "description": "A simple, pleasant HTTP library for Python.",
+        "primary_languages": ["Python"],
+        "files_analyzed": 75,
+        "grade": "B",
+        "status": "WARN",
+        "risk_score": 8,
+        "findings_count": 1,
+        "freshness": "fresh",
+    }
+]
+
+@router.get("/registry/search")
+@limiter.limit("20/minute")
+def search_registry(
+    request: Request,
+    query: Optional[str] = Query(None, description="Search term for repository URL or name"),
+):
+    """
+    Search indexed skills in the GitScape registry.
+    If no query is provided, returns all indexed skills.
+    """
+    if not query:
+        return REGISTRY_SKILLS
+        
+    q = query.lower()
+    results = []
+    for skill in REGISTRY_SKILLS:
+        if (q in skill["name"].lower() or 
+            q in skill["owner"].lower() or 
+            q in skill["repo"].lower() or 
+            q in skill["repo_url"].lower() or
+            q in skill["description"].lower()):
+            results.append(skill)
+    return results
+
+
+@router.get("/registry/detail")
+@limiter.limit("10/minute")
+def get_registry_detail(
+    request: Request,
+    repo_url: str = Query(..., description="Git repository URL to fetch details for"),
+    github_token: str = Query(None, description="Optional GitHub PAT"),
+):
+    """
+    Retrieve or dynamically compile the GitScape skill for the given repository URL.
+    This provides infinite long-tail coverage via dynamic compilation.
+    """
+    repo_url = urllib.parse.unquote(repo_url)
+    static_info = next((s for s in REGISTRY_SKILLS if s["repo_url"].lower() == repo_url.lower()), None)
+    
+    try:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            clone_path = os.path.join(tmpdir, "repo")
+            converter.clone_repository(repo_url, clone_path, github_token=github_token)
+            digest_str, metadata = converter.generate_markdown_digest(
+                repo_url, clone_path, return_metadata=True
+            )
+            
+            owner = metadata["owner"]
+            repo = metadata["repo"]
+            languages = metadata["primary_languages"]
+            files_analyzed = metadata["files_analyzed"]
+            readme = metadata.get("readme", "")
+            file_structure = metadata.get("file_structure", "")
+            structure_overview = metadata.get("structure_overview", "")
+            generated_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+            git_sha = converter.get_git_sha(clone_path)
+            
+            meta = RepoMeta(
+                owner=owner, repo=repo, repo_url=repo_url,
+                primary_languages=languages, files_analyzed=files_analyzed,
+                readme=readme, file_structure=file_structure,
+                structure_overview=structure_overview, generated_at=generated_at,
+                git_sha=git_sha,
+            )
+            units = skillforge.units_from_clone(Path(clone_path))
+            pkg = skillforge.build_skill(
+                units, meta, digest_hash=skillforge.content_hash(digest_str),
+                digest_content=digest_str, skill_type="code"
+            )
+            
+            # Dynamic Registry Append (Stateless Warm-instance Cache)
+            if not static_info:
+                new_skill_entry = {
+                    "repo_url": repo_url,
+                    "name": pkg.name,
+                    "owner": owner,
+                    "repo": repo,
+                    "description": pkg.manifest.description or f"Agent skill for {owner}/{repo}.",
+                    "primary_languages": languages,
+                    "files_analyzed": files_analyzed,
+                    "grade": pkg.scan_report.grade,
+                    "status": pkg.scan_report.status.value,
+                    "risk_score": pkg.scan_report.risk_score,
+                    "findings_count": len(pkg.scan_report.findings),
+                    "freshness": "fresh",
+                }
+                REGISTRY_SKILLS.append(new_skill_entry)
+
+            return {
+                "repo_url": repo_url,
+                "name": pkg.name,
+                "owner": owner,
+                "repo": repo,
+                "description": static_info["description"] if static_info else pkg.manifest.description,
+                "primary_languages": languages,
+                "files_analyzed": files_analyzed,
+                "grade": pkg.scan_report.grade,
+                "status": pkg.scan_report.status.value,
+                "risk_score": pkg.scan_report.risk_score,
+                "findings": [f.model_dump(mode="json") for f in pkg.scan_report.findings],
+                "categories": [c.model_dump(mode="json") for c in pkg.scan_report.categories],
+                "skill_md": pkg.skill_md,
+                "manifest": pkg.manifest.model_dump(mode="json")
+            }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/badge/{owner}/{repo}")
+def get_repo_badge(owner: str, repo: str):
+    """
+    Generate a dynamic ScapeGuard badge SVG for a given repository.
+    """
+    matching_skill = None
+    for skill in REGISTRY_SKILLS:
+        if skill["owner"].lower() == owner.lower() and skill["repo"].lower() == repo.lower():
+            matching_skill = skill
+            break
+            
+    if matching_skill:
+        grade = matching_skill["grade"]
+    else:
+        grade = "Scanned"
+        
+    color_map = {
+        "A": "#10b981",
+        "B": "#84cc16",
+        "C": "#f59e0b",
+        "F": "#ef4444",
+        "Scanned": "#64748b"
+    }
+    color = color_map.get(grade, "#64748b")
+    
+    label = "ScapeGuard"
+    value = f"Grade {grade}" if grade != "Scanned" else "Scanned"
+    
+    svg = f"""<svg xmlns="http://www.w3.org/2000/svg" width="160" height="20">
+  <linearGradient id="b" lg="y" x2="0" y2="100%">
+    <stop offset="0" stop-color="#bbb" stop-opacity=".1"/>
+    <stop offset="1" stop-opacity=".1"/>
+  </linearGradient>
+  <mask id="a">
+    <rect width="160" height="20" rx="3" fill="#fff"/>
+  </mask>
+  <g mask="url(#a)">
+    <path fill="#555" d="M0 0h100v20H0z"/>
+    <path fill="{color}" d="M100 0h60v20H100z"/>
+    <path fill="url(#b)" d="M0 0h160v20H0z"/>
+  </g>
+  <g fill="#fff" text-anchor="middle" font-family="DejaVu Sans,Verdana,Geneva,sans-serif" font-size="11">
+    <text x="50" y="15" fill="#010101" fill-opacity=".3">{label}</text>
+    <text x="50" y="14">{label}</text>
+    <text x="130" y="15" fill="#010101" fill-opacity=".3">{value}</text>
+    <text x="130" y="14">{value}</text>
+  </g>
+</svg>"""
+    
+    from fastapi import Response
+    return Response(content=svg, media_type="image/svg+xml")
+
+
 class SkillZipRequest(BaseModel):
     repo_url: str
     owner: str

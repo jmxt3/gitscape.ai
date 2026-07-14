@@ -158,6 +158,8 @@ Usage:
   npx gitscape scan <repo_url>        Security-scan a repo (report only — writes nothing)
   npx gitscape init                   Configure your IDE(s) to use the GitScape MCP server
   npx gitscape remove <skill_name>    Uninstall a skill and clean up references
+  npx gitscape refresh --check        Check for drift/freshness on all installed skills
+  npx gitscape refresh --apply        Check and regenerate stale skills in the workspace
 
 Options:
   --token <pat>       Optional GitHub Personal Access Token for private repos
@@ -431,6 +433,98 @@ async function handleCompile(repoUrl, options) {
   }
 }
 
+async function handleRefresh(isCheck, isApply, options) {
+  const skillsDir = path.join(process.cwd(), '.agents', 'skills');
+  if (!fs.existsSync(skillsDir)) {
+    console.log('No installed skills found in this workspace (.agents/skills/ directory does not exist).');
+    return;
+  }
+
+  const skills = fs.readdirSync(skillsDir).filter(name => {
+    const manifestPath = path.join(skillsDir, name, 'manifest.json');
+    return fs.existsSync(manifestPath);
+  });
+
+  if (skills.length === 0) {
+    console.log('No skills with manifest.json found in .agents/skills/.');
+    return;
+  }
+
+  let staleCount = 0;
+  console.log(`Checking freshness of ${skills.length} installed skill${skills.length === 1 ? '' : 's'}...`);
+
+  for (const skillName of skills) {
+    const manifestPath = path.join(skillsDir, skillName, 'manifest.json');
+    let manifest;
+    try {
+      manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
+    } catch (e) {
+      console.warn(`  ⚠ Could not parse manifest for ${skillName}: ${e.message}`);
+      continue;
+    }
+
+    const repoUrl = manifest.metadata?.source_repo || manifest.source?.repo_url;
+    const lastGitHead = manifest.source_git_head;
+
+    if (!repoUrl) {
+      console.warn(`  ⚠ Could not find source repository URL in manifest for ${skillName}`);
+      continue;
+    }
+
+    if (!lastGitHead) {
+      console.log(`  ⚠ ${skillName}: No source_git_head stored in manifest. Treating as stale.`);
+      staleCount++;
+      if (isApply) {
+        await handleCompile(repoUrl, options);
+      }
+      continue;
+    }
+
+    try {
+      const token = options.token || process.env.GITHUB_TOKEN || null;
+      const queryParams = new URLSearchParams({
+        repo_url: repoUrl,
+        last_git_head: lastGitHead
+      });
+      if (token) {
+        queryParams.set('github_token', token);
+      }
+
+      const response = await fetch(apiUrl(`/freshness?${queryParams.toString()}`));
+      if (!response.ok) {
+        throw new Error(`Server returned HTTP ${response.status}: ${await response.text()}`);
+      }
+
+      const r = await response.json();
+      if (r.status === 'fresh') {
+        console.log(`  ✓ ${skillName}: Up to date (HEAD is ${r.git_head.slice(0, 7)})`);
+      } else {
+        console.log(`  ⚠ ${skillName}: Stale (drift detected, remote is ${r.git_head.slice(0, 7)})`);
+        if (r.changes_since_last && r.changes_since_last.length > 0) {
+          console.log(`    Changes: ${r.changes_since_last.slice(0, 5).join(', ')}${r.changes_since_last.length > 5 ? '... and ' + (r.changes_since_last.length - 5) + ' more' : ''}`);
+        }
+        staleCount++;
+        if (isApply) {
+          console.log(`    Regenerating ${skillName} from ${repoUrl}...`);
+          await handleCompile(repoUrl, options);
+        }
+      }
+    } catch (err) {
+      console.warn(`  ⚠ Error checking freshness for ${skillName}: ${err.message}`);
+    }
+  }
+
+  if (isCheck) {
+    if (staleCount > 0) {
+      console.log(`\n${paint(STATUS_COLOR.WARN, '⚠')} ${staleCount} skill${staleCount === 1 ? ' is' : 's are'} stale. Run "npx gitscape refresh --apply" to update.`);
+      process.exit(1);
+    } else {
+      console.log(`\n${paint(STATUS_COLOR.PASS, '✓')} All skills are up to date.`);
+      process.exit(0);
+    }
+  }
+}
+
 // Interactive menu shown when `npx gitscape` is run with no arguments in a TTY.
 async function interactiveMenu() {
   const { createInterface } = await import('node:readline');
@@ -483,6 +577,18 @@ async function main() {
 
   if (cleanArgs[0] === 'init') {
     await handleInit(options);
+    process.exit(0);
+  }
+
+  if (cleanArgs[0] === 'refresh') {
+    const isCheck = args.includes('--check');
+    const isApply = args.includes('--apply');
+    if (!isCheck && !isApply) {
+      console.error('Error: Please specify either --check or --apply.');
+      printHelp();
+      process.exit(1);
+    }
+    await handleRefresh(isCheck, isApply, options);
     process.exit(0);
   }
 

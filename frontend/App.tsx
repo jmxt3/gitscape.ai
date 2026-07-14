@@ -15,6 +15,7 @@ import { transformGithubTreeToD3Hierarchy } from "./components/diagramUtils";
 import { Hero } from "./components/Hero";
 import { HowItWorks, Security, OpenSource, FaqSection, FeatureComparison } from "./components/LandingSections";
 import { CliPanel, McpPanel, DevTools } from "./components/DevToolsSection";
+import { RegistryView } from "./components/RegistryView";
 import {
   GITHUB_TOKEN_LOCAL_STORAGE_KEY,
   REPO_URL_LOCAL_STORAGE_KEY,
@@ -463,7 +464,7 @@ const App: React.FC = () => {
     getFromLocalStorage(REPO_URL_LOCAL_STORAGE_KEY, "")
   );
   const [digest, setDigest] = useState<string>("");
-  const [activeMainTab, setActiveMainTab] = useState<'web' | 'cli' | 'mcp'>('web');
+  const [activeMainTab, setActiveMainTab] = useState<'web' | 'registry' | 'cli' | 'mcp'>('web');
   const [showConfetti, setShowConfetti] = useState<boolean>(false);
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -1073,6 +1074,7 @@ const App: React.FC = () => {
               >
                 {[
                   { key: "web", label: "Web", activeColor: "#fcd34d", underline: "#f59e0b" },
+                  { key: "registry", label: "Registry", activeColor: "#67e8f9", underline: "#06b6d4" },
                   { key: "cli", label: "CLI", activeColor: "#c4b5fd", underline: "#7c3aed" },
                   { key: "mcp", label: "MCP", activeColor: "#6ee7b7", underline: "#10b981" },
                 ].map((tab) => {
@@ -1082,7 +1084,7 @@ const App: React.FC = () => {
                       key={tab.key}
                       role="tab"
                       aria-selected={isActive}
-                      onClick={() => setActiveMainTab(tab.key as 'web' | 'cli' | 'mcp')}
+                      onClick={() => setActiveMainTab(tab.key as 'web' | 'registry' | 'cli' | 'mcp')}
                       className={`px-4.5 py-2.5 text-[13px] whitespace-nowrap transition-colors duration-200 ${
                         isActive ? "font-bold" : "font-semibold text-slate-400 hover:text-slate-200"
                       }`}
@@ -1104,6 +1106,8 @@ const App: React.FC = () => {
                   background: "rgba(15,23,42,0.75)",
                   border: activeMainTab === 'web'
                     ? "1px solid rgba(245,158,11,0.35)"
+                    : activeMainTab === 'registry'
+                    ? "1px solid rgba(6,182,212,0.35)"
                     : activeMainTab === 'cli'
                     ? "1px solid rgba(124,58,237,0.35)"
                     : "1px solid rgba(16,185,129,0.35)",
@@ -1245,6 +1249,8 @@ const App: React.FC = () => {
                     Public repos free, no account. Private repos with your token — it never leaves your browser.
                   </p>
                 </div>
+              ) : activeMainTab === 'registry' ? (
+                <RegistryView />
               ) : activeMainTab === 'cli' ? (
                 <CliPanel />
               ) : (

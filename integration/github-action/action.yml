@@ -1,0 +1,26 @@
+name: 'GitScape Skill Refresh'
+description: 'Drift detection and auto-refresh for GitScape agent skills'
+inputs:
+  github_token:
+    description: 'GitHub token for private repos or API rate limits'
+    required: false
+    default: ''
+  accept_risk:
+    description: 'Accept risk and write skills even if security scan fails'
+    required: false
+    default: 'false'
+runs:
+  using: 'composite'
+  steps:
+    - name: Run GitScape Refresh
+      shell: bash
+      run: |
+        CMD="npx -y gitscape refresh --apply"
+        if [ -n "${{ inputs.github_token }}" ]; then
+          CMD="$CMD --token ${{ inputs.github_token }}"
+        fi
+        if [ "${{ inputs.accept_risk }}" = "true" ]; then
+          CMD="$CMD --accept-risk"
+        fi
+        echo "Running: $CMD"
+        eval $CMD

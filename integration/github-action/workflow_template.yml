@@ -1,0 +1,34 @@
+name: GitScape Skill Refresh
+on:
+  schedule:
+    - cron: '0 8 * * 1'          # Weekly Monday 8am UTC
+  workflow_dispatch:              # Manual on-demand
+  push:
+    branches: [main]
+    paths-ignore: ['.agents/skills/**']  # Don't re-trigger on skill changes
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Ensure full history is fetched for log drift calculations
+
+      - name: Run GitScape Refresh
+        uses: gitscape/refresh-action@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          accept_risk: 'false'
+
+      - name: Create Scoped Pull Request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "chore: refresh GitScape agent skills"
+          commit-message: "chore: auto-refresh agent skills from upstream git drift"
+          add-paths: '.agents/skills/**'
+          branch: 'gitscape/refresh-skills'
+          base: 'main'
+          delete-branch: true
