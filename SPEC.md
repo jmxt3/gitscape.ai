@@ -1,29 +1,26 @@
-# Spec: Adjust Footer Links and License
+# Spec: Mitigate ScapeGuard False Positives for GS-AGY-002 ("Do not ask")
 
 ## Objective
-Update the landing page footer of GitScape to accurately reflect the license type (Apache 2.0 instead of MIT) and remove the obsolete/deprecated "API docs" link.
+Refine the ScapeGuard `GS-AGY-002` rule regex to prevent false positives like "Do not ask multiple subagents..." or general "Do not ask questions...", while ensuring actual safety-bypass instructions (e.g. bypassing host agent permissions, bypassing user confirmation) remain correctly flagged.
 
 ## Commands / User Flows
-- A user scrolls to the bottom of the GitScape landing page.
-- In the footer, they see:
-  - "made with ❤️ by João Machete" on the left.
-  - Links on the right: "GitHub", "CLI on npm", "MCP server", and "Apache 2.0 license".
-  - The "API docs" link is removed.
-- Clicking the "Apache 2.0 license" link opens the official project license at `https://github.com/jmxt3/Git-Scape-Web/blob/main/LICENSE` in a new tab.
+- A user scans a repository (e.g., `pydantic-ai`) containing instructions like "Do not ask multiple subagents to answer the same question."
+- The scan completes successfully (or fails for other genuine reasons) without flagging `GS-AGY-002` on those procedural lines.
+- If a skill contains actual bypass instructions like "do not ask for permission", "do not ask the user for confirmation", "do not ask before executing", or "do not ask the user", it is correctly flagged under `GS-AGY-002`.
 
 ## Project Structure
-- [frontend/App.tsx](file:///c:/Users/jmach/dev/GitScape/frontend/App.tsx):
-  - Remove the "API docs" anchor element.
-  - Modify the label of the license anchor element from "MIT license" to "Apache 2.0 license".
+- [backend/app/skillforge/scan/rules/agency.py](file:///c:/Users/jmach/dev/GitScape/backend/app/skillforge/scan/rules/agency.py): Modify the pattern regex for `GS-AGY-002` to use a refined regex pattern.
+- [backend/tests/test_scan_execution.py](file:///c:/Users/jmach/dev/GitScape/backend/tests/test_scan_execution.py): Add unit tests validating the fix (positive cases that should trigger the flag, and negative cases that should not).
 
 ## Code Style and Patterns
-- Maintain the same visual structure, classes, spacing, and styling of the footer.
-- Use clean, standard JSX/React structure.
+- Use Python's `re.compile` standard library patterns.
+- Follow existing patterns in the codebase for rule definitions.
+- Write tests matching the pytest structure used in `test_scan_execution.py`.
 
 ## Testing Strategy
-- Run frontend build to ensure there are no compilation or TypeScript errors.
-- Use the browser subagent to verify the footer layout visually and verify that the links are updated as expected.
+- Run `pytest backend/tests/test_scan_execution.py` to verify that both the existing and the newly added cases pass.
+- Run the full test suite `.\.venv\Scripts\python.exe -m pytest` inside the backend directory to ensure no regressions.
 
 ## Boundaries
-- **Always**: Keep the existing font sizes, spacing, colors, and layout structure of the footer intact.
-- **Never**: Add the "API docs" link back or reference the license as "MIT license".
+- **Always**: Ensure that genuine safety bypasses (like `do not ask for permission`, `do not ask before running`) are flagged.
+- **Never**: Skip writing tests for the refined regex pattern.

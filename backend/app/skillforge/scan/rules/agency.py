@@ -34,7 +34,8 @@ RULES: list[Rule] = [
         severity=Severity.HIGH, confidence=Confidence.MEDIUM,
         pattern=re.compile(
             r"--dangerously-skip-permissions|--no-verify|--disable-\w*(safety|security|guard)"
-            r"|\bauto[- ]?approve\b|\bwithout (asking|confirmation|permission)\b|\bdo not ask\b",
+            r"|\bauto[- ]?approve\b|\bwithout (asking|confirmation|permission)\b"
+            r"|\bdo not ask (?:the user\b(?! (?:details|questions?|clarification|info|anything|for clarification\b))|for (?:permission|confirmation|approval)|permission|confirmation|approval|before (?:running|executing|modifying|writing|deleting|creating|making))\b",
             re.I),
         message="Instructs the agent to bypass its own safety / confirmation checks.",
         remediation="Skills must not disable the host agent's permission prompts.",
