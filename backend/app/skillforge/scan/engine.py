@@ -16,10 +16,13 @@ Author: GitScape.ai
 """
 from __future__ import annotations
 
+import logging
 import hashlib
 import re
 from datetime import datetime, timezone
 from typing import Iterable, Optional
+
+logger = logging.getLogger(__name__)
 
 from ..models import (
     CategoryResult,
@@ -194,6 +197,20 @@ def scan_skill(
     # attribute findings back to originating repo files
     for f in findings:
         f.source_path = _attribute(f.snippet, units)
+
+    # Mitigate severity for findings in non-executable reference/example files
+    for f in findings:
+        is_ref_or_example = (
+            f.file.startswith("references/") or 
+            f.file.startswith("examples/") or 
+            "references/" in f.file or 
+            "examples/" in f.file or
+            (f.file.endswith((".md", ".txt")) and f.file != "SKILL.md")
+        )
+        if is_ref_or_example:
+            if f.severity in (Severity.CRITICAL, Severity.HIGH):
+                logger.info(f"Downgrading finding {f.rule} in reference file {f.file} from {f.severity} to MEDIUM.")
+                f.severity = Severity.MEDIUM
 
     status = _status_for(findings)
     score = compute_score(findings)
