@@ -122,6 +122,33 @@ async def list_tools():
                     "required": ["skill_name"]
                 }
             },
+            {
+                "name": "scan_skill",
+                "description": (
+                    "Security-scan a GitHub repository's agent skill WITHOUT installing it. "
+                    "Use this tool when the user asks to: scan a skill, check if a skill/repo is safe, "
+                    "audit a skill before installing, or vet a third-party skill (e.g. before `npx skills add`). "
+                    "If the repo already ships a maintainer-authored SKILL.md it scans that as-is; otherwise it "
+                    "compiles one and scans that. Returns the ScapeGuard verdict — scan_grade (A/B/C/F), "
+                    "scan_status (PASS/WARN/FAIL), risk_score, safe_to_install, source (authored/compiled), and "
+                    "findings. Writes nothing to disk. Do not install a skill whose scan fails without telling "
+                    "the user the findings."
+                ),
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "repo_url": {
+                            "type": "string",
+                            "description": "The HTTPS URL (or owner/repo) of the Git repository to scan."
+                        },
+                        "github_token": {
+                            "type": "string",
+                            "description": "Optional GitHub Personal Access Token for private repositories."
+                        },
+                    },
+                    "required": ["repo_url"]
+                }
+            },
         ]
     }
 
@@ -314,6 +341,66 @@ def run_uninstall_skill(skill_name: str) -> Dict[str, Any]:
     }
 
 
+async def run_scan_skill(repo_url: str, github_token: Optional[str]) -> Dict[str, Any]:
+    """Security-scan a repo's skill without installing. Writes nothing.
+
+    Clones, runs the deterministic pipeline (Search-or-Compile: scans an authored
+    SKILL.md if present, else compiles + scans), and returns only the ScapeGuard
+    verdict.
+    """
+    try:
+        repo_url = urllib.parse.unquote(repo_url)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            clone_path = os.path.join(tmpdir, "repo")
+            converter.clone_repository(repo_url, clone_path, github_token=github_token)
+            digest_str, metadata = converter.generate_markdown_digest(
+                repo_url, clone_path, return_metadata=True
+            )
+            meta = RepoMeta(
+                owner=metadata["owner"], repo=metadata["repo"], repo_url=repo_url,
+                primary_languages=metadata["primary_languages"],
+                files_analyzed=metadata["files_analyzed"],
+                readme=metadata.get("readme", ""),
+                file_structure=metadata.get("file_structure", ""),
+                structure_overview=metadata.get("structure_overview", ""),
+                generated_at=datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                git_sha=converter.get_git_sha(clone_path),
+            )
+            units = skillforge.units_from_clone(Path(clone_path))
+            # skill_type="code" keeps the compile fallback keyless; Search-or-Compile
+            # still scans an authored SKILL.md as-is when the repo ships one.
+            pkg = skillforge.build_skill(
+                units, meta, digest_hash=skillforge.content_hash(digest_str),
+                digest_content=digest_str, skill_type="code",
+            )
+
+        from app.skillforge.models import ScanStatus
+        from app.skillforge.package import is_bypassable
+        report = pkg.scan_report
+        payload = {
+            "status": "success",
+            "repo_url": repo_url,
+            "source": pkg.source,
+            "scan_grade": report.grade or report.status.value,
+            "scan_status": report.status.value,
+            "risk_score": report.risk_score,
+            "safe_to_install": report.status != ScanStatus.FAIL,
+            "bypassable": is_bypassable(report),
+            "findings": [f.model_dump(mode="json") for f in report.findings],
+            "categories": [c.model_dump(mode="json") for c in report.categories],
+            "engine_version": report.engine_version,
+        }
+        return {
+            "content": [{"type": "text", "text": json.dumps(payload, indent=2)}],
+            "isError": False,
+        }
+    except Exception as e:
+        logger.exception("MCP scan_skill tool call execution failed")
+        return {
+            "content": [{"type": "text", "text": f"Error during skill scan: {str(e)}"}],
+            "isError": True,
+        }
+
 
 @mcp_router.post("")
 @mcp_router.post("/")
@@ -358,6 +445,16 @@ async def call_tool(request: Request):
                     }
                 github_token = arguments.get("github_token")
                 res = await run_install_skill(repo_url, github_token)
+
+            elif name == "scan_skill":
+                repo_url = arguments.get("repo_url")
+                if not repo_url:
+                    return {
+                        "jsonrpc": jsonrpc,
+                        "id": req_id,
+                        "error": {"code": -32602, "message": "repo_url argument is required"}
+                    }
+                res = await run_scan_skill(repo_url, arguments.get("github_token"))
 
             elif name == "uninstall_skill":
                 skill_name = arguments.get("skill_name")
@@ -418,6 +515,9 @@ async def call_tool(request: Request):
                         "ALWAYS use the install_skill tool when the user asks to: "
                         "install a skill, compile a repo, add a skill from GitHub, "
                         "or convert a repository into an agent skill. "
+                        "Use the scan_skill tool to security-scan a repo's skill WITHOUT installing "
+                        "(e.g. to vet a third-party skill before `npx skills add`); it returns a "
+                        "ScapeGuard grade and findings and writes nothing. "
                         "ALWAYS use the uninstall_skill tool to remove a previously installed skill. "
                         "After install_skill returns, write ALL returned files to disk and "
                         "register the skill in AGENTS.md."
@@ -445,6 +545,15 @@ async def call_tool(request: Request):
             }
         github_token = arguments.get("github_token")
         return await run_install_skill(repo_url, github_token)
+
+    if name == "scan_skill":
+        repo_url = arguments.get("repo_url")
+        if not repo_url:
+            return {
+                "content": [{"type": "text", "text": "Error: repo_url is required."}],
+                "isError": True
+            }
+        return await run_scan_skill(repo_url, arguments.get("github_token"))
 
     if name == "uninstall_skill":
         skill_name = arguments.get("skill_name")
