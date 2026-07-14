@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "gitscape": {
+      "url": "https://gitscape.ai/api/mcp"
+    }
+  }
+}
