@@ -36,8 +36,13 @@ def build_skill(
     skill_type: str = "framework",
     prebuilt_references: dict | None = None,
     digest_content: str | None = None,
+    prefer_authored: bool = True,
 ) -> SkillPackage:
     """Build a SkillPackage from content units and repo metadata.
+
+    **Search-or-Compile:** if the repo already ships a maintainer-authored skill
+    (a committed `SKILL.md`), scan *that* as-is rather than regenerate a worse
+    one (unless prefer_authored=False). Otherwise compile:
 
     skill_type="framework" (default) triggers the Engineering Skill path:
       - Calls generate_framework_prose() to get all 6 canonical sections from Gemini.
@@ -47,6 +52,15 @@ def build_skill(
     skill_type="code" is the deterministic fallback path with optional LLM
     prose glue when hd=True. Not exposed to users.
     """
+    if prefer_authored:
+        from .authored import detect_authored_skills
+        authored = detect_authored_skills(units)
+        if authored:
+            return _build_from_authored(
+                authored[0], units, meta,
+                digest_hash=digest_hash, digest_content=digest_content,
+            )
+
     digest_filename = f"references/{meta.owner}_{meta.repo}_digest.txt".lower().replace("-", "_") if digest_content else None
     extract = build_extract(units, readme=meta.readme)
 
@@ -99,6 +113,7 @@ def build_skill(
         provenance=assembled.provenance,
         scan_status=scan_report.status,
         scan_grade=scan_report.grade,
+        source="compiled",
         framework_compatibility=_FRAMEWORKS,
         source_git_head=meta.git_sha,
         built_at=generated_at,
@@ -140,7 +155,69 @@ def build_skill(
         references=assembled.references,
         manifest=manifest,
         scan_report=scan_report,
+        source="compiled",
         exporters=exporters,
         digest_filename=digest_filename,
+        digest_content=digest_content,
+    )
+
+
+def _build_from_authored(authored, units, meta: RepoMeta, *, digest_hash="", digest_content=None) -> SkillPackage:
+    """Package a maintainer-authored skill: scan it as-is, no regeneration.
+
+    Script files (`scripts/**`) are scanned on the stricter SCRIPTS surface;
+    other files scan as references. The package keeps every authored file so an
+    install writes the skill exactly as the maintainer shipped it.
+    """
+    from .assemble import generate_skill_name
+
+    refs = {k: v for k, v in authored.references.items() if not k.startswith("scripts/")}
+    scripts = {k: v for k, v in authored.references.items() if k.startswith("scripts/")}
+    scan_report = scan_skill(
+        authored.skill_md, refs, units=units, scripts=scripts,
+        repo_url=meta.repo_url, is_framework_skill=False,
+    )
+    from .scan.judge import judge_enabled
+    if judge_enabled():
+        from .scan.judge import maybe_adjudicate
+        scan_report = maybe_adjudicate(scan_report, skill_md=authored.skill_md)
+
+    generated_at = meta.generated_at or datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    name = authored.name or generate_skill_name(meta.owner, meta.repo)
+    description = authored.description or f"{meta.owner}/{meta.repo} — maintainer-authored agent skill."
+    files = ["SKILL.md", *authored.references.keys(), "manifest.json", "scan-report.json", "scan-report.sarif"]
+
+    manifest = Manifest(
+        name=name,
+        display_name=f"{meta.owner}/{meta.repo}",
+        description=description,
+        builder_version=BUILDER_VERSION,
+        digest_hash=digest_hash,
+        files=files,
+        scan_status=scan_report.status,
+        scan_grade=scan_report.grade,
+        source="authored",
+        framework_compatibility=_FRAMEWORKS,
+        source_git_head=meta.git_sha,
+        built_at=generated_at,
+        metadata={
+            "source_repo": meta.repo_url,
+            "generated_by": "GitScape.ai",
+            "generated_by_url": "https://gitscape.ai",
+            "generated_at": generated_at,
+            "authored_skill_dir": authored.dir or ".",
+            "scan_engine": scan_report.engine,
+            "scan_engine_version": scan_report.engine_version,
+            "skill_hash": scan_report.skill_hash,
+            "license": scan_report.license.model_dump(mode="json"),
+        },
+    )
+    return SkillPackage(
+        name=name,
+        skill_md=authored.skill_md,
+        references=authored.references,
+        manifest=manifest,
+        scan_report=scan_report,
+        source="authored",
         digest_content=digest_content,
     )

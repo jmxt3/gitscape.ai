@@ -269,12 +269,17 @@ class TestDigestCompleteness:
     def test_full_build_produces_valid_package(self, tmp_path):
         digest = _build_skill_collection(tmp_path)
         units = parse_digest(digest).units
+        # This fixture is itself a skills collection (ships authored SKILL.md
+        # files), so exercise the compile pipeline explicitly — Search-or-Compile
+        # would otherwise (correctly) surface one of the authored skills.
         pkg = build_skill(
             units, _meta(),
             digest_hash=content_hash(digest),
             digest_content=digest,
+            prefer_authored=False,
         )
 
+        assert pkg.source == "compiled"
         assert pkg.name == "test-agent-skills"
         assert pkg.manifest.builder_version == BUILDER_VERSION
         assert pkg.skill_md

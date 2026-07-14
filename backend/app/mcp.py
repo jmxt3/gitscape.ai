@@ -205,6 +205,9 @@ async def run_install_skill(repo_url: str, github_token: Optional[str]) -> Dict[
             result_payload = {
                 "status": "success",
                 "skill_name": pkg.name,
+                # "authored" = installed the maintainer's committed skill as-is;
+                # "compiled" = GitScape generated it from source.
+                "source": pkg.source,
                 # Letter grade (A/B/C/F); scan_status keeps the PASS/WARN/FAIL verdict.
                 "scan_grade": report.grade or report.status.value,
                 "scan_status": report.status.value,
