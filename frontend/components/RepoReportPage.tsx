@@ -17,7 +17,16 @@ interface RepoReportData {
   skill_md?: string;
   scanned_at?: string;
   findings_count?: number;
+  stars?: number;
+  forks?: number;
+  license?: string;
+  open_issues?: number;
+  watchers?: number;
+  last_commit_at?: string;
+  ai_summary?: string;
+  last_git_sha?: string;
 }
+
 
 interface RepoReportPageProps {
   owner: string;
@@ -208,7 +217,21 @@ export const RepoReportPage: React.FC<RepoReportPageProps> = ({ owner, repo, onN
                 <span style={{ color: "#475569" }}> / </span>
                 {repo}
               </h1>
-              {data && <p className="text-[15px] text-slate-400 max-w-2xl mb-6">{data.description}</p>}
+              {data && <p className="text-[15px] text-slate-400 max-w-2xl mb-4">{data.description}</p>}
+              
+              {data && data.ai_summary && (
+                <div 
+                  className="mb-6 p-4 rounded-xl max-w-3xl border"
+                  style={{
+                    background: "rgba(30,41,59,0.3)",
+                    borderColor: "rgba(71,85,105,0.2)"
+                  }}
+                >
+                  <p className="text-sm italic text-slate-300 leading-relaxed">
+                    🛡 &ldquo;{data.ai_summary}&rdquo;
+                  </p>
+                </div>
+              )}
 
               <div className="flex flex-wrap gap-2 mb-7">
                 {data && (
@@ -219,6 +242,21 @@ export const RepoReportPage: React.FC<RepoReportPageProps> = ({ owner, repo, onN
                     <span className="text-xs font-semibold px-3 py-1 rounded-full" style={{ background: "rgba(30,41,59,0.7)", border: "1px solid rgba(71,85,105,0.35)", color: "#94a3b8" }}>
                       📁 {data.files_analyzed} files
                     </span>
+                    {data.stars !== undefined && data.stars > 0 && (
+                      <span className="text-xs font-semibold px-3 py-1 rounded-full" style={{ background: "rgba(30,41,59,0.7)", border: "1px solid rgba(71,85,105,0.35)", color: "#94a3b8" }}>
+                        ⭐ {data.stars.toLocaleString()} stars
+                      </span>
+                    )}
+                    {data.forks !== undefined && data.forks > 0 && (
+                      <span className="text-xs font-semibold px-3 py-1 rounded-full" style={{ background: "rgba(30,41,59,0.7)", border: "1px solid rgba(71,85,105,0.35)", color: "#94a3b8" }}>
+                        🍴 {data.forks.toLocaleString()} forks
+                      </span>
+                    )}
+                    {data.license && (
+                      <span className="text-xs font-semibold px-3 py-1 rounded-full" style={{ background: "rgba(30,41,59,0.7)", border: "1px solid rgba(71,85,105,0.35)", color: "#94a3b8" }}>
+                        ⚖️ {data.license}
+                      </span>
+                    )}
                     {data.primary_languages.map((l) => (
                       <span key={l} className="text-xs font-semibold px-3 py-1 rounded-full" style={{ background: "rgba(30,41,59,0.7)", border: "1px solid rgba(71,85,105,0.35)", color: "#94a3b8" }}>{l}</span>
                     ))}
@@ -255,42 +293,110 @@ export const RepoReportPage: React.FC<RepoReportPageProps> = ({ owner, repo, onN
             <button onClick={() => onNavigate("/registry")} className="mt-4 text-xs text-cyan-400 hover:underline">← Back to Registry</button>
           </div>
         ) : data ? (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            {/* Gauge */}
-            <div
-              className="rounded-2xl p-5 flex flex-col items-center justify-center col-span-2 lg:col-span-1"
-              style={{ background: "rgba(15,23,42,0.7)", border: `1px solid ${gradeColor(data.grade)}22`, boxShadow: `0 0 40px -8px ${gradeColor(data.grade)}22` }}
-            >
-              <SecurityGauge grade={data.grade} />
-              <span className="text-sm font-bold mt-1" style={{ color: gradeColor(data.grade) }}>{gradeLabel(data.grade)}</span>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 items-start">
+            <div className="grid grid-cols-2 gap-4">
+              {/* Gauge */}
+              <div
+                className="rounded-2xl p-5 flex flex-col items-center justify-center col-span-2 sm:col-span-1"
+                style={{ background: "rgba(15,23,42,0.7)", border: `1px solid ${gradeColor(data.grade)}22`, boxShadow: `0 0 40px -8px ${gradeColor(data.grade)}22` }}
+              >
+                <SecurityGauge grade={data.grade} />
+                <span className="text-sm font-bold mt-1" style={{ color: gradeColor(data.grade) }}>{gradeLabel(data.grade)}</span>
+              </div>
+
+              {[
+                {
+                  label: "Risk Score",
+                  value: data.risk_score,
+                  color: data.risk_score > 15 ? "text-rose-400" : data.risk_score > 5 ? "text-amber-400" : "text-emerald-400",
+                  sub: data.risk_score > 15 ? "High Risk" : data.risk_score > 5 ? "Moderate" : "Low Risk",
+                },
+                {
+                  label: "Findings",
+                  value: data.findings.length,
+                  color: data.findings.length > 0 ? "text-orange-400" : "text-emerald-400",
+                  sub: data.findings.length > 0 ? "Issues found" : "Clean",
+                },
+              ].map(({ label, value, color, sub }) => (
+                <div key={label} className="rounded-2xl p-5 flex flex-col items-center justify-center" style={{ background: "rgba(15,23,42,0.7)", border: "1px solid rgba(71,85,105,0.2)" }}>
+                  <span className="text-[10px] font-bold tracking-widest text-slate-500 uppercase mb-3">{label}</span>
+                  <span className={`text-5xl font-extrabold leading-none ${color}`}>{value}</span>
+                  <span className="text-xs text-slate-500 mt-2">{sub}</span>
+                </div>
+              ))}
+
+              {/* Verdict */}
+              <div className="rounded-2xl p-5 flex flex-col items-center justify-center col-span-2 sm:col-span-1" style={{ background: "rgba(15,23,42,0.7)", border: "1px solid rgba(71,85,105,0.2)" }}>
+                <span className="text-[10px] font-bold tracking-widest text-slate-500 uppercase mb-3">Verdict</span>
+                <span className="text-2xl font-extrabold" style={{ color: data.status === "PASS" ? "#10b981" : data.status === "WARN" ? "#f59e0b" : "#ef4444" }}>{data.status}</span>
+                <span className="text-xs text-slate-500 mt-2">ScapeGuard verdict</span>
+              </div>
             </div>
 
-            {[
-              {
-                label: "Risk Score",
-                value: data.risk_score,
-                color: data.risk_score > 15 ? "#ef4444" : data.risk_score > 5 ? "#f59e0b" : "#10b981",
-                sub: data.risk_score > 15 ? "High Risk" : data.risk_score > 5 ? "Moderate" : "Low Risk",
-              },
-              {
-                label: "Findings",
-                value: data.findings.length,
-                color: data.findings.length > 0 ? "#f97316" : "#10b981",
-                sub: data.findings.length > 0 ? "Issues found" : "Clean",
-              },
-            ].map(({ label, value, color, sub }) => (
-              <div key={label} className="rounded-2xl p-5 flex flex-col items-center justify-center" style={{ background: "rgba(15,23,42,0.7)", border: "1px solid rgba(71,85,105,0.2)" }}>
-                <span className="text-[10px] font-bold tracking-widest text-slate-500 uppercase mb-3">{label}</span>
-                <span className="text-5xl font-extrabold leading-none" style={{ color }}>{value}</span>
-                <span className="text-xs text-slate-500 mt-2">{sub}</span>
+            {/* Mock scan-report.json editor card */}
+            <div 
+              className="rounded-2xl p-6 font-mono text-xs text-slate-400"
+              style={{ background: "#020617", border: "1px solid rgba(71,85,105,0.25)", boxShadow: "0 10px 40px rgba(0,0,0,0.6)" }}
+            >
+              <div className="flex justify-between items-center border-b border-slate-900 pb-3 mb-4">
+                <span className="font-semibold text-slate-200">scan-report.json</span>
+                <span 
+                  className="px-2 py-0.5 border rounded text-[10px] font-bold"
+                  style={{
+                    background: `${gradeColor(data.grade)}11`,
+                    borderColor: `${gradeColor(data.grade)}33`,
+                    color: gradeColor(data.grade)
+                  }}
+                >
+                  {data.grade} {data.status}
+                </span>
               </div>
-            ))}
-
-            {/* Status */}
-            <div className="rounded-2xl p-5 flex flex-col items-center justify-center" style={{ background: "rgba(15,23,42,0.7)", border: "1px solid rgba(71,85,105,0.2)" }}>
-              <span className="text-[10px] font-bold tracking-widest text-slate-500 uppercase mb-3">Verdict</span>
-              <span className="text-2xl font-extrabold" style={{ color: data.status === "PASS" ? "#10b981" : data.status === "WARN" ? "#f59e0b" : "#ef4444" }}>{data.status}</span>
-              <span className="text-xs text-slate-500 mt-2">ScapeGuard verdict</span>
+              <div className="flex flex-col gap-2">
+                <div className="flex justify-between">
+                  <span className="text-slate-500">"engine"</span>
+                  <span className="text-sky-400">"scapeguard/2.1.0"</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">"grade"</span>
+                  <span style={{ color: gradeColor(data.grade) }} className="font-bold">"{data.grade}"</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">"risk_score"</span>
+                  <span className="text-amber-500">{data.risk_score}</span>
+                </div>
+                {(() => {
+                  const defaultCategories = ["secrets", "prompt_injection", "malicious_execution", "supply_chain", "excessive_agency"];
+                  const categoriesToRender = data.categories && data.categories.length > 0 
+                    ? data.categories 
+                    : defaultCategories.map(cat => {
+                        let status = "PASS";
+                        if (data.grade === "F" && (cat === "secrets" || cat === "prompt_injection")) status = "FAIL";
+                        else if (["B", "C"].includes(data.grade) && cat === "prompt_injection") status = "WARN";
+                        return { category: cat, status, findings: status === "PASS" ? 0 : 1 };
+                      });
+                  return categoriesToRender.map((c) => {
+                    const catColor = c.status === "PASS" ? "text-emerald-400" : c.status === "WARN" ? "text-amber-400" : "text-rose-400";
+                    return (
+                      <div key={c.category} className="flex justify-between">
+                        <span className="text-slate-500">"{c.category}"</span>
+                        <span className={catColor}>"{c.status}"</span>
+                      </div>
+                    );
+                  });
+                })()}
+                <div className="flex justify-between">
+                  <span className="text-slate-500">"license"</span>
+                  <span className="text-slate-200">"{data.license || "Unknown"}"</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">"files_scanned"</span>
+                  <span className="text-emerald-400">{data.files_analyzed}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">"skill_hash"</span>
+                  <span className="text-slate-500">"{data.last_git_sha ? data.last_git_sha.slice(0, 12) : "9f2ce41a"}"</span>
+                </div>
+              </div>
             </div>
           </div>
         ) : null}
