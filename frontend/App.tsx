@@ -459,13 +459,55 @@ const getStepGlow = (pct: number): string => {
 };
 // ─────────────────────────────────────────────────────────────────────────────
 
+// Helper to normalize the window.location.pathname by trimming trailing slashes
+const getNormalizedPath = (path: string): string => {
+  let p = path.trim();
+  if (p.endsWith('/') && p !== '/') {
+    p = p.slice(0, -1);
+  }
+  return p;
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 const App: React.FC = () => {
+  const [currentPath, setCurrentPath] = useState<string>(() =>
+    getNormalizedPath(window.location.pathname)
+  );
   const [repoUrl, setRepoUrl] = useState<string>(() =>
     getFromLocalStorage(REPO_URL_LOCAL_STORAGE_KEY, "")
   );
   const [digest, setDigest] = useState<string>("");
-  const [activeMainTab, setActiveMainTab] = useState<'web' | 'registry' | 'cli' | 'mcp'>('web');
+  const [activeMainTab, setActiveMainTab] = useState<'web' | 'cli' | 'mcp'>('web');
   const [showConfetti, setShowConfetti] = useState<boolean>(false);
+
+  // Client-side router navigation helper
+  const navigateTo = useCallback((path: string, hash?: string) => {
+    const normalized = getNormalizedPath(path);
+    window.history.pushState({}, "", normalized + (hash ? hash : ""));
+    setCurrentPath(normalized);
+    if (normalized === '/') {
+      if (hash) {
+        setTimeout(() => {
+          const el = document.getElementById(hash.replace('#', ''));
+          if (el) el.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+      } else {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    } else {
+      window.scrollTo({ top: 0 });
+    }
+  }, []);
+
+  // Listen to popstate event to handle browser back/forward buttons
+  useEffect(() => {
+    const handlePopState = () => {
+      setCurrentPath(getNormalizedPath(window.location.pathname));
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -1053,9 +1095,26 @@ const App: React.FC = () => {
       <Header
         onToggleTokenModal={() => setShowTokenModal(true)}
         hasToken={!!githubToken}
+        currentPath={currentPath}
+        onNavigate={navigateTo}
       />
       <main className="flex-grow">
-        {/* ── First-screen hero section with shared aurora background ── */}
+        {currentPath === '/registry' ? (
+          <div className="max-w-[1100px] mx-auto px-4 sm:px-6 py-8 sm:py-12 flex-grow w-full mt-6">
+            <div
+              className="rounded-2xl p-5 sm:p-7 flex flex-col gap-6"
+              style={{
+                background: "rgba(15,23,42,0.75)",
+                border: "1px solid rgba(6,182,212,0.35)",
+                boxShadow: "0 12px 48px -12px rgba(0,0,0,0.6), 0 0 0 1px rgba(139,92,246,0.08)",
+              }}
+            >
+              <RegistryView />
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* ── First-screen hero section with shared aurora background ── */}
         <div className="relative overflow-hidden pt-16 sm:pt-[72px] pb-8 sm:pb-10">
           {/* Aurora blobs */}
           <div className="hero-blob-1" />
@@ -1074,7 +1133,6 @@ const App: React.FC = () => {
               >
                 {[
                   { key: "web", label: "Web", activeColor: "#fcd34d", underline: "#f59e0b" },
-                  { key: "registry", label: "Registry", activeColor: "#67e8f9", underline: "#06b6d4" },
                   { key: "cli", label: "CLI", activeColor: "#c4b5fd", underline: "#7c3aed" },
                   { key: "mcp", label: "MCP", activeColor: "#6ee7b7", underline: "#10b981" },
                 ].map((tab) => {
@@ -1084,7 +1142,7 @@ const App: React.FC = () => {
                       key={tab.key}
                       role="tab"
                       aria-selected={isActive}
-                      onClick={() => setActiveMainTab(tab.key as 'web' | 'registry' | 'cli' | 'mcp')}
+                      onClick={() => setActiveMainTab(tab.key as 'web' | 'cli' | 'mcp')}
                       className={`px-4.5 py-2.5 text-[13px] whitespace-nowrap transition-colors duration-200 ${
                         isActive ? "font-bold" : "font-semibold text-slate-400 hover:text-slate-200"
                       }`}
@@ -1106,8 +1164,6 @@ const App: React.FC = () => {
                   background: "rgba(15,23,42,0.75)",
                   border: activeMainTab === 'web'
                     ? "1px solid rgba(245,158,11,0.35)"
-                    : activeMainTab === 'registry'
-                    ? "1px solid rgba(6,182,212,0.35)"
                     : activeMainTab === 'cli'
                     ? "1px solid rgba(124,58,237,0.35)"
                     : "1px solid rgba(16,185,129,0.35)",
@@ -1249,8 +1305,6 @@ const App: React.FC = () => {
                     Public repos free, no account. Private repos with your token — it never leaves your browser.
                   </p>
                 </div>
-              ) : activeMainTab === 'registry' ? (
-                <RegistryView />
               ) : activeMainTab === 'cli' ? (
                 <CliPanel />
               ) : (
@@ -1324,6 +1378,8 @@ const App: React.FC = () => {
           <OpenSource />
           <FaqSection />
         </div>
+          </>
+        )}
       </main>
 
       <footer
@@ -1359,7 +1415,11 @@ const App: React.FC = () => {
             CLI on npm
           </a>
           <a
-            href="#developer-tools"
+            href="/#developer-tools"
+            onClick={(e) => {
+              e.preventDefault();
+              navigateTo('/', '#developer-tools');
+            }}
             className="hover:text-slate-300 transition-colors"
           >
             MCP server

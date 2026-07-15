@@ -1,26 +1,30 @@
-# Spec: Mitigate ScapeGuard False Positives for GS-AGY-002 ("Do not ask")
+# Spec: Dedicated Public Skill Registry Page
 
 ## Objective
-Refine the ScapeGuard `GS-AGY-002` rule regex to prevent false positives like "Do not ask multiple subagents..." or general "Do not ask questions...", while ensuring actual safety-bypass instructions (e.g. bypassing host agent permissions, bypassing user confirmation) remain correctly flagged.
+Move the Public Agent Skill Registry from a tab on the main landing page to a dedicated, unique page. Provide a "Registry" link in the header navbar to access it, and ensure all navigation works cleanly in a Single Page App (SPA) setup without page reloads.
 
 ## Commands / User Flows
-- A user scans a repository (e.g., `pydantic-ai`) containing instructions like "Do not ask multiple subagents to answer the same question."
-- The scan completes successfully (or fails for other genuine reasons) without flagging `GS-AGY-002` on those procedural lines.
-- If a skill contains actual bypass instructions like "do not ask for permission", "do not ask the user for confirmation", "do not ask before executing", or "do not ask the user", it is correctly flagged under `GS-AGY-002`.
+- User visits the home page (`/`). The main input container displays tabs for "Web", "CLI", and "MCP" (the "Registry" tab is removed).
+- User clicks the "Registry" link in the header navbar.
+- The URL path changes to `/registry` without reloading the page.
+- The application displays the dedicated Public Skill Registry page. The Hero section and main generator input are hidden; only the Header navbar, the RegistryView container (with its search/index interface), and the Footer are displayed.
+- User clicks "How it works", "CLI & MCP", "Security", or "Open source" in the navbar.
+- The application navigates back to the home page (`/`) and smooth-scrolls to the corresponding section.
+- User reloads the page while on `/registry`. The application correctly initializes and mounts the Registry view.
 
 ## Project Structure
-- [backend/app/skillforge/scan/rules/agency.py](file:///c:/Users/jmach/dev/GitScape/backend/app/skillforge/scan/rules/agency.py): Modify the pattern regex for `GS-AGY-002` to use a refined regex pattern.
-- [backend/tests/test_scan_execution.py](file:///c:/Users/jmach/dev/GitScape/backend/tests/test_scan_execution.py): Add unit tests validating the fix (positive cases that should trigger the flag, and negative cases that should not).
+- [frontend/App.tsx](file:///c:/Users/jmach/dev/GitScape/frontend/App.tsx): Implement custom client-side routing to manage the current path, remove the "registry" tab, wrap the home page sections to conditionally render only on the home route, and pass routing handlers to the Header.
+- [frontend/components/Header.tsx](file:///c:/Users/jmach/dev/GitScape/frontend/components/Header.tsx): Add the "Registry" link, adjust standard anchor links to support routing back to home sections, and call the navigation callback.
 
 ## Code Style and Patterns
-- Use Python's `re.compile` standard library patterns.
-- Follow existing patterns in the codebase for rule definitions.
-- Write tests matching the pytest structure used in `test_scan_execution.py`.
+- Use React 19 state and DOM history API (`window.history.pushState`, `popstate` event) for lightweight, dependency-free routing.
+- Keep style tokens, tailwind classes, and CSS structures consistent with the existing GitScape UI theme (dark mode, glassmorphism, cyan/violet/emerald color accents).
 
 ## Testing Strategy
-- Run `pytest backend/tests/test_scan_execution.py` to verify that both the existing and the newly added cases pass.
-- Run the full test suite `.\.venv\Scripts\python.exe -m pytest` inside the backend directory to ensure no regressions.
+- Manual verification of URL routing, back/forward button behavior, page reloading on `/registry`, and scrolling on landing sections.
+- Verification that all console warnings or errors are absent.
 
 ## Boundaries
-- **Always**: Ensure that genuine safety bypasses (like `do not ask for permission`, `do not ask before running`) are flagged.
-- **Never**: Skip writing tests for the refined regex pattern.
+- **Always**: Keep the RegistryView fully functional and visually aligned with the design language.
+- **Never**: Break direct URL sharing (e.g. going directly to `/registry`).
+- **Never**: Introduce page reloads for internal navigation.

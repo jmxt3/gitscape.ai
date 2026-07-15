@@ -4,6 +4,8 @@ import GitHubButton from 'react-github-btn';
 interface HeaderProps {
   onToggleTokenModal: () => void;
   hasToken: boolean;
+  currentPath: string;
+  onNavigate: (path: string, hash?: string) => void;
 }
 
 const LockIcon = () => (
@@ -18,7 +20,7 @@ const CheckIcon = () => (
   </svg>
 );
 
-export const Header: React.FC<HeaderProps> = ({ onToggleTokenModal, hasToken }) => {
+export const Header: React.FC<HeaderProps> = ({ onToggleTokenModal, hasToken, currentPath, onNavigate }) => {
   return (
     <header
       className="sticky top-0 z-40"
@@ -32,7 +34,14 @@ export const Header: React.FC<HeaderProps> = ({ onToggleTokenModal, hasToken }) 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
         {/* Logo */}
         <div className="flex items-center gap-2.5">
-          <div className="flex items-baseline gap-1">
+          <a
+            href="/"
+            onClick={(e) => {
+              e.preventDefault();
+              onNavigate('/');
+            }}
+            className="flex items-baseline gap-1 hover:opacity-90 transition-opacity"
+          >
             <span className="text-xl font-bold tracking-tight text-slate-100">
               GitScape
             </span>
@@ -46,15 +55,71 @@ export const Header: React.FC<HeaderProps> = ({ onToggleTokenModal, hasToken }) 
             >
               AI
             </span>
-          </div>
+          </a>
         </div>
 
         {/* Center nav */}
         <nav className="hidden md:flex items-center gap-7 text-[13px] font-medium text-slate-400">
-          <a href="#how-it-works" className="hover:text-slate-200 transition-colors">How it works</a>
-          <a href="#developer-tools" className="hover:text-slate-200 transition-colors">CLI &amp; MCP</a>
-          <a href="#security" className="hover:text-slate-200 transition-colors">Security</a>
-          <a href="#open-source" className="hover:text-slate-200 transition-colors">Open source</a>
+          <a
+            href="/"
+            onClick={(e) => {
+              e.preventDefault();
+              onNavigate('/');
+            }}
+            className={`hover:text-slate-200 transition-colors ${currentPath === '/' ? 'text-slate-100 font-semibold' : ''}`}
+          >
+            Home
+          </a>
+          <a
+            href="/registry"
+            onClick={(e) => {
+              e.preventDefault();
+              onNavigate('/registry');
+            }}
+            className={`hover:text-slate-200 transition-colors ${currentPath === '/registry' ? 'text-cyan-400 font-bold' : ''}`}
+          >
+            Registry
+          </a>
+          <a
+            href="/#how-it-works"
+            onClick={(e) => {
+              e.preventDefault();
+              onNavigate('/', '#how-it-works');
+            }}
+            className="hover:text-slate-200 transition-colors"
+          >
+            How it works
+          </a>
+          <a
+            href="/#developer-tools"
+            onClick={(e) => {
+              e.preventDefault();
+              onNavigate('/', '#developer-tools');
+            }}
+            className="hover:text-slate-200 transition-colors"
+          >
+            CLI &amp; MCP
+          </a>
+          <a
+            href="/#security"
+            onClick={(e) => {
+              e.preventDefault();
+              onNavigate('/', '#security');
+            }}
+            className="hover:text-slate-200 transition-colors"
+          >
+            Security
+          </a>
+          <a
+            href="/#open-source"
+            onClick={(e) => {
+              e.preventDefault();
+              onNavigate('/', '#open-source');
+            }}
+            className="hover:text-slate-200 transition-colors"
+          >
+            Open source
+          </a>
           <a
             href="https://github.com/jmxt3/Git-Scape-Web#readme"
             target="_blank"

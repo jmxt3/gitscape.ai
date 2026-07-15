@@ -44,12 +44,19 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: Optional[str] = os.getenv("GEMINI_API_KEY", "")
     HD_MODEL: str = os.getenv("HD_MODEL", "gemini-3.1-flash-lite")
 
+    # Registry settings
+    GITSCAPE_REGISTRY_BUCKET: Optional[str] = os.getenv(
+        "GITSCAPE_REGISTRY_BUCKET", "gitscape-registry-scans"
+    )
+
     # CORS settings
     # CORS_ORIGINS: List[str] = origins
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore"
+    )
 
 
 # Create a settings instance that will be imported by other modules
