@@ -35,7 +35,7 @@ const STEPS = [
   {
     n: 2,
     title: "Scan",
-    desc: "ScapeGuard checks every generated skill for prompt injection, secrets, exfiltration, and 6 more threat categories.",
+    desc: "ScapeGuard audits the codebase for secrets, prompt injection, and exfiltration.",
     border: "#10b981",
     color: "#34d399",
     titleColor: "#6ee7b7",
@@ -44,7 +44,7 @@ const STEPS = [
   {
     n: 3,
     title: "Forge",
-    desc: "Compiles digest + scan into a packaged SKILL.md your agents load in one line.",
+    desc: "Packages the audited code digest and rules into a structured SKILL.md skill.",
     border: "#f59e0b",
     color: "#fbbf24",
     titleColor: "#fcd34d",
@@ -139,10 +139,10 @@ export const HowItWorks: React.FC = () => (
       <div className="flex flex-col items-center gap-2.5 text-center">
         <span className="text-[11px] font-bold tracking-[0.1em] text-violet-400">HOW IT WORKS</span>
         <h2 className="m-0 text-3xl sm:text-[38px] font-extrabold tracking-[-0.025em] text-slate-100">
-          One URL in. Three artifacts out.
+          One URL in. A secure agent skill out.
         </h2>
         <p className="m-0 text-[15px] text-slate-400">
-          About a minute, start to finish. The progress bar only lies a little.
+          Three automated steps to compile, verify, and package any repository into a ready-to-use coding agent skill.
         </p>
       </div>
       <div className="relative grid grid-cols-1 sm:grid-cols-3 gap-8 sm:gap-6">
