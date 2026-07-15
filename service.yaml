@@ -57,6 +57,8 @@ spec:
               value: "8081"
             - name: ENVIRONMENT
               value: production
+            - name: GITSCAPE_REGISTRY_BUCKET
+              value: gitscape-registry-scans
             - name: GEMINI_API_KEY
               valueFrom:
                 secretKeyRef:
