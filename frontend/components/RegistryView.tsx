@@ -1,5 +1,18 @@
-import React, { useState, useEffect } from "react";
-import { ScanFinding, ScanReport, SkillManifest } from "../types";
+// Author: Joao Machete
+// Description: Public Agent Skill Registry index page — Aurora design. A full-page
+// certification-ledger layout: hero with registry pulse stats, grade filters,
+// grid/list toggle, and seal cards that navigate to per-repo security reports.
+import React, { useState, useEffect, useMemo } from "react";
+import {
+  gradeInfo,
+  statusColor,
+  fmtK,
+  glassStyle,
+  Eyebrow,
+  RepoMark,
+  GradeSeal,
+  GradeChip,
+} from "./registryTheme";
 
 interface RegistrySkill {
   repo_url: string;
@@ -13,339 +26,395 @@ interface RegistrySkill {
   status: string;
   risk_score: number;
   findings_count: number;
-  freshness: string;
+  freshness?: string;
+  scanned_at?: string;
+  stars?: number;
 }
 
-interface DetailPayload {
-  repo_url: string;
-  name: string;
-  owner: string;
-  repo: string;
-  description: string;
-  primary_languages: string[];
-  files_analyzed: number;
-  grade: string;
-  status: string;
-  risk_score: number;
-  findings: ScanFinding[];
-  categories: any[];
-  skill_md: string;
-  manifest: SkillManifest;
-}
+type GradeFilter = "ALL" | "A" | "B" | "C" | "F";
+type SortKey = "risk" | "stars" | "name" | "scanned";
+type Layout = "grid" | "list";
+
+const RISK_BAR_MAX = 60; // visual full-scale for the risk micro-bar
+
+const getApiUrl = (routePath: string) => {
+  const base = (import.meta as any).env?.VITE_API_URL || "";
+  return `${base}/api${routePath}`;
+};
+
+const parseGithubUrl = (raw: string): { owner: string; repo: string } | null => {
+  const m = raw.trim().match(/github\.com\/([^/\s]+)\/([^/\s#?]+)/i);
+  if (!m) return null;
+  return { owner: m[1], repo: m[2].replace(/\.git$/, "") };
+};
+
+const RiskBar: React.FC<{ risk: number; grade: string }> = ({ risk, grade }) => (
+  <span
+    className="inline-flex items-center gap-2 font-mono text-[10.5px] text-slate-400 tabular-nums"
+    title="Weighted risk score"
+  >
+    <span className="inline-block w-[52px] h-1 rounded-sm overflow-hidden" style={{ background: "rgba(30,41,59,0.9)" }}>
+      <i
+        className="block h-full rounded-sm"
+        style={{ width: `${Math.min(100, (risk / RISK_BAR_MAX) * 100)}%`, background: gradeInfo(grade).hex }}
+      />
+    </span>
+    risk {risk}
+  </span>
+);
 
 export const RegistryView: React.FC<{ onNavigate: (path: string) => void }> = ({ onNavigate }) => {
-  const [query, setQuery] = useState<string>("");
   const [skills, setSkills] = useState<RegistrySkill[]>([]);
-  const [loadingList, setLoadingList] = useState<boolean>(true);
-  const [loadingDetail, setLoadingDetail] = useState<boolean>(false);
-  const [selectedSkillUrl, setSelectedSkillUrl] = useState<string | null>(null);
-  const [detail, setDetail] = useState<DetailPayload | null>(null);
-  const [activeTab, setActiveTab] = useState<"findings" | "skill_md" | "manifest">("findings");
-  const [detailError, setDetailError] = useState<string | null>(null);
-
-  // Helper to build API URL
-  const getApiUrl = (routePath: string) => {
-    const base = import.meta.env.VITE_API_URL || "";
-    return `${base}/api${routePath}`;
-  };
-
-  const fetchList = async (searchVal: string) => {
-    setLoadingList(true);
-    try {
-      const url = getApiUrl(`/registry/search${searchVal ? `?query=${encodeURIComponent(searchVal)}` : ""}`);
-      const resp = await fetch(url);
-      if (resp.ok) {
-        const data = await resp.json();
-        setSkills(data);
-      }
-    } catch (e) {
-      console.error("Failed to fetch registry list", e);
-    } finally {
-      setLoadingList(false);
-    }
-  };
+  const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState("");
+  const [grade, setGrade] = useState<GradeFilter>("ALL");
+  const [sort, setSort] = useState<SortKey>("risk");
+  const [layout, setLayout] = useState<Layout>("grid");
 
   useEffect(() => {
-    fetchList("");
+    fetch(getApiUrl("/registry/search"))
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data) => setSkills(Array.isArray(data) ? data : []))
+      .catch((e) => console.error("Failed to fetch registry list", e))
+      .finally(() => setLoading(false));
   }, []);
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    fetchList(query);
-  };
+  const githubTarget = parseGithubUrl(query);
 
-  const handleSelectSkill = async (repoUrl: string) => {
-    setSelectedSkillUrl(repoUrl);
-    setLoadingDetail(true);
-    setDetailError(null);
-    setDetail(null);
-    try {
-      const url = getApiUrl(`/registry/detail?repo_url=${encodeURIComponent(repoUrl)}`);
-      const resp = await fetch(url);
-      if (!resp.ok) {
-        throw new Error(`Failed to load details (HTTP ${resp.status})`);
-      }
-      const data = await resp.json();
-      setDetail(data);
-      setActiveTab("findings");
-    } catch (e: any) {
-      setDetailError(e.message || "An error occurred during dynamic compilation.");
-    } finally {
-      setLoadingDetail(false);
-    }
-  };
+  const goToReport = (owner: string, repo: string) => onNavigate(`/registry/${owner}/${repo}`);
 
-  // Compile on the fly for custom searches
-  const handleCompileOnTheFly = () => {
-    if (!query.startsWith("http://") && !query.startsWith("https://")) {
-      alert("Please enter a valid GitHub repository URL in the search input first.");
-      return;
-    }
-    handleSelectSkill(query);
-  };
+  const counts = useMemo(() => {
+    const c: Record<string, number> = { ALL: skills.length, A: 0, B: 0, C: 0, F: 0 };
+    skills.forEach((s) => {
+      if (c[s.grade] !== undefined) c[s.grade]++;
+    });
+    return c;
+  }, [skills]);
 
-  const getGradeBg = (grade: string) => {
-    if (grade === "A") return "bg-emerald-500/10 border-emerald-500/35 text-emerald-400";
-    if (grade === "B") return "bg-lime-500/10 border-lime-500/35 text-lime-400";
-    if (grade === "C") return "bg-amber-500/10 border-amber-500/35 text-amber-400";
-    return "bg-rose-500/10 border-rose-500/35 text-rose-400";
+  const pulse = useMemo(() => {
+    const passN = skills.filter((s) => s.status === "PASS").length;
+    const risks = skills.map((s) => s.risk_score).sort((a, b) => a - b);
+    const median = risks.length ? risks[Math.floor(risks.length / 2)] : 0;
+    const findings = skills.reduce((n, s) => n + (s.findings_count || 0), 0);
+    const langs = new Set(skills.flatMap((s) => s.primary_languages || [])).size;
+    return { passN, median, findings, langs };
+  }, [skills]);
+
+  const list = useMemo(() => {
+    const q = query.toLowerCase();
+    const filtered = skills.filter((s) => {
+      if (grade !== "ALL" && s.grade !== grade) return false;
+      if (!q) return true;
+      return (
+        `${s.owner}/${s.repo}`.toLowerCase().includes(q) ||
+        (s.description || "").toLowerCase().includes(q) ||
+        (s.primary_languages || []).join(" ").toLowerCase().includes(q)
+      );
+    });
+    const cmp: Record<SortKey, (a: RegistrySkill, b: RegistrySkill) => number> = {
+      risk: (a, b) => a.risk_score - b.risk_score || `${a.owner}/${a.repo}`.localeCompare(`${b.owner}/${b.repo}`),
+      stars: (a, b) => (b.stars || 0) - (a.stars || 0),
+      name: (a, b) => `${a.owner}/${a.repo}`.localeCompare(`${b.owner}/${b.repo}`),
+      scanned: (a, b) => (b.scanned_at || "").localeCompare(a.scanned_at || ""),
+    };
+    return [...filtered].sort(cmp[sort]);
+  }, [skills, query, grade, sort]);
+
+  const cardMeta = (s: RegistrySkill) => {
+    const bits: string[] = [];
+    if (s.stars) bits.push(`★ ${fmtK(s.stars)}`);
+    else bits.push(`${(s.files_analyzed || 0).toLocaleString()} files`);
+    if (s.scanned_at) bits.push(`scanned ${s.scanned_at.slice(5, 10)}`);
+    else if (s.freshness) bits.push(s.freshness);
+    return bits.join(" · ");
   };
 
   return (
-    <div className="w-full flex flex-col gap-6 text-slate-200">
-      {/* Search Header */}
-      <div className="flex flex-col md:flex-row gap-3 items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold tracking-tight text-cyan-400">Public Agent Skill Registry</h2>
-          <p className="text-xs text-slate-400">Search indexed skills, or type any GitHub URL to compile and scan on the fly.</p>
-        </div>
-        <form onSubmit={handleSearchSubmit} className="flex gap-2 w-full md:w-auto min-w-[320px]">
-          <input
-            type="text"
-            placeholder="Search or GitHub Repo URL..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="flex-grow px-3.5 py-2 text-xs bg-slate-950/80 border border-slate-800 rounded-lg focus:outline-none focus:border-cyan-500 transition-colors"
-          />
-          <button
-            type="submit"
-            className="px-4 py-2 bg-slate-900 border border-slate-700 hover:border-slate-500 text-xs font-bold rounded-lg transition-colors"
-          >
-            Search
-          </button>
-          {query.includes("github.com/") && (
-            <button
-              type="button"
-              onClick={handleCompileOnTheFly}
-              className="px-4 py-2 bg-cyan-950/80 border border-cyan-800 hover:border-cyan-600 text-xs font-bold text-cyan-400 rounded-lg transition-colors"
-            >
-              Compile &amp; Scan
-            </button>
-          )}
-        </form>
-      </div>
+    <div className="min-h-screen" style={{ background: "#0b1120" }}>
+      {/* ── Hero band ─────────────────────────────────────────────── */}
+      <div
+        className="relative overflow-hidden"
+        style={{
+          background: "linear-gradient(135deg, rgba(124,58,237,0.08) 0%, rgba(6,182,212,0.05) 100%)",
+          borderBottom: "1px solid rgba(71,85,105,0.2)",
+        }}
+      >
+        <div style={{ position: "absolute", top: -80, right: -80, width: 400, height: 400, borderRadius: "50%", background: "radial-gradient(circle, rgba(124,58,237,0.12), transparent 70%)", pointerEvents: "none" }} />
+        <div style={{ position: "absolute", bottom: -60, left: 80, width: 300, height: 300, borderRadius: "50%", background: "radial-gradient(circle, rgba(6,182,212,0.08), transparent 70%)", pointerEvents: "none" }} />
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-[480px]">
-        {/* Left Side: Skills Catalog */}
-        <div className="lg:col-span-5 flex flex-col gap-3.5">
-          <span className="text-[11px] font-bold tracking-wider text-slate-500 uppercase">Available Skills</span>
-          
-          {loadingList ? (
-            <div className="flex items-center justify-center py-20 bg-slate-950/20 border border-slate-900 rounded-xl">
-              <span className="text-xs text-slate-500 animate-pulse">Loading catalog...</span>
-            </div>
-          ) : skills.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 bg-slate-950/20 border border-slate-900 rounded-xl text-center px-4">
-              <span className="text-xs text-slate-500 mb-2">No pre-indexed skills found for "{query}"</span>
-              {query.includes("github.com/") && (
+        <div className="max-w-[1180px] mx-auto px-4 sm:px-7 pt-11 pb-2 relative">
+          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_auto] gap-9 items-end">
+            <div>
+              <Eyebrow>ScapeGuard · security-audited skills</Eyebrow>
+              <h1 className="text-3xl sm:text-[34px] font-extrabold text-slate-100 mt-2.5 mb-2.5" style={{ letterSpacing: "-1px", lineHeight: 1.12 }}>
+                Public Agent Skill Registry
+              </h1>
+              <p className="text-[14.5px] text-slate-400 max-w-[56ch] mb-6">
+                Every skill audited, every grade earned. Search indexed skills, or type any GitHub URL to compile
+                and scan it on the fly with ScapeGuard's five gate categories.
+              </p>
+              <form
+                className="flex gap-2.5 max-w-[640px] mb-7"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (githubTarget) goToReport(githubTarget.owner, githubTarget.repo);
+                }}
+              >
+                <label
+                  className="flex-1 flex items-center gap-2.5 rounded-lg px-3.5 transition-colors focus-within:border-cyan-500"
+                  style={{ background: "rgba(2,6,23,0.8)", border: "1px solid #1e293b" }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="opacity-50 flex-shrink-0">
+                    <circle cx="11" cy="11" r="7" />
+                    <path d="m20 20-4-4" />
+                  </svg>
+                  <input
+                    type="text"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="Search skills — or paste any GitHub URL..."
+                    aria-label="Search the registry"
+                    className="flex-1 bg-transparent border-none outline-none text-slate-200 font-mono text-xs h-[42px] min-w-0 placeholder:text-slate-600"
+                  />
+                </label>
                 <button
-                  onClick={handleCompileOnTheFly}
-                  className="px-3.5 py-1.5 bg-cyan-950/50 border border-cyan-900 hover:border-cyan-800 text-[11px] font-bold text-cyan-400 rounded-lg transition-colors"
+                  type="submit"
+                  disabled={!githubTarget}
+                  className="inline-flex items-center rounded-lg text-xs font-semibold px-4 h-[42px] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  style={{ background: "rgba(8,51,68,0.8)", border: "1px solid #155e75", color: "#22d3ee" }}
                 >
-                  Compile this repository now
+                  Compile &amp; Scan
                 </button>
-              )}
+              </form>
             </div>
-          ) : (
-            <div className="flex flex-col gap-2.5 max-h-[500px] overflow-y-auto pr-1">
-              {skills.map((skill) => (
-                <a
-                  key={skill.repo_url}
-                  href={`/registry/${skill.owner}/${skill.repo}`}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setSelectedSkillUrl(skill.repo_url);
-                    handleSelectSkill(skill.repo_url);
-                  }}
-                  className={`w-full text-left p-4 rounded-xl border transition-all duration-200 block ${
-                    selectedSkillUrl === skill.repo_url
-                      ? "bg-slate-950/60 border-cyan-500/40 shadow-[0_0_12px_rgba(6,182,212,0.06)]"
-                      : "bg-slate-950/30 border-slate-900 hover:border-slate-800 hover:bg-slate-950/40"
-                  }`}
-                >
-                  <div className="flex justify-between items-start mb-1.5">
-                    <span className="font-semibold text-xs tracking-wide text-slate-200">
-                      {skill.owner}/{skill.repo}
-                    </span>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 border rounded-full ${getGradeBg(skill.grade)}`}>
-                      Grade {skill.grade}
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-400 line-clamp-2 mb-2">{skill.description}</p>
-                  <div className="flex justify-between items-center text-[10px] text-slate-500">
-                    <span>{skill.primary_languages.join(" · ")}</span>
-                    <span>{skill.files_analyzed} files</span>
-                  </div>
-                  {skill.scanned_at && (
-                    <div className="mt-1.5 text-[10px] text-slate-600">
-                      Scanned {skill.scanned_at.slice(0, 10)}
+
+            {/* Registry pulse */}
+            <div className="min-w-0 lg:min-w-[340px] mb-8 lg:mb-9">
+              <div className="rounded-2xl overflow-hidden" style={glassStyle} role="group" aria-label="Registry summary">
+                <div className="grid grid-cols-2 sm:grid-cols-4">
+                  {[
+                    { l: "Skills indexed", v: String(skills.length), s: `across ${pulse.langs} languages` },
+                    { l: "Gate pass rate", v: skills.length ? `${Math.round((pulse.passN / skills.length) * 100)}%` : "—", s: `${pulse.passN} of ${skills.length} pass` },
+                    { l: "Median risk", v: String(pulse.median), s: "weighted score" },
+                    { l: "Open findings", v: String(pulse.findings), s: "across all scans" },
+                  ].map((t, i) => (
+                    <div key={t.l} className="px-4 py-3.5" style={{ borderLeft: i > 0 ? "1px solid rgba(71,85,105,0.2)" : "none" }}>
+                      <Eyebrow>{t.l}</Eyebrow>
+                      <div className="font-mono tabular-nums text-[22px] font-semibold text-slate-100 mt-1 leading-tight">{t.v}</div>
+                      <div className="text-[11px] text-slate-500 mt-0.5">{t.s}</div>
                     </div>
-                  )}
-                  <div className="mt-2 text-[10px] font-semibold text-cyan-500 hover:text-cyan-400">
-                    View full report →
-                  </div>
-                </a>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Right Side: Detailed Security Audit and Preview */}
-        <div className="lg:col-span-7 bg-slate-950/40 border border-slate-900 rounded-2xl p-5 sm:p-6 flex flex-col">
-          {loadingDetail ? (
-            <div className="flex-grow flex flex-col items-center justify-center py-32">
-              <div className="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin mb-4" />
-              <span className="text-xs text-slate-400">Compiling repository structure...</span>
-              <span className="text-[10px] text-slate-500 mt-1">Downloading, performing static analysis, and running security audit.</span>
-            </div>
-          ) : detailError ? (
-            <div className="flex-grow flex flex-col items-center justify-center py-32 px-6 text-center">
-              <svg className="w-8 h-8 text-rose-500 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <circle cx="12" cy="12" r="10" />
-                <path d="M12 8v4M12 16h.01" />
-              </svg>
-              <span className="text-xs font-semibold text-rose-400">Failed to compile skill</span>
-              <p className="text-[11px] text-slate-500 mt-1 max-w-[380px]">{detailError}</p>
-            </div>
-          ) : !detail ? (
-            <div className="flex-grow flex flex-col items-center justify-center py-32 text-center">
-              <svg className="w-10 h-10 text-slate-700 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 15l-6 6m0 0l-6-6m6 6V9a6 6 0 0112 0v3" />
-              </svg>
-              <span className="text-xs text-slate-500 font-semibold">Select a skill or enter a GitHub URL</span>
-              <p className="text-[10px] text-slate-600 mt-1">Get audited security reports and pre-compiled workspace skill markdown.</p>
-            </div>
-          ) : (
-            <div className="flex-grow flex flex-col gap-4">
-              {/* Skill Header Info */}
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-900 pb-4">
-                <div>
-                  <h3 className="font-bold text-sm tracking-wide text-slate-200">{detail.owner}/{detail.repo}</h3>
-                  <a
-                    href={detail.repo_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-[11px] text-cyan-500 hover:underline flex items-center gap-1 mt-0.5"
-                  >
-                    {detail.repo_url}
-                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                    </svg>
-                  </a>
+                  ))}
                 </div>
-                <div className="flex gap-2">
-                  <span className={`text-xs font-bold px-3 py-1 border rounded-lg ${getGradeBg(detail.grade)}`}>
-                    Grade {detail.grade}
-                  </span>
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(`npx gitscape ${detail.repo_url}`);
-                      alert("CLI command copied to clipboard!");
-                    }}
-                    className="px-3 py-1 bg-slate-900 border border-slate-800 text-[11px] font-bold text-slate-300 hover:border-slate-600 rounded-lg transition-colors flex items-center gap-1.5"
-                  >
-                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-                    </svg>
-                    Copy command
-                  </button>
-                </div>
-              </div>
-
-              {/* Tabs */}
-              <div className="flex border-b border-slate-900">
-                {[
-                  { key: "findings", label: `Audit Report (${detail.findings.length})` },
-                  { key: "skill_md", label: "SKILL.md Preview" },
-                  { key: "manifest", label: "Provenance JSON" }
-                ].map((t) => (
-                  <button
-                    key={t.key}
-                    onClick={() => setActiveTab(t.key as any)}
-                    className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-all ${
-                      activeTab === t.key
-                        ? "border-cyan-500 text-cyan-400"
-                        : "border-transparent text-slate-400 hover:text-slate-200"
-                    }`}
-                  >
-                    {t.label}
-                  </button>
-                ))}
-              </div>
-
-              {/* Tab Contents */}
-              <div className="flex-grow max-h-[360px] overflow-y-auto pr-1">
-                {activeTab === "findings" && (
-                  <div className="flex flex-col gap-3">
-                    <div className="flex items-center justify-between text-xs text-slate-400 bg-slate-950/40 p-3 rounded-lg border border-slate-900">
-                      <span>ScapeGuard Verdict: <strong>{detail.status}</strong></span>
-                      <span>Risk Score: <strong>{detail.risk_score}</strong></span>
-                    </div>
-
-                    {detail.findings.length === 0 ? (
-                      <div className="text-center py-12 text-slate-500 text-xs">
-                        ✓ No vulnerabilities or prompt injections found. This skill is safe to load.
-                      </div>
-                    ) : (
-                      <div className="flex flex-col gap-2.5">
-                        {detail.findings.map((f, idx) => (
-                          <div key={idx} className="p-3 bg-slate-950/60 border border-slate-900 rounded-lg flex flex-col gap-1.5">
-                            <div className="flex justify-between items-center">
-                              <span className="text-[11px] font-bold text-rose-400 uppercase tracking-wide">
-                                [{f.severity}] {f.rule}
-                              </span>
-                              <span className="text-[10px] text-slate-500">
-                                {f.file}{f.line ? `:${f.line}` : ""}
-                              </span>
-                            </div>
-                            <p className="text-xs text-slate-300">{f.message}</p>
-                            {f.snippet && (
-                              <pre className="text-[10px] bg-slate-950 p-2 rounded border border-slate-900/60 overflow-x-auto text-slate-400 max-h-[80px]">
-                                <code>{f.snippet}</code>
-                              </pre>
-                            )}
-                          </div>
-                        ))}
-                      </div>
+                <div className="px-4 pb-4 pt-3" style={{ borderTop: "1px solid rgba(71,85,105,0.2)" }}>
+                  <div className="flex gap-0.5 h-1.5 rounded-sm overflow-hidden" title="Grade distribution">
+                    {(["A", "B", "C", "F"] as const).map(
+                      (g) =>
+                        counts[g] > 0 && <span key={g} style={{ flex: counts[g], background: gradeInfo(g).hex, display: "block" }} />
                     )}
                   </div>
-                )}
-
-                {activeTab === "skill_md" && (
-                  <div className="bg-slate-950/80 p-4 rounded-xl border border-slate-900 text-xs text-slate-300 font-mono whitespace-pre-wrap leading-relaxed">
-                    {detail.skill_md}
+                  <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2">
+                    {(["A", "B", "C", "F"] as const).map((g) => (
+                      <span key={g} className="inline-flex items-center gap-1.5 font-mono text-[9.5px] tracking-[0.06em] text-slate-400 tabular-nums">
+                        <i style={{ width: 7, height: 7, borderRadius: 2, background: gradeInfo(g).hex, display: "inline-block" }} />
+                        {g} {counts[g]}
+                      </span>
+                    ))}
                   </div>
-                )}
-
-                {activeTab === "manifest" && (
-                  <pre className="bg-slate-950/80 p-4 rounded-xl border border-slate-900 text-[10px] text-slate-400 font-mono overflow-x-auto leading-normal">
-                    {JSON.stringify(detail.manifest, null, 2)}
-                  </pre>
-                )}
+                </div>
               </div>
             </div>
-          )}
+          </div>
         </div>
+      </div>
+
+      {/* ── Toolbar + results ─────────────────────────────────────── */}
+      <div className="max-w-[1180px] mx-auto px-4 sm:px-7">
+        <div className="flex items-center gap-3.5 py-4 flex-wrap">
+          <span className="font-mono text-[11px] tracking-[0.06em] text-slate-500 mr-auto">
+            {list.length} skill{list.length === 1 ? "" : "s"} · sorted by {sort}
+          </span>
+          <div className="flex gap-1.5" role="group" aria-label="Filter by grade">
+            {(["ALL", "A", "B", "C", "F"] as GradeFilter[]).map((g) => {
+              const on = grade === g;
+              return (
+                <button
+                  key={g}
+                  onClick={() => setGrade(g)}
+                  className="font-mono text-[11px] tracking-[0.04em] rounded-full px-3 py-1 transition-colors"
+                  style={
+                    on
+                      ? { background: "rgba(6,182,212,0.12)", border: "1px solid rgba(6,182,212,0.5)", color: "#67e8f9" }
+                      : { background: "rgba(30,41,59,0.4)", border: "1px solid rgba(71,85,105,0.35)", color: "#94a3b8" }
+                  }
+                >
+                  {g === "ALL" ? "All" : `Grade ${g}`}
+                  <span className="ml-1.5" style={{ color: on ? "rgba(103,232,249,0.75)" : "#64748b" }}>{counts[g]}</span>
+                </button>
+              );
+            })}
+          </div>
+          <select
+            value={sort}
+            onChange={(e) => setSort(e.target.value as SortKey)}
+            aria-label="Sort order"
+            className="font-mono text-[11px] rounded-md px-2 py-1.5 text-slate-400"
+            style={{ background: "rgba(30,41,59,0.5)", border: "1px solid rgba(71,85,105,0.35)" }}
+          >
+            <option value="risk">Sort · risk ↑</option>
+            <option value="stars">Sort · stars ↓</option>
+            <option value="name">Sort · name A–Z</option>
+            <option value="scanned">Sort · newest scan</option>
+          </select>
+          <div className="flex rounded-md overflow-hidden" style={{ border: "1px solid rgba(71,85,105,0.35)" }} role="group" aria-label="Layout">
+            {(
+              [
+                ["grid", <svg key="g" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></svg>],
+                ["list", <svg key="l" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 6h16M4 12h16M4 18h16" /></svg>],
+              ] as [Layout, React.ReactNode][]
+            ).map(([mode, icon]) => (
+              <button
+                key={mode}
+                onClick={() => setLayout(mode)}
+                aria-label={`${mode} view`}
+                title={`${mode} view`}
+                className="flex px-2.5 py-[7px] transition-colors"
+                style={layout === mode ? { background: "rgba(30,41,59,0.9)", color: "#22d3ee" } : { background: "none", color: "#64748b" }}
+              >
+                {icon}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 pb-14">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="rounded-2xl p-5 animate-pulse h-[180px]" style={glassStyle} />
+            ))}
+          </div>
+        ) : list.length === 0 ? (
+          <div className="rounded-2xl text-center px-5 py-14 mb-14" style={glassStyle}>
+            <p className="font-semibold text-slate-200 mb-1.5">No indexed skill matches “{query}”</p>
+            <p className="text-xs text-slate-500 mb-4">
+              Paste a GitHub URL above and ScapeGuard will compile and scan it on the fly.
+            </p>
+            {githubTarget && (
+              <button
+                onClick={() => goToReport(githubTarget.owner, githubTarget.repo)}
+                className="inline-flex items-center rounded-lg text-xs font-semibold px-4 py-2.5"
+                style={{ background: "rgba(8,51,68,0.8)", border: "1px solid #155e75", color: "#22d3ee" }}
+              >
+                Compile this repository now
+              </button>
+            )}
+          </div>
+        ) : layout === "grid" ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 pb-14">
+            {list.map((s) => (
+              <a
+                key={s.repo_url}
+                href={`/registry/${s.owner}/${s.repo}`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  goToReport(s.owner, s.repo);
+                }}
+                aria-label={`Open security report for ${s.owner}/${s.repo}`}
+                className="flex flex-col gap-3 rounded-2xl p-[18px] pb-[15px] transition-all duration-150 hover:-translate-y-0.5"
+                style={glassStyle}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = "rgba(6,182,212,0.4)";
+                  e.currentTarget.style.boxShadow = "0 0 12px rgba(6,182,212,0.06), 0 12px 32px -18px rgba(0,0,0,0.9)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = "rgba(71,85,105,0.2)";
+                  e.currentTarget.style.boxShadow = "none";
+                }}
+              >
+                <div className="flex items-start gap-3">
+                  <RepoMark owner={s.owner} repo={s.repo} grade={s.grade} size={44} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block font-semibold text-[14.5px] text-slate-200 leading-tight whitespace-nowrap overflow-hidden text-ellipsis">
+                      <span className="text-slate-500 font-normal">{s.owner} /</span> {s.repo}
+                    </span>
+                    <span className="block font-mono text-[10.5px] text-slate-500 mt-1 tracking-[0.03em]">
+                      {(s.primary_languages || []).join(" · ")} · {(s.files_analyzed || 0).toLocaleString()} files
+                    </span>
+                  </span>
+                  <GradeSeal grade={s.grade} size={40} />
+                </div>
+                <p className="text-xs text-slate-400 leading-normal m-0 line-clamp-2 min-h-[2.9em]">{s.description}</p>
+                <div className="flex items-center gap-2" title={`Gate verdict: ${s.status} · ${s.findings_count} findings`}>
+                  <i style={{ width: 7, height: 7, borderRadius: 2, background: statusColor(s.status), display: "inline-block" }} />
+                  <span className="font-mono text-[10px] tracking-[0.05em]" style={{ color: statusColor(s.status) }}>
+                    {s.status}
+                  </span>
+                  <span className="font-mono text-[10px] text-slate-500 tracking-[0.05em]">
+                    · {s.findings_count} finding{s.findings_count === 1 ? "" : "s"}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between pt-2.5" style={{ borderTop: "1px solid rgba(71,85,105,0.2)" }}>
+                  <span className="font-mono text-[10.5px] text-slate-500 tabular-nums">{cardMeta(s)}</span>
+                  <RiskBar risk={s.risk_score} grade={s.grade} />
+                </div>
+              </a>
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-2xl overflow-hidden mb-14" style={glassStyle}>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse min-w-[560px]" style={{ tableLayout: "fixed" }}>
+                <thead>
+                  <tr style={{ background: "rgba(30,41,59,0.5)", borderBottom: "1px solid rgba(71,85,105,0.35)" }}>
+                    <th className="w-[34px] px-3.5 py-3 text-left font-mono text-[10px] font-semibold tracking-[0.14em] uppercase text-slate-500">#</th>
+                    <th className="px-3.5 py-3 text-left font-mono text-[10px] font-semibold tracking-[0.14em] uppercase text-slate-500">Skill</th>
+                    <th className="w-[110px] px-3.5 py-3 text-left font-mono text-[10px] font-semibold tracking-[0.14em] uppercase text-slate-500">Language</th>
+                    <th className="w-[110px] px-3.5 py-3 text-right font-mono text-[10px] font-semibold tracking-[0.14em] uppercase text-slate-500">Risk</th>
+                    <th className="w-[130px] px-3.5 py-3 text-right font-mono text-[10px] font-semibold tracking-[0.14em] uppercase text-slate-500">Grade</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {list.map((s, i) => (
+                    <tr
+                      key={s.repo_url}
+                      onClick={() => goToReport(s.owner, s.repo)}
+                      onKeyDown={(e) => e.key === "Enter" && goToReport(s.owner, s.repo)}
+                      tabIndex={0}
+                      role="link"
+                      aria-label={`Open report for ${s.owner}/${s.repo}`}
+                      className="cursor-pointer transition-colors hover:bg-slate-800/40"
+                      style={{ borderBottom: i < list.length - 1 ? "1px solid rgba(71,85,105,0.2)" : "none" }}
+                    >
+                      <td className="px-3.5 py-3 font-mono text-[10.5px] text-slate-500 tabular-nums">{String(i + 1).padStart(2, "0")}</td>
+                      <td className="px-3.5 py-3">
+                        <span className="flex items-center gap-3 min-w-0">
+                          <RepoMark owner={s.owner} repo={s.repo} grade={s.grade} size={30} />
+                          <span className="min-w-0 flex-1">
+                            <span className="block font-semibold text-[12.5px] text-slate-200 whitespace-nowrap overflow-hidden text-ellipsis">
+                              <span className="text-slate-500 font-normal">{s.owner} /</span> {s.repo}
+                            </span>
+                            <span className="block text-[11.5px] text-slate-500 whitespace-nowrap overflow-hidden text-ellipsis mt-px">
+                              {s.description}
+                            </span>
+                          </span>
+                        </span>
+                      </td>
+                      <td className="px-3.5 py-3 font-mono text-[11px] text-slate-400 whitespace-nowrap">
+                        {(s.primary_languages || [])[0] || "—"}
+                        {(s.primary_languages || []).length > 1 ? ` +${s.primary_languages.length - 1}` : ""}
+                      </td>
+                      <td className="px-3.5 py-3 text-right">
+                        <RiskBar risk={s.risk_score} grade={s.grade} />
+                      </td>
+                      <td className="px-3.5 py-3 text-right">
+                        <GradeChip grade={s.grade} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

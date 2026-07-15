@@ -1112,22 +1112,9 @@ const App: React.FC = () => {
               />
             );
           }
-          // /registry — index page
+          // /registry — index page (full-bleed: the view brings its own hero band)
           if (currentPath === '/registry') {
-            return (
-              <div className="max-w-[1100px] mx-auto px-4 sm:px-6 py-8 sm:py-12 flex-grow w-full mt-6">
-                <div
-                  className="rounded-2xl p-5 sm:p-7 flex flex-col gap-6"
-                  style={{
-                    background: "rgba(15,23,42,0.75)",
-                    border: "1px solid rgba(6,182,212,0.35)",
-                    boxShadow: "0 12px 48px -12px rgba(0,0,0,0.6), 0 0 0 1px rgba(139,92,246,0.08)",
-                  }}
-                >
-                  <RegistryView onNavigate={navigateTo} />
-                </div>
-              </div>
-            );
+            return <RegistryView onNavigate={navigateTo} />;
           }
           // Home page
           return (
