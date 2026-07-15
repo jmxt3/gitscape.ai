@@ -5,3 +5,9 @@ Dockerfile
 node_modules
 npm-debug.log
 README.md
+
+# Build output & local configurations
+dist/
+.env
+.env.local
+.env.*.local

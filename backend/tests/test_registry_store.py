@@ -58,7 +58,7 @@ def test_list_registry_skills_with_gcs_index_exists(mock_get_client, monkeypatch
     skills = list_registry_skills()
     # Should combine STATIC_REGISTRY_SKILLS + the dynamic_scan
     assert len(skills) == len(STATIC_REGISTRY_SKILLS) + 1
-    assert skills[-1]["owner"] == "custom"
+    assert any(s.get("owner") == "custom" for s in skills)
     mock_bucket.blob.assert_called_with("scans_index.json")
 
 

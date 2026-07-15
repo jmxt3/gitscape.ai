@@ -31,3 +31,7 @@ generate_key.py
 # Key management scripts (never ship these)
 api_key.txt
 generate_key.py
+
+# Python virtual environment and test caches
+.venv/
+.pytest_cache/
