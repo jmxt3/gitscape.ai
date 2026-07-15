@@ -74,7 +74,7 @@ def _structured_context(meta: RepoMeta, extract: Extract) -> str:
             lines.append(f"  - {a}")
 
     if meta.readme:
-        lines.append("README excerpt:\n" + meta.readme[:1500])
+        lines.append("README:\n" + meta.readme)
 
     return "\n".join(lines)
 
@@ -170,8 +170,8 @@ def _framework_prompt(meta: RepoMeta, extract: Extract) -> str:
         'Not for [near-miss exclusion]."\n'
         '                 Requirements: third-person capability, at least 2 trigger conditions with '
         'quoted user phrasings, one near-miss exclusion. NEVER include workflow steps.\n'
-        '  "summary_title": One sentence capturing the essence/vision/design philosophy of this codebase (max 150 chars). Example: "Distinctive, production-grade frontend interfaces that reject generic AI aesthetics through intentional design choices."\n'
-        '  "summary_bullets": Array of exactly 4 concise, high-impact bullet points summarizing the core engineering rules/philosophy of this repository.\n'
+        '  "summary_title": One sentence summarizing what this project actually is and its main purpose (max 150 chars), based on the README. Example: "vLLM is a high-throughput and memory-efficient LLM serving engine."\n'
+        '  "summary_bullets": Array of exactly 4 concise, high-impact bullet points summarizing the key features, architecture, and technology stack of this project based on the README.\n'
         '  "overview": 1-2 sentences explaining what this skill does and why an agent should follow it, '
         'followed by a core principle in one line. Max 300 characters. Must answer: "What does this do and why follow it?"\n'
         '  "when_to_use": Array of 4-6 strings. Each must be a CONCRETE trigger scenario '
@@ -199,6 +199,49 @@ def _framework_prompt(meta: RepoMeta, extract: Extract) -> str:
         "No markdown, no code fences, no commentary — JSON only.\n\n"
         "=== STRUCTURED CONTEXT ===\n" + _structured_context(meta, extract)
     ).replace("{repo}", meta.repo).replace("{owner}", meta.owner)
+
+
+def generate_readme_summary(meta: RepoMeta) -> dict | None:
+    """Uses Gemini to generate a project-centric summary_title and summary_bullets from the README.
+
+    Returns a dict with keys 'summary_title' and 'summary_bullets', or None.
+    """
+    key = settings.GEMINI_API_KEY
+    if not key or not meta.readme:
+        return None
+
+    url = _ENDPOINT.format(model=settings.HD_MODEL)
+    prompt = (
+        "You are a technical writer. Summarize the following GitHub repository based on its README.\n\n"
+        f"Repository: {meta.owner}/{meta.repo}\n"
+        f"Languages: {', '.join(meta.primary_languages) or 'multiple languages'}\n\n"
+        f"=== README ===\n{meta.readme}\n\n"
+        "Return STRICT JSON with exactly these keys:\n"
+        '  "summary_title": One sentence summarizing what this project actually is and its main purpose (max 150 chars). Example: "vLLM is a high-throughput and memory-efficient LLM serving engine."\n'
+        '  "summary_bullets": Array of exactly 4 concise, high-impact bullet points summarizing the key features, architecture, and technology stack of this project.\n\n'
+        "No markdown, no code fences, no commentary — JSON only."
+    )
+    body = {
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {
+            "temperature": 0.2,
+            "maxOutputTokens": 512,
+            "responseMimeType": "application/json",
+            "thinkingConfig": {"thinkingBudget": 0},
+        },
+    }
+    try:
+        resp = requests.post(url, params={"key": key}, json=body, timeout=_TIMEOUT)
+        resp.raise_for_status()
+        text = resp.json()["candidates"][0]["content"]["parts"][0]["text"]
+        data = _extract_json(text)
+        return {
+            "summary_title": str(data.get("summary_title", "")).strip(),
+            "summary_bullets": [str(x).strip() for x in (data.get("summary_bullets") or [])][:4],
+        }
+    except Exception:
+        logger.exception("README summary generation failed; falling back")
+        return None
 
 
 def generate_framework_prose(meta: RepoMeta, extract: Extract) -> FrameworkProseFields | None:

@@ -91,3 +91,42 @@ def test_prefer_authored_false_forces_compile():
              _u("README.md", "# Demo", FileKind.DOCS)]
     pkg = build_skill(units, _META, skill_type="code", prefer_authored=False)
     assert pkg.source == "compiled"
+
+
+def test_authored_skill_readme_enrichment(monkeypatch):
+    from app.config import settings
+    import app.skillforge.hd as hd_mod
+
+    monkeypatch.setattr(settings, "GEMINI_API_KEY", "fake-key")
+
+    mock_summary = {
+        "summary_title": "Acme Demo is a high-performance framework.",
+        "summary_bullets": [
+            "Fast deployment",
+            "Easy usage",
+            "Python 3.10 support",
+            "Highly scalable"
+        ]
+    }
+    monkeypatch.setattr(hd_mod, "generate_readme_summary", lambda meta: mock_summary)
+
+    meta_with_readme = RepoMeta(
+        owner="acme", repo="demo", repo_url="https://github.com/acme/demo",
+        primary_languages=["Python"], files_analyzed=2,
+        readme="# Acme Demo\n\nA high-performance framework."
+    )
+    units = [
+        _u("skills/my-authored-skill/SKILL.md", _AUTHORED),
+        _u("src/main.py", "def f(): ...", FileKind.SOURCE),
+    ]
+
+    pkg = build_skill(units, meta_with_readme)
+    assert pkg.source == "authored"
+    assert pkg.manifest.metadata.get("summary_title") == "Acme Demo is a high-performance framework."
+    assert pkg.manifest.metadata.get("summary_bullets") == [
+        "Fast deployment",
+        "Easy usage",
+        "Python 3.10 support",
+        "Highly scalable"
+    ]
+

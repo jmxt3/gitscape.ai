@@ -198,6 +198,23 @@ def _build_from_authored(authored, units, meta: RepoMeta, *, digest_hash="", dig
     name = authored.name or generate_skill_name(meta.owner, meta.repo)
     description = authored.description or f"{meta.owner}/{meta.repo} — maintainer-authored agent skill."
     files = ["SKILL.md", *authored.references.keys(), "manifest.json", "scan-report.json", "scan-report.sarif"]
+    metadata = {
+        "source_repo": meta.repo_url,
+        "generated_by": "GitScape.ai",
+        "generated_by_url": "https://gitscape.ai",
+        "generated_at": generated_at,
+        "authored_skill_dir": authored.dir or ".",
+        "scan_engine": scan_report.engine,
+        "scan_engine_version": scan_report.engine_version,
+        "skill_hash": scan_report.skill_hash,
+        "license": scan_report.license.model_dump(mode="json"),
+    }
+    if settings.GEMINI_API_KEY and meta.readme:
+        from .hd import generate_readme_summary
+        readme_sum = generate_readme_summary(meta)
+        if readme_sum:
+            metadata["summary_title"] = readme_sum.get("summary_title")
+            metadata["summary_bullets"] = readme_sum.get("summary_bullets")
 
     manifest = Manifest(
         name=name,
@@ -212,19 +229,8 @@ def _build_from_authored(authored, units, meta: RepoMeta, *, digest_hash="", dig
         framework_compatibility=_FRAMEWORKS,
         source_git_head=meta.git_sha,
         built_at=generated_at,
-        metadata={
-            "source_repo": meta.repo_url,
-            "generated_by": "GitScape.ai",
-            "generated_by_url": "https://gitscape.ai",
-            "generated_at": generated_at,
-            "authored_skill_dir": authored.dir or ".",
-            "scan_engine": scan_report.engine,
-            "scan_engine_version": scan_report.engine_version,
-            "skill_hash": scan_report.skill_hash,
-            "license": scan_report.license.model_dump(mode="json"),
-        },
+        metadata=metadata,
     )
-
     # Manifest signing step
     import json
     from .signing import sign_manifest
