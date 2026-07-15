@@ -1,8 +1,11 @@
 User-agent: *
 Allow: /
+Disallow: /api/admin/
 
 User-agent: Googlebot
 Allow: /registry/
+Allow: /registry/nvidia/
 Allow: /
+Disallow: /api/admin/
 
 Sitemap: https://gitscape.ai/api/registry/sitemap.xml

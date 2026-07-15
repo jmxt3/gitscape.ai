@@ -17,6 +17,7 @@ import { HowItWorks, Security, OpenSource, FaqSection, FeatureComparison } from 
 import { CliPanel, McpPanel, DevTools } from "./components/DevToolsSection";
 import { RegistryView } from "./components/RegistryView";
 import { RepoReportPage } from "./components/RepoReportPage";
+import { NvidiaSkillPage } from "./components/NvidiaSkillPage";
 import {
   GITHUB_TOKEN_LOCAL_STORAGE_KEY,
   REPO_URL_LOCAL_STORAGE_KEY,
@@ -1101,6 +1102,16 @@ const App: React.FC = () => {
       />
       <main className="flex-grow">
         {(() => {
+          // /registry/nvidia/{slug} — dedicated NVIDIA skill SEO landing page
+          const nvidiaSlugMatch = currentPath.match(/^\/registry\/nvidia\/([^/]+)$/);
+          if (nvidiaSlugMatch) {
+            return (
+              <NvidiaSkillPage
+                slug={nvidiaSlugMatch[1]}
+                onNavigate={navigateTo}
+              />
+            );
+          }
           // /registry/{owner}/{repo} — per-repo cinematic security report
           const repoMatch = currentPath.match(/^\/registry\/([^/]+)\/([^/]+)$/);
           if (repoMatch) {

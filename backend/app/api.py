@@ -599,7 +599,8 @@ def get_registry_detail(
 def registry_sitemap(request: Request):
     """
     Auto-generated XML sitemap of all scanned repositories.
-    Submitted to Google Search Console to drive indexing of /registry/{owner}/{repo} pages.
+    Submitted to Google Search Console to drive indexing of /registry/{owner}/{repo} pages
+    and /registry/nvidia/{skill_slug} pages for NVIDIA-sourced skills.
     """
     from fastapi import Response
 
@@ -614,6 +615,8 @@ def registry_sitemap(request: Request):
     <priority>0.8</priority>
   </url>""")
 
+    nvidia_slugs_added = set()
+
     for scan in scans:
         owner = scan.get("owner", "")
         repo = scan.get("repo", "")
@@ -621,12 +624,28 @@ def registry_sitemap(request: Request):
         if not owner or not repo:
             continue
         lastmod = f"<lastmod>{scanned_at[:10]}</lastmod>" if scanned_at else ""
+
+        # Primary GitHub repo URL
         urls.append(f"""  <url>
     <loc>{base_url}/registry/{owner}/{repo}</loc>
     {lastmod}
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>""")
+
+        # Also add /registry/nvidia/{skill_slug} for NVIDIA-sourced skills
+        if scan.get("source") == "nvidia":
+            skill_name = scan.get("nvidia_skill_name", "")
+            if skill_name and skill_name not in nvidia_slugs_added:
+                # Slugify: lowercase, replace spaces/underscores with hyphens
+                slug = skill_name.lower().replace(" ", "-").replace("_", "-")
+                urls.append(f"""  <url>
+    <loc>{base_url}/registry/nvidia/{slug}</loc>
+    {lastmod}
+    <changefreq>weekly</changefreq>
+    <priority>0.75</priority>
+  </url>""")
+                nvidia_slugs_added.add(skill_name)
 
     sitemap_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
@@ -638,6 +657,62 @@ def registry_sitemap(request: Request):
         media_type="application/xml",
         headers={"Cache-Control": "public, max-age=3600"},
     )
+
+
+@router.get("/registry/nvidia/{skill_slug}")
+@limiter.limit("30/minute")
+def get_nvidia_skill(request: Request, skill_slug: str):
+    """
+    Retrieve a registry entry for an NVIDIA-curated skill by its slug.
+    The slug is the nvidia_skill_name lowercased with spaces/underscores → hyphens.
+    Returns the index summary enriched with the full scan detail if available.
+    Used by the NvidiaSkillPage frontend component for SEO-optimised skill landing pages.
+    """
+    # Normalise the incoming slug
+    slug = skill_slug.lower().strip()
+
+    def _to_slug(name: str) -> str:
+        return name.lower().replace(" ", "-").replace("_", "-").strip()
+
+    skills = registry_store.list_registry_skills()
+    match = next(
+        (s for s in skills
+         if s.get("source") == "nvidia"
+         and _to_slug(s.get("nvidia_skill_name", "")) == slug),
+        None,
+    )
+
+    if not match:
+        # Fallback: try matching by repo name (some NVIDIA skills use repo slug)
+        match = next(
+            (s for s in skills
+             if s.get("source") == "nvidia"
+             and _to_slug(s.get("repo", "")) == slug),
+            None,
+        )
+
+    if not match:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No NVIDIA skill found for slug '{skill_slug}'. "
+                   "Run the admin batch scan to index this skill.",
+        )
+
+    owner = match.get("owner", "")
+    repo = match.get("repo", "")
+
+    # Try to enrich with full scan detail (categories, findings, ai_summary, etc.)
+    detail = registry_store.get_scanned_detail(owner, repo) if owner and repo else None
+    if detail:
+        # Merge NVIDIA taxonomy from index into detail (detail may have been saved before taxonomy fields)
+        for field in ("source", "nvidia_domain", "nvidia_audience", "nvidia_skill_name",
+                      "nvidia_skill_url", "nvidia_subdomain"):
+            if field not in detail or not detail[field]:
+                detail[field] = match.get(field)
+        return detail
+
+    # Return the index summary when detail blob is not yet cached
+    return match
 
 
 def _grade_color(grade: str) -> str:
@@ -994,6 +1069,357 @@ def render_repo_report(owner: str, repo: str, request: Request):
         headers={"Cache-Control": "public, max-age=1800, stale-while-revalidate=86400"},
     )
 
+
+@router.get("/registry/render/nvidia/{skill_slug}")
+def render_nvidia_skill(skill_slug: str, request: Request):
+    """
+    SSR: Server-rendered HTML for NVIDIA skill landing pages.
+    Googlebot and social crawlers receive this pre-built page.
+    Regular users get the React SPA (handled by nginx bot detection).
+    Contains full JSON-LD structured data, OG/Twitter meta, and NVIDIA taxonomy.
+    """
+    from fastapi import Response as FastAPIResponse
+
+    def _to_slug(name: str) -> str:
+        return name.lower().replace(" ", "-").replace("_", "-").strip()
+
+    slug = skill_slug.lower().strip()
+
+    # Resolve slug → registry entry
+    skills = registry_store.list_registry_skills()
+    match = next(
+        (s for s in skills
+         if s.get("source") == "nvidia" and _to_slug(s.get("nvidia_skill_name", "")) == slug),
+        None,
+    )
+    if not match:
+        match = next(
+            (s for s in skills
+             if s.get("source") == "nvidia" and _to_slug(s.get("repo", "")) == slug),
+            None,
+        )
+
+    is_thin = not match or not match.get("grade")
+    robots_meta = (
+        '<meta name="robots" content="noindex, nofollow">'
+        if is_thin else
+        '<meta name="robots" content="index, follow, max-snippet:200, max-image-preview:large">'
+    )
+
+    if not match:
+        skill_name = skill_slug.replace("-", " ").title()
+        grade = "?"
+        status = "Not yet scanned"
+        risk_score = 0
+        description = f"{skill_name} — NVIDIA-curated AI agent skill. Scan on GitScape AI to see the ScapeGuard security report."
+        findings_count = 0
+        findings = []
+        categories = []
+        languages = []
+        files_analyzed = 0
+        scanned_at = ""
+        ai_summary = ""
+        nvidia_domain: list = []
+        nvidia_audience: list = []
+        nvidia_skill_name = skill_name
+        nvidia_skill_url = f"https://build.nvidia.com/skills/{skill_slug}"
+        nvidia_subdomain = ""
+        owner = "NVIDIA"
+        repo = skill_slug
+    else:
+        # Try to pull full detail blob (has categories + findings)
+        detail = registry_store.get_scanned_detail(match.get("owner", ""), match.get("repo", ""))
+        data = detail if detail else match
+        grade = data.get("grade", "?")
+        status = data.get("status", "")
+        risk_score = data.get("risk_score", 0)
+        description = data.get("description", "")
+        findings = data.get("findings", data.get("findings_summary", []))
+        findings_count = data.get("findings_count", len(findings))
+        categories = data.get("categories", [])
+        languages = data.get("primary_languages", [])
+        files_analyzed = data.get("files_analyzed", 0)
+        scanned_at = data.get("scanned_at", "")
+        ai_summary = data.get("ai_summary", "")
+        nvidia_domain = match.get("nvidia_domain") or data.get("nvidia_domain") or []
+        nvidia_audience = match.get("nvidia_audience") or data.get("nvidia_audience") or []
+        nvidia_skill_name = match.get("nvidia_skill_name") or data.get("nvidia_skill_name") or skill_slug
+        nvidia_skill_url = match.get("nvidia_skill_url") or data.get("nvidia_skill_url") or f"https://build.nvidia.com/skills/{skill_slug}"
+        nvidia_subdomain = match.get("nvidia_subdomain") or data.get("nvidia_subdomain") or ""
+        owner = match.get("owner", "NVIDIA")
+        repo = match.get("repo", skill_slug)
+
+    grade_color = _grade_color(grade)
+    grade_verdict = _grade_label(grade, status)
+    page_url = f"https://gitscape.ai/registry/nvidia/{slug}"
+    repo_url = f"https://github.com/{owner}/{repo}"
+    langs_str = ", ".join(languages) if languages else "Unknown"
+    scanned_display = scanned_at[:10] if scanned_at else "Not yet scanned"
+
+    domains_html = "".join(
+        f'<span style="display:inline-block;padding:3px 10px;border-radius:9999px;font-size:11px;font-family:monospace;font-weight:600;background:rgba(124,58,237,0.1);border:1px solid rgba(124,58,237,0.3);color:#c4b5fd;margin:2px 3px">{d}</span>'
+        for d in nvidia_domain
+    )
+    audiences_html = "".join(
+        f'<span style="display:inline-block;padding:3px 10px;border-radius:9999px;font-size:11px;font-family:monospace;font-weight:600;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);color:#6ee7b7;margin:2px 3px">{a}</span>'
+        for a in nvidia_audience
+    )
+    taxonomy_html = (
+        f'<div style="margin-bottom:16px">{domains_html}{audiences_html}</div>'
+        if (domains_html or audiences_html) else ""
+    )
+
+    ai_prose_html = ""
+    if ai_summary:
+        ai_prose_html = f"""
+        <div style="background:rgba(30,41,59,0.4);border:1px solid rgba(71,85,105,0.2);border-radius:12px;padding:16px 20px;margin-bottom:24px;max-width:800px;">
+          <p style="font-size:14px;color:#94a3b8;line-height:1.6;font-style:italic;">"{ai_summary}"</p>
+        </div>"""
+
+    # Findings rows (top 10)
+    findings_rows = ""
+    for f in findings[:10]:
+        sev = f.get("severity", "INFO")
+        sev_color = {"CRITICAL": "#ef4444", "HIGH": "#f97316", "MEDIUM": "#f59e0b", "LOW": "#64748b"}.get(sev.upper(), "#64748b")
+        rule = f.get("rule", "")
+        msg = f.get("message", "")[:200]
+        loc = f"{f.get('file', '')}:{f.get('line', '')}" if f.get("file") else ""
+        findings_rows += f"""
+        <tr>
+          <td style="padding:10px 12px;"><span style="display:inline-block;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:700;background:{sev_color}22;color:{sev_color};border:1px solid {sev_color}44">{sev}</span></td>
+          <td style="padding:10px 12px;font-family:monospace;font-size:12px;color:#94a3b8">{rule}</td>
+          <td style="padding:10px 12px;font-size:13px;color:#cbd5e1">{msg}</td>
+          <td style="padding:10px 12px;font-family:monospace;font-size:11px;color:#64748b">{loc}</td>
+        </tr>"""
+    if not findings_rows:
+        findings_rows = """
+        <tr><td colspan="4" style="padding:28px;text-align:center;color:#10b981;font-size:14px">
+          &#10003; No security findings detected — this skill is considered safe for agent installation.
+        </td></tr>"""
+
+    # Categories
+    cat_rows = ""
+    default_cats = ["secrets", "prompt_injection", "malicious_execution", "supply_chain", "excessive_agency"]
+    cat_labels = {"secrets": "Secrets & Credentials", "prompt_injection": "Prompt Injection",
+                  "malicious_execution": "Malicious Execution", "supply_chain": "Supply Chain",
+                  "excessive_agency": "Excessive Agency"}
+    cats = categories if categories else [
+        {"category": c, "status": ("FAIL" if grade == "F" and c in ("secrets", "prompt_injection")
+                                   else "WARN" if grade in ("B", "C") and c == "prompt_injection"
+                                   else "PASS")}
+        for c in default_cats
+    ]
+    for c in cats:
+        cs = c.get("status", "PASS")
+        cc = "#10b981" if cs == "PASS" else "#f59e0b" if cs == "WARN" else "#ef4444"
+        cn = cat_labels.get(c.get("category", ""), c.get("category", ""))
+        cat_rows += f'<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(71,85,105,0.15)"><span style="font-size:13px;color:#cbd5e1">{cn}</span><span style="font-size:11px;font-weight:700;font-family:monospace;color:{cc};background:{cc}15;padding:2px 8px;border-radius:4px;border:1px solid {cc}33">{cs}</span></div>'
+
+    # JSON-LD
+    json_ld = json.dumps({
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "@id": page_url,
+        "name": nvidia_skill_name,
+        "url": nvidia_skill_url,
+        "description": description,
+        "applicationCategory": "DeveloperApplication",
+        "creator": {"@type": "Organization", "name": "NVIDIA"},
+        "review": {
+            "@type": "Review",
+            "author": {"@type": "Organization", "name": "GitScape AI ScapeGuard"},
+            "reviewBody": (
+                f"{nvidia_skill_name} is an NVIDIA-curated AI agent skill. "
+                f"ScapeGuard security grade: {grade} ({grade_verdict}). "
+                f"{findings_count} finding{'s' if findings_count != 1 else ''} across {files_analyzed} files. "
+                f"Languages: {langs_str}."
+            ),
+            "reviewRating": {
+                "@type": "Rating",
+                "ratingValue": {"A": "5", "B": "4", "C": "3"}.get(grade, "1"),
+                "bestRating": "5",
+                "worstRating": "1",
+            },
+            "datePublished": scanned_at[:10] if scanned_at else "",
+        },
+        "keywords": ", ".join(nvidia_domain + nvidia_audience),
+    }, indent=2)
+
+    meta_desc = (
+        f"{nvidia_skill_name} is an NVIDIA-curated AI agent skill"
+        + (f" for {', '.join(nvidia_domain)}" if nvidia_domain else "")
+        + f". ScapeGuard security grade: {grade}"
+        + (f" — {findings_count} finding{'s' if findings_count != 1 else ''}" if findings_count else ", no findings")
+        + f". Languages: {langs_str}. View the full security audit on GitScape AI."
+    )
+
+    nvidia_url_html = (
+        f'<a href="{nvidia_skill_url}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;padding:10px 18px;background:rgba(30,41,59,0.7);color:#94a3b8;font-weight:600;font-size:13px;border-radius:8px;border:1px solid rgba(71,85,105,0.4);text-decoration:none">View on NVIDIA &#8599;</a>'
+        if nvidia_skill_url else ""
+    )
+
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{nvidia_skill_name} — NVIDIA AI Skill Security Audit | GitScape AI</title>
+  <meta name="description" content="{meta_desc}">
+  {robots_meta}
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="{page_url}">
+  <meta property="og:title" content="{nvidia_skill_name} — NVIDIA Skill Grade {grade} | GitScape AI">
+  <meta property="og:description" content="{meta_desc}">
+  <meta property="og:site_name" content="GitScape AI">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="{nvidia_skill_name} — ScapeGuard Grade {grade}">
+  <meta name="twitter:description" content="{meta_desc}">
+  <link rel="canonical" href="{page_url}">
+  <script type="application/ld+json">{json_ld}</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *{{box-sizing:border-box;margin:0;padding:0}}
+    body{{font-family:'Inter',sans-serif;background:#0b1120;color:#cbd5e1;line-height:1.6;min-height:100vh}}
+    a{{color:#22d3ee;text-decoration:none}}
+    a:hover{{color:#67e8f9}}
+    .header{{background:rgba(8,13,20,0.9);border-bottom:1px solid rgba(71,85,105,0.3);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;backdrop-filter:blur(20px)}}
+    .logo{{font-size:18px;font-weight:800;color:#f1f5f9;letter-spacing:-0.5px}}
+    .logo span{{background:linear-gradient(135deg,#7c3aed,#4f46e5);color:white;font-size:11px;font-weight:700;padding:2px 7px;border-radius:4px;margin-left:6px}}
+    .nav-link{{font-size:13px;font-weight:500;color:#94a3b8;margin-left:20px}}
+    .hero{{padding:48px 24px 36px;max-width:1100px;margin:0 auto}}
+    .breadcrumb{{font-size:12px;color:#475569;margin-bottom:18px;font-family:monospace}}
+    .breadcrumb a{{color:#475569}}
+    .breadcrumb a:hover{{color:#94a3b8}}
+    .nvidia-badge{{display:inline-flex;align-items:center;gap:6px;padding:3px 12px;border-radius:9999px;background:rgba(118,233,0,0.08);border:1px solid rgba(118,233,0,0.22);margin-bottom:14px}}
+    .nvidia-badge-dot{{width:7px;height:7px;border-radius:50%;background:#76e900;flex-shrink:0}}
+    .nvidia-badge-text{{font-family:monospace;font-size:10.5px;letter-spacing:0.08em;color:#76e900;font-weight:700;text-transform:uppercase}}
+    .skill-title{{font-size:34px;font-weight:800;color:#f1f5f9;letter-spacing:-1px;margin-bottom:10px;line-height:1.15}}
+    .skill-desc{{font-size:15px;color:#94a3b8;max-width:720px;margin-bottom:16px;line-height:1.65}}
+    .meta-row{{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:24px;align-items:center}}
+    .meta-pill{{font-size:12px;font-weight:500;padding:4px 12px;border-radius:9999px;border:1px solid rgba(100,116,139,0.3);color:#94a3b8;background:rgba(30,41,59,0.5);font-family:monospace}}
+    .cta-row{{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}}
+    .btn-primary{{display:inline-flex;align-items:center;gap:6px;padding:10px 20px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:white;font-weight:700;font-size:13px;border-radius:8px;text-decoration:none}}
+    .btn-secondary{{display:inline-flex;align-items:center;gap:6px;padding:10px 20px;background:rgba(30,41,59,0.7);color:#94a3b8;font-weight:600;font-size:13px;border-radius:8px;border:1px solid rgba(71,85,105,0.4);text-decoration:none}}
+    .layout{{display:grid;grid-template-columns:1fr 240px;gap:32px;max-width:1100px;margin:0 auto;padding:0 24px 32px;align-items:start}}
+    @media(max-width:768px){{.layout{{grid-template-columns:1fr}}}}
+    .grade-card{{background:rgba(15,23,42,0.7);border:1px solid rgba(71,85,105,0.25);border-radius:16px;padding:28px;text-align:center;backdrop-filter:blur(12px)}}
+    .grade-label{{font-size:10px;font-weight:700;letter-spacing:0.1em;color:#64748b;text-transform:uppercase;margin-bottom:12px}}
+    .grade-value{{font-size:64px;font-weight:800;line-height:1;color:{grade_color};text-shadow:0 0 28px {grade_color}44}}
+    .grade-verdict{{font-size:12px;color:#94a3b8;margin-top:6px;font-weight:600}}
+    .grade-stat{{display:flex;justify-content:space-between;font-size:12px;font-family:monospace;padding:6px 0;border-top:1px solid rgba(71,85,105,0.2);margin-top:8px;color:#64748b}}
+    .grade-stat span:last-child{{color:#cbd5e1}}
+    .section{{max-width:1100px;margin:0 auto;padding:0 24px 36px}}
+    .section-title{{font-size:15px;font-weight:700;color:#e2e8f0;margin-bottom:14px;display:flex;align-items:center;gap:8px}}
+    .section-title::before{{content:'';display:block;width:3px;height:15px;background:linear-gradient(#7c3aed,#22d3ee);border-radius:2px}}
+    .findings-table{{width:100%;border-collapse:collapse;background:rgba(15,23,42,0.6);border:1px solid rgba(71,85,105,0.2);border-radius:12px;overflow:hidden}}
+    .findings-table th{{background:rgba(15,23,42,0.9);padding:10px 12px;text-align:left;font-size:10px;font-weight:700;letter-spacing:0.08em;color:#64748b;text-transform:uppercase;border-bottom:1px solid rgba(71,85,105,0.2)}}
+    .findings-table tr:not(:last-child){{border-bottom:1px solid rgba(71,85,105,0.12)}}
+    .taxonomy-card{{background:rgba(15,23,42,0.6);border:1px solid rgba(71,85,105,0.25);border-radius:14px;padding:22px;margin-bottom:28px}}
+    .taxonomy-row{{display:grid;grid-template-columns:130px 1fr;gap:8px;margin-bottom:10px;font-size:13px}}
+    .taxonomy-key{{font-family:monospace;font-size:10.5px;letter-spacing:0.08em;text-transform:uppercase;color:#64748b;padding-top:2px}}
+    .taxonomy-val{{color:#cbd5e1}}
+    .footer{{border-top:1px solid rgba(71,85,105,0.2);padding:24px;text-align:center;font-size:12px;color:#475569;margin-top:40px}}
+  </style>
+</head>
+<body>
+  <header class="header">
+    <a href="/" class="logo">GitScape<span>AI</span></a>
+    <div>
+      <a href="/registry" class="nav-link">Registry</a>
+      <a href="{nvidia_skill_url}" target="_blank" rel="noopener" class="nav-link">NVIDIA &#8599;</a>
+    </div>
+  </header>
+
+  <div class="hero">
+    <nav class="breadcrumb">
+      <a href="/">GitScape AI</a> &rsaquo;
+      <a href="/registry">Registry</a> &rsaquo;
+      <a href="/registry">NVIDIA</a> &rsaquo;
+      {nvidia_skill_name}
+    </nav>
+
+    <div class="nvidia-badge">
+      <div class="nvidia-badge-dot"></div>
+      <span class="nvidia-badge-text">NVIDIA Curated Skill</span>
+    </div>
+
+    <h1 class="skill-title">{nvidia_skill_name}</h1>
+    <p class="skill-desc">{description}</p>
+    {taxonomy_html}
+    {ai_prose_html}
+
+    <div class="meta-row">
+      <span class="meta-pill">Scanned: {scanned_display}</span>
+      <span class="meta-pill">{files_analyzed:,} files</span>
+      <span class="meta-pill">{langs_str}</span>
+      <span class="meta-pill" style="color:{grade_color};border-color:{grade_color}44;background:{grade_color}11">Grade {grade} &middot; {grade_verdict}</span>
+      {f'<span class="meta-pill">{nvidia_subdomain}</span>' if nvidia_subdomain else ''}
+    </div>
+
+    <div class="cta-row">
+      <a href="/registry/{owner}/{repo}" class="btn-primary">Full Security Report</a>
+      {nvidia_url_html}
+      <a href="https://github.com/{owner}/{repo}" target="_blank" rel="noopener" class="btn-secondary">GitHub &#8599;</a>
+      <a href="/registry" class="btn-secondary">&larr; Registry</a>
+    </div>
+  </div>
+
+  <div class="layout">
+    <div>
+      <!-- Gate categories -->
+      <div class="taxonomy-card">
+        <div class="section-title" style="margin-bottom:12px">Security Gate Results</div>
+        {cat_rows}
+      </div>
+
+      <!-- Taxonomy -->
+      <div class="taxonomy-card">
+        <div class="section-title" style="margin-bottom:12px">NVIDIA Skill Taxonomy</div>
+        {''.join(f'<div class="taxonomy-row"><div class="taxonomy-key">{k}</div><div class="taxonomy-val">{v}</div></div>' for k, v in [("Skill", nvidia_skill_name), ("Subdomain", nvidia_subdomain or "—"), ("Domain", ", ".join(nvidia_domain) or "—"), ("Audience", ", ".join(nvidia_audience) or "—"), ("Repository", f"{owner}/{repo}"), ("Source", "NVIDIA/skills")])}
+      </div>
+    </div>
+
+    <!-- Grade certificate -->
+    <div class="grade-card">
+      <div class="grade-label">ScapeGuard Grade</div>
+      <div class="grade-value">{grade}</div>
+      <div class="grade-verdict">{grade_verdict}</div>
+      <div class="grade-stat"><span>Risk Score</span><span>{risk_score}</span></div>
+      <div class="grade-stat"><span>Findings</span><span>{findings_count}</span></div>
+      <div class="grade-stat"><span>Files</span><span>{files_analyzed:,}</span></div>
+      <div class="grade-stat"><span>Verdict</span><span style="color:{'#10b981' if status == 'PASS' else '#f59e0b' if status == 'WARN' else '#ef4444'}">{status or '—'}</span></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2 class="section-title">Security Findings ({findings_count})</h2>
+    <table class="findings-table">
+      <thead><tr><th>Severity</th><th>Rule</th><th>Description</th><th>Location</th></tr></thead>
+      <tbody>{findings_rows}</tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2 class="section-title">Install as Agent Skill</h2>
+    <div style="background:rgba(15,23,42,0.6);border:1px solid rgba(71,85,105,0.25);border-radius:14px;padding:22px">
+      <p style="font-size:13px;color:#94a3b8;margin-bottom:10px">Add this NVIDIA-curated skill to your AI agent workspace:</p>
+      <div style="background:rgba(8,13,20,0.8);border:1px solid rgba(71,85,105,0.2);border-radius:8px;padding:12px 16px;font-family:monospace;font-size:12px;color:#94a3b8;word-break:break-all">npx skills add nvidia/{skill_slug}</div>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <p>GitScape AI &mdash; ScapeGuard Security Audit for <strong>{nvidia_skill_name}</strong></p>
+    <p style="margin-top:6px">Powered by <a href="https://gitscape.ai">GitScape AI</a> &middot; <a href="/registry">View all {229} NVIDIA skills in the registry</a></p>
+  </footer>
+</body>
+</html>"""
+
+    return FastAPIResponse(
+        content=html,
+        media_type="text/html",
+        headers={"Cache-Control": "public, max-age=1800, stale-while-revalidate=86400"},
+    )
 
 @router.get("/badge/{owner}/{repo}")
 def get_repo_badge(owner: str, repo: str):
