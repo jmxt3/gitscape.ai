@@ -29,10 +29,18 @@ interface RegistrySkill {
   freshness?: string;
   scanned_at?: string;
   stars?: number;
+  // NVIDIA taxonomy (optional — present only for NVIDIA-sourced skills)
+  nvidia_domain?: string[];
+  nvidia_audience?: string[];
+  nvidia_skill_name?: string;
+  nvidia_skill_url?: string;
+  nvidia_subdomain?: string;
+  source?: "nvidia" | "community" | "static";
 }
 
 type GradeFilter = "ALL" | "A" | "B" | "C" | "F";
 type SortKey = "risk" | "stars" | "name" | "scanned";
+type SourceFilter = "all" | "nvidia" | "community";
 type Layout = "grid" | "list";
 
 const RISK_BAR_MAX = 60; // visual full-scale for the risk micro-bar
@@ -63,6 +71,73 @@ const RiskBar: React.FC<{ risk: number; grade: string }> = ({ risk, grade }) => 
   </span>
 );
 
+// ── Filter sidebar components ─────────────────────────────────────────────────
+
+const FilterAccordion: React.FC<{
+  title: string;
+  open: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+}> = ({ title, open, onToggle, children }) => (
+  <div style={{ borderBottom: "1px solid rgba(71,85,105,0.18)" }}>
+    <button
+      onClick={onToggle}
+      className="w-full flex items-center justify-between py-3 px-1 text-left"
+      style={{ background: "none", border: "none", cursor: "pointer" }}
+    >
+      <span className="font-mono text-[11px] tracking-[0.08em] uppercase text-slate-400 font-semibold">
+        {title}
+      </span>
+      <svg
+        width="12" height="12" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" strokeWidth="2.5"
+        style={{ color: "#64748b", transform: open ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.18s" }}
+      >
+        <path d="m6 9 6 6 6-6" />
+      </svg>
+    </button>
+    {open && (
+      <div className="pb-2 flex flex-col gap-0.5">
+        {children}
+      </div>
+    )}
+  </div>
+);
+
+const FilterCheckbox: React.FC<{
+  label: string;
+  count: number;
+  checked: boolean;
+  onChange: () => void;
+}> = ({ label, count, checked, onChange }) => (
+  <label
+    className="flex items-center gap-2 py-1.5 px-1 rounded cursor-pointer group"
+    style={{
+      background: checked ? "rgba(6,182,212,0.07)" : "transparent",
+      transition: "background 0.12s",
+    }}
+  >
+    <span
+      className="flex-shrink-0 w-3.5 h-3.5 rounded flex items-center justify-center"
+      style={{
+        border: checked ? "1.5px solid #06b6d4" : "1.5px solid rgba(71,85,105,0.5)",
+        background: checked ? "rgba(6,182,212,0.2)" : "transparent",
+        transition: "all 0.12s",
+      }}
+    >
+      {checked && (
+        <svg width="8" height="8" viewBox="0 0 10 10" fill="none">
+          <path d="M1.5 5.5 4 8l4.5-6" stroke="#22d3ee" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      )}
+    </span>
+    <input type="checkbox" checked={checked} onChange={onChange} className="sr-only" />
+    <span className="flex-1 text-[11.5px] text-slate-300 leading-tight">{label}</span>
+    <span className="font-mono text-[10px] text-slate-500 tabular-nums">{count}</span>
+  </label>
+);
+
+
 export const RegistryView: React.FC<{ onNavigate: (path: string) => void }> = ({ onNavigate }) => {
   const [skills, setSkills] = useState<RegistrySkill[]>([]);
   const [loading, setLoading] = useState(true);
@@ -70,6 +145,14 @@ export const RegistryView: React.FC<{ onNavigate: (path: string) => void }> = ({
   const [grade, setGrade] = useState<GradeFilter>("ALL");
   const [sort, setSort] = useState<SortKey>("risk");
   const [layout, setLayout] = useState<Layout>("grid");
+
+  // Filter sidebar state
+  const [selectedDomains, setSelectedDomains] = useState<Set<string>>(new Set());
+  const [selectedAudiences, setSelectedAudiences] = useState<Set<string>>(new Set());
+  const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
+  const [domainOpen, setDomainOpen] = useState(true);
+  const [audienceOpen, setAudienceOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false); // mobile
 
   useEffect(() => {
     fetch(getApiUrl("/registry/search"))
@@ -82,6 +165,44 @@ export const RegistryView: React.FC<{ onNavigate: (path: string) => void }> = ({
   const githubTarget = parseGithubUrl(query);
 
   const goToReport = (owner: string, repo: string) => onNavigate(`/registry/${owner}/${repo}`);
+
+  // Dynamic taxonomy derived from live registry data — no hardcoding
+  const taxonomy = useMemo(() => {
+    const domains: Record<string, number> = {};
+    const audiences: Record<string, number> = {};
+    skills.forEach((s) => {
+      (s.nvidia_domain || []).forEach((d) => { domains[d] = (domains[d] || 0) + 1; });
+      (s.nvidia_audience || []).forEach((a) => { audiences[a] = (audiences[a] || 0) + 1; });
+    });
+    return {
+      domains: Object.entries(domains).sort((a, b) => b[1] - a[1]),
+      audiences: Object.entries(audiences).sort((a, b) => b[1] - a[1]),
+    };
+  }, [skills]);
+
+  const toggleDomain = (d: string) => setSelectedDomains((prev) => {
+    const next = new Set(prev);
+    if (next.has(d)) next.delete(d); else next.add(d);
+    return next;
+  });
+
+  const toggleAudience = (a: string) => setSelectedAudiences((prev) => {
+    const next = new Set(prev);
+    if (next.has(a)) next.delete(a); else next.add(a);
+    return next;
+  });
+
+  const clearAllFilters = () => {
+    setSelectedDomains(new Set());
+    setSelectedAudiences(new Set());
+    setSourceFilter("all");
+    setGrade("ALL");
+  };
+
+  const activeFilterCount =
+    selectedDomains.size + selectedAudiences.size +
+    (sourceFilter !== "all" ? 1 : 0) +
+    (grade !== "ALL" ? 1 : 0);
 
   const counts = useMemo(() => {
     const c: Record<string, number> = { ALL: skills.length, A: 0, B: 0, C: 0, F: 0 };
@@ -104,6 +225,14 @@ export const RegistryView: React.FC<{ onNavigate: (path: string) => void }> = ({
     const q = query.toLowerCase();
     const filtered = skills.filter((s) => {
       if (grade !== "ALL" && s.grade !== grade) return false;
+      // Source filter
+      if (sourceFilter === "nvidia" && s.source !== "nvidia") return false;
+      if (sourceFilter === "community" && s.source === "nvidia") return false;
+      // Domain filter (OR across selected domains)
+      if (selectedDomains.size > 0 && !s.nvidia_domain?.some((d) => selectedDomains.has(d))) return false;
+      // Audience filter (OR across selected audiences)
+      if (selectedAudiences.size > 0 && !s.nvidia_audience?.some((a) => selectedAudiences.has(a))) return false;
+      // Text search
       if (!q) return true;
       return (
         `${s.owner}/${s.repo}`.toLowerCase().includes(q) ||
@@ -118,7 +247,7 @@ export const RegistryView: React.FC<{ onNavigate: (path: string) => void }> = ({
       scanned: (a, b) => (b.scanned_at || "").localeCompare(a.scanned_at || ""),
     };
     return [...filtered].sort(cmp[sort]);
-  }, [skills, query, grade, sort]);
+  }, [skills, query, grade, sort, sourceFilter, selectedDomains, selectedAudiences]);
 
   const cardMeta = (s: RegistrySkill) => {
     const bits: string[] = [];
@@ -227,138 +356,307 @@ export const RegistryView: React.FC<{ onNavigate: (path: string) => void }> = ({
         </div>
       </div>
 
-      {/* ── Toolbar + results ─────────────────────────────────────── */}
+      {/* ── Body: sidebar + results ──────────────────────────────────── */}
       <div className="max-w-[1180px] mx-auto px-4 sm:px-7">
-        <div className="flex items-center gap-3.5 py-4 flex-wrap">
-          <span className="font-mono text-[11px] tracking-[0.06em] text-slate-500 mr-auto">
-            {list.length} skill{list.length === 1 ? "" : "s"} · sorted by {sort}
-          </span>
-          <div className="flex gap-1.5" role="group" aria-label="Filter by grade">
-            {(["ALL", "A", "B", "C", "F"] as GradeFilter[]).map((g) => {
-              const on = grade === g;
-              return (
-                <button
-                  key={g}
-                  onClick={() => setGrade(g)}
-                  className="font-mono text-[11px] tracking-[0.04em] rounded-full px-3 py-1 transition-colors"
-                  style={
-                    on
-                      ? { background: "rgba(6,182,212,0.12)", border: "1px solid rgba(6,182,212,0.5)", color: "#67e8f9" }
-                      : { background: "rgba(30,41,59,0.4)", border: "1px solid rgba(71,85,105,0.35)", color: "#94a3b8" }
-                  }
-                >
-                  {g === "ALL" ? "All" : `Grade ${g}`}
-                  <span className="ml-1.5" style={{ color: on ? "rgba(103,232,249,0.75)" : "#64748b" }}>{counts[g]}</span>
-                </button>
-              );
-            })}
-          </div>
-          <select
-            value={sort}
-            onChange={(e) => setSort(e.target.value as SortKey)}
-            aria-label="Sort order"
-            className="font-mono text-[11px] rounded-md px-2 py-1.5 text-slate-400"
-            style={{ background: "rgba(30,41,59,0.5)", border: "1px solid rgba(71,85,105,0.35)" }}
+
+        {/* Mobile filter toggle */}
+        <div className="flex items-center gap-3 pt-4 pb-2 lg:hidden">
+          <button
+            onClick={() => setSidebarOpen((v) => !v)}
+            className="inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-xs font-semibold"
+            style={{ background: "rgba(30,41,59,0.6)", border: "1px solid rgba(71,85,105,0.35)", color: "#94a3b8" }}
           >
-            <option value="risk">Sort · risk ↑</option>
-            <option value="stars">Sort · stars ↓</option>
-            <option value="name">Sort · name A–Z</option>
-            <option value="scanned">Sort · newest scan</option>
-          </select>
-          <div className="flex rounded-md overflow-hidden" style={{ border: "1px solid rgba(71,85,105,0.35)" }} role="group" aria-label="Layout">
-            {(
-              [
-                ["grid", <svg key="g" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></svg>],
-                ["list", <svg key="l" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 6h16M4 12h16M4 18h16" /></svg>],
-              ] as [Layout, React.ReactNode][]
-            ).map(([mode, icon]) => (
-              <button
-                key={mode}
-                onClick={() => setLayout(mode)}
-                aria-label={`${mode} view`}
-                title={`${mode} view`}
-                className="flex px-2.5 py-[7px] transition-colors"
-                style={layout === mode ? { background: "rgba(30,41,59,0.9)", color: "#22d3ee" } : { background: "none", color: "#64748b" }}
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M4 6h16M8 12h8M11 18h2" />
+            </svg>
+            Filters
+            {activeFilterCount > 0 && (
+              <span
+                className="ml-1 rounded-full w-4 h-4 flex items-center justify-center font-mono text-[10px]"
+                style={{ background: "rgba(6,182,212,0.2)", color: "#22d3ee" }}
               >
-                {icon}
-              </button>
-            ))}
-          </div>
+                {activeFilterCount}
+              </span>
+            )}
+          </button>
+          {activeFilterCount > 0 && (
+            <button onClick={clearAllFilters} className="text-[11px] text-slate-500 hover:text-slate-300 transition-colors">
+              Clear all
+            </button>
+          )}
         </div>
 
-        {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 pb-14">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <div key={i} className="rounded-2xl p-5 animate-pulse h-[180px]" style={glassStyle} />
-            ))}
-          </div>
-        ) : list.length === 0 ? (
-          <div className="rounded-2xl text-center px-5 py-14 mb-14" style={glassStyle}>
-            <p className="font-semibold text-slate-200 mb-1.5">No indexed skill matches “{query}”</p>
-            <p className="text-xs text-slate-500 mb-4">
-              Paste a GitHub URL above and ScapeGuard will compile and scan it on the fly.
-            </p>
-            {githubTarget && (
-              <button
-                onClick={() => goToReport(githubTarget.owner, githubTarget.repo)}
-                className="inline-flex items-center rounded-lg text-xs font-semibold px-4 py-2.5"
-                style={{ background: "rgba(8,51,68,0.8)", border: "1px solid #155e75", color: "#22d3ee" }}
-              >
-                Compile this repository now
-              </button>
+        <div className="flex gap-6 pt-2 pb-14 items-start">
+
+          {/* ── Filter sidebar ─────────────────────────────────── */}
+          <aside
+            className={`flex-shrink-0 w-[220px] rounded-xl overflow-hidden lg:block ${sidebarOpen ? "block" : "hidden"}`}
+            style={{ background: "rgba(15,23,42,0.6)", border: "1px solid rgba(71,85,105,0.2)", alignSelf: "flex-start", position: "sticky", top: 16 }}
+            aria-label="Filter skills"
+          >
+            <div className="px-4 pt-4 pb-1 flex items-center justify-between">
+              <span className="font-mono text-[10.5px] tracking-[0.08em] uppercase text-slate-500 font-semibold">Filters</span>
+              {activeFilterCount > 0 && (
+                <button onClick={clearAllFilters} className="text-[10.5px] text-slate-500 hover:text-cyan-400 transition-colors">
+                  Clear ({activeFilterCount})
+                </button>
+              )}
+            </div>
+
+            {/* Source filter */}
+            {taxonomy.domains.length > 0 && (
+              <div className="px-3 pb-3 pt-2" style={{ borderBottom: "1px solid rgba(71,85,105,0.18)" }}>
+                <span className="font-mono text-[11px] tracking-[0.08em] uppercase text-slate-400 font-semibold block mb-2">Source</span>
+                <div className="flex flex-col gap-0.5">
+                  {(["all", "nvidia", "community"] as SourceFilter[]).map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => setSourceFilter(s)}
+                      className="text-left px-2 py-1.5 rounded text-[11.5px] transition-colors"
+                      style={{
+                        background: sourceFilter === s ? "rgba(6,182,212,0.1)" : "transparent",
+                        color: sourceFilter === s ? "#22d3ee" : "#94a3b8",
+                        border: sourceFilter === s ? "1px solid rgba(6,182,212,0.25)" : "1px solid transparent",
+                      }}
+                    >
+                      {s === "all" ? "All sources" : s === "nvidia" ? "NVIDIA Curated" : "Community"}
+                    </button>
+                  ))}
+                </div>
+              </div>
             )}
-          </div>
-        ) : layout === "grid" ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 pb-14">
-            {list.map((s) => (
-              <a
-                key={s.repo_url}
-                href={`/registry/${s.owner}/${s.repo}`}
-                onClick={(e) => {
-                  e.preventDefault();
-                  goToReport(s.owner, s.repo);
-                }}
-                aria-label={`Open security report for ${s.owner}/${s.repo}`}
-                className="flex flex-col gap-3 rounded-2xl p-[18px] pb-[15px] transition-all duration-150 hover:-translate-y-0.5"
-                style={glassStyle}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = "rgba(6,182,212,0.4)";
-                  e.currentTarget.style.boxShadow = "0 0 12px rgba(6,182,212,0.06), 0 12px 32px -18px rgba(0,0,0,0.9)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = "rgba(71,85,105,0.2)";
-                  e.currentTarget.style.boxShadow = "none";
-                }}
+
+            {/* Domain filter */}
+            {taxonomy.domains.length > 0 && (
+              <div className="px-3">
+                <FilterAccordion title="Domain" open={domainOpen} onToggle={() => setDomainOpen((v) => !v)}>
+                  {taxonomy.domains.map(([domain, count]) => (
+                    <FilterCheckbox
+                      key={domain}
+                      label={domain}
+                      count={count}
+                      checked={selectedDomains.has(domain)}
+                      onChange={() => toggleDomain(domain)}
+                    />
+                  ))}
+                </FilterAccordion>
+              </div>
+            )}
+
+            {/* Audience filter */}
+            {taxonomy.audiences.length > 0 && (
+              <div className="px-3 pb-3">
+                <FilterAccordion title="Audience" open={audienceOpen} onToggle={() => setAudienceOpen((v) => !v)}>
+                  {taxonomy.audiences.map(([audience, count]) => (
+                    <FilterCheckbox
+                      key={audience}
+                      label={audience}
+                      count={count}
+                      checked={selectedAudiences.has(audience)}
+                      onChange={() => toggleAudience(audience)}
+                    />
+                  ))}
+                </FilterAccordion>
+              </div>
+            )}
+          </aside>
+
+          {/* ── Results column ─────────────────────────────────── */}
+          <div className="flex-1 min-w-0">
+            {/* ── Toolbar ─────────────────────────────── */}
+            <div className="flex items-center gap-3.5 py-4 flex-wrap">
+              {/* Active filter chips */}
+              {(selectedDomains.size > 0 || selectedAudiences.size > 0 || sourceFilter !== "all" || grade !== "ALL") && (
+                <div className="flex flex-wrap gap-1.5 mr-auto">
+                  {grade !== "ALL" && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10.5px] font-mono" style={{ background: "rgba(6,182,212,0.1)", border: "1px solid rgba(6,182,212,0.3)", color: "#67e8f9" }}>
+                      Grade {grade}
+                      <button onClick={() => setGrade("ALL")} className="opacity-70 hover:opacity-100 leading-none">×</button>
+                    </span>
+                  )}
+                  {sourceFilter !== "all" && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10.5px] font-mono" style={{ background: "rgba(124,58,237,0.1)", border: "1px solid rgba(124,58,237,0.3)", color: "#c4b5fd" }}>
+                      {sourceFilter === "nvidia" ? "NVIDIA" : "Community"}
+                      <button onClick={() => setSourceFilter("all")} className="opacity-70 hover:opacity-100 leading-none">×</button>
+                    </span>
+                  )}
+                  {[...selectedDomains].map((d) => (
+                    <span key={d} className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10.5px] font-mono" style={{ background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.3)", color: "#6ee7b7" }}>
+                      {d}
+                      <button onClick={() => toggleDomain(d)} className="opacity-70 hover:opacity-100 leading-none">×</button>
+                    </span>
+                  ))}
+                  {[...selectedAudiences].map((a) => (
+                    <span key={a} className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10.5px] font-mono" style={{ background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.3)", color: "#fcd34d" }}>
+                      {a}
+                      <button onClick={() => toggleAudience(a)} className="opacity-70 hover:opacity-100 leading-none">×</button>
+                    </span>
+                  ))}
+                </div>
+              )}
+              <span className="font-mono text-[11px] tracking-[0.06em] text-slate-500 mr-auto">
+                {list.length} skill{list.length === 1 ? "" : "s"} · sorted by {sort}
+              </span>
+              <div className="flex gap-1.5" role="group" aria-label="Filter by grade">
+                {(["ALL", "A", "B", "C", "F"] as GradeFilter[]).map((g) => {
+                  const on = grade === g;
+                  return (
+                    <button
+                      key={g}
+                      onClick={() => setGrade(g)}
+                      className="font-mono text-[11px] tracking-[0.04em] rounded-full px-3 py-1 transition-colors"
+                      style={
+                        on
+                          ? { background: "rgba(6,182,212,0.12)", border: "1px solid rgba(6,182,212,0.5)", color: "#67e8f9" }
+                          : { background: "rgba(30,41,59,0.4)", border: "1px solid rgba(71,85,105,0.35)", color: "#94a3b8" }
+                      }
+                    >
+                      {g === "ALL" ? "All" : `Grade ${g}`}
+                      <span className="ml-1.5" style={{ color: on ? "rgba(103,232,249,0.75)" : "#64748b" }}>{counts[g]}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              <select
+                value={sort}
+                onChange={(e) => setSort(e.target.value as SortKey)}
+                aria-label="Sort order"
+                className="font-mono text-[11px] rounded-md px-2 py-1.5 text-slate-400"
+                style={{ background: "rgba(30,41,59,0.5)", border: "1px solid rgba(71,85,105,0.35)" }}
               >
-                <div className="flex items-start gap-3">
-                  <RepoMark owner={s.owner} repo={s.repo} grade={s.grade} size={44} />
-                  <span className="min-w-0 flex-1">
-                    <span className="block font-semibold text-[14.5px] text-slate-200 leading-tight whitespace-nowrap overflow-hidden text-ellipsis">
-                      <span className="text-slate-500 font-normal">{s.owner} /</span> {s.repo}
-                    </span>
-                    <span className="block font-mono text-[10.5px] text-slate-500 mt-1 tracking-[0.03em]">
-                      {(s.primary_languages || []).join(" · ")} · {(s.files_analyzed || 0).toLocaleString()} files
-                    </span>
-                  </span>
-                  <GradeSeal grade={s.grade} size={40} />
-                </div>
-                <p className="text-xs text-slate-400 leading-normal m-0 line-clamp-2 min-h-[2.9em]">{s.description}</p>
-                <div className="flex items-center gap-2" title={`Gate verdict: ${s.status} · ${s.findings_count} findings`}>
-                  <i style={{ width: 7, height: 7, borderRadius: 2, background: statusColor(s.status), display: "inline-block" }} />
-                  <span className="font-mono text-[10px] tracking-[0.05em]" style={{ color: statusColor(s.status) }}>
-                    {s.status}
-                  </span>
-                  <span className="font-mono text-[10px] text-slate-500 tracking-[0.05em]">
-                    · {s.findings_count} finding{s.findings_count === 1 ? "" : "s"}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between pt-2.5" style={{ borderTop: "1px solid rgba(71,85,105,0.2)" }}>
-                  <span className="font-mono text-[10.5px] text-slate-500 tabular-nums">{cardMeta(s)}</span>
-                  <RiskBar risk={s.risk_score} grade={s.grade} />
-                </div>
-              </a>
-            ))}
-          </div>
+                <option value="risk">Sort · risk ↑</option>
+                <option value="stars">Sort · stars ↓</option>
+                <option value="name">Sort · name A–Z</option>
+                <option value="scanned">Sort · newest scan</option>
+              </select>
+              <div className="flex rounded-md overflow-hidden" style={{ border: "1px solid rgba(71,85,105,0.35)" }} role="group" aria-label="Layout">
+                {(
+                  [
+                    ["grid", <svg key="g" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></svg>],
+                    ["list", <svg key="l" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 6h16M4 12h16M4 18h16" /></svg>],
+                  ] as [Layout, React.ReactNode][]
+                ).map(([mode, icon]) => (
+                  <button
+                    key={mode}
+                    onClick={() => setLayout(mode)}
+                    aria-label={`${mode} view`}
+                    title={`${mode} view`}
+                    className="flex px-2.5 py-[7px] transition-colors"
+                    style={layout === mode ? { background: "rgba(30,41,59,0.9)", color: "#22d3ee" } : { background: "none", color: "#64748b" }}
+                  >
+                    {icon}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {loading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5 pb-14">
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <div key={i} className="rounded-2xl p-5 animate-pulse h-[180px]" style={glassStyle} />
+                ))}
+              </div>
+            ) : list.length === 0 ? (
+              <div className="rounded-2xl text-center px-5 py-14 mb-14" style={glassStyle}>
+                <p className="font-semibold text-slate-200 mb-1.5">No indexed skill matches &ldquo;{query || "applied filters"}&rdquo;</p>
+                <p className="text-xs text-slate-500 mb-4">
+                  {activeFilterCount > 0
+                    ? "Try clearing some filters, or paste a GitHub URL to scan a new repo."
+                    : "Paste a GitHub URL above and ScapeGuard will compile and scan it on the fly."
+                  }
+                </p>
+                {activeFilterCount > 0 && (
+                  <button
+                    onClick={clearAllFilters}
+                    className="inline-flex items-center rounded-lg text-xs font-semibold px-4 py-2.5 mr-3"
+                    style={{ background: "rgba(30,41,59,0.8)", border: "1px solid rgba(71,85,105,0.4)", color: "#94a3b8" }}
+                  >
+                    Clear all filters
+                  </button>
+                )}
+                {githubTarget && (
+                  <button
+                    onClick={() => goToReport(githubTarget.owner, githubTarget.repo)}
+                    className="inline-flex items-center rounded-lg text-xs font-semibold px-4 py-2.5"
+                    style={{ background: "rgba(8,51,68,0.8)", border: "1px solid #155e75", color: "#22d3ee" }}
+                  >
+                    Compile this repository now
+                  </button>
+                )}
+              </div>
+            ) : layout === "grid" ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5 pb-14">
+                {list.map((s) => (
+                  <a
+                    key={s.repo_url}
+                    href={`/registry/${s.owner}/${s.repo}`}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      goToReport(s.owner, s.repo);
+                    }}
+                    aria-label={`Open security report for ${s.owner}/${s.repo}`}
+                    className="flex flex-col gap-3 rounded-2xl p-[18px] pb-[15px] transition-all duration-150 hover:-translate-y-0.5"
+                    style={glassStyle}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = "rgba(6,182,212,0.4)";
+                      e.currentTarget.style.boxShadow = "0 0 12px rgba(6,182,212,0.06), 0 12px 32px -18px rgba(0,0,0,0.9)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = "rgba(71,85,105,0.2)";
+                      e.currentTarget.style.boxShadow = "none";
+                    }}
+                  >
+                    <div className="flex items-start gap-3">
+                      <RepoMark owner={s.owner} repo={s.repo} grade={s.grade} size={44} />
+                      <span className="min-w-0 flex-1">
+                        <span className="block font-semibold text-[14.5px] text-slate-200 leading-tight whitespace-nowrap overflow-hidden text-ellipsis">
+                          <span className="text-slate-500 font-normal">{s.owner} /</span> {s.repo}
+                        </span>
+                        <span className="block font-mono text-[10.5px] text-slate-500 mt-1 tracking-[0.03em]">
+                          {(s.primary_languages || []).join(" · ")} · {(s.files_analyzed || 0).toLocaleString()} files
+                        </span>
+                      </span>
+                      <GradeSeal grade={s.grade} size={40} />
+                    </div>
+                    <p className="text-xs text-slate-400 leading-normal m-0 line-clamp-2 min-h-[2.9em]">{s.description}</p>
+                    {/* NVIDIA domain + audience chips */}
+                    {s.source === "nvidia" && s.nvidia_domain && s.nvidia_domain.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {s.nvidia_domain.slice(0, 2).map((d) => (
+                          <span
+                            key={d}
+                            className="inline-flex items-center rounded-full px-2 py-0.5 text-[9.5px] font-mono"
+                            style={{ background: "rgba(124,58,237,0.1)", border: "1px solid rgba(124,58,237,0.25)", color: "#c4b5fd" }}
+                          >
+                            {d}
+                          </span>
+                        ))}
+                        {s.nvidia_audience && s.nvidia_audience[0] && (
+                          <span
+                            className="inline-flex items-center rounded-full px-2 py-0.5 text-[9.5px] font-mono"
+                            style={{ background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)", color: "#6ee7b7" }}
+                          >
+                            {s.nvidia_audience[0]}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2" title={`Gate verdict: ${s.status} · ${s.findings_count} findings`}>
+                      <i style={{ width: 7, height: 7, borderRadius: 2, background: statusColor(s.status), display: "inline-block" }} />
+                      <span className="font-mono text-[10px] tracking-[0.05em]" style={{ color: statusColor(s.status) }}>
+                        {s.status}
+                      </span>
+                      <span className="font-mono text-[10px] text-slate-500 tracking-[0.05em]">
+                        · {s.findings_count} finding{s.findings_count === 1 ? "" : "s"}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between pt-2.5" style={{ borderTop: "1px solid rgba(71,85,105,0.2)" }}>
+                      <span className="font-mono text-[10.5px] text-slate-500 tabular-nums">{cardMeta(s)}</span>
+                      <RiskBar risk={s.risk_score} grade={s.grade} />
+                    </div>
+                  </a>
+                ))}
+              </div>
         ) : (
           <div className="rounded-2xl overflow-hidden mb-14" style={glassStyle}>
             <div className="overflow-x-auto">
@@ -414,8 +712,10 @@ export const RegistryView: React.FC<{ onNavigate: (path: string) => void }> = ({
               </table>
             </div>
           </div>
-        )}
-      </div>
+            )}
+          </div> {/* end results column */}
+        </div> {/* end body flex row */}
+      </div> {/* end max-w container */}
     </div>
   );
 };

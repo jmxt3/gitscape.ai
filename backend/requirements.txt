@@ -1,10 +1,10 @@
-fastapi[standard]
-pydantic
-pydantic-settings
-python-dotenv
-slowapi
-requests
-jinja2
+fastapi[standard]>=0.115.12
+pydantic>=2.11.5
+pydantic-settings>=2.9.1
+python-dotenv>=1.1.0
+slowapi>=0.1.9
+requests>=2.32.3
+jinja2>=3.1.6
 tree-sitter>=0.25
 tree-sitter-python>=0.23
 tree-sitter-typescript>=0.23

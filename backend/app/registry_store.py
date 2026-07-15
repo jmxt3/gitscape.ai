@@ -233,6 +233,13 @@ def save_scanned_skill(owner: str, repo: str, detail_data: dict):
         "watchers": detail_data.get("watchers", 0),
         "last_commit_at": detail_data.get("last_commit_at", ""),
         "ai_summary": detail_data.get("ai_summary", ""),
+        # ── NVIDIA taxonomy fields (populated by batch scan; empty for community scans) ──
+        "nvidia_domain": detail_data.get("nvidia_domain", []),
+        "nvidia_audience": detail_data.get("nvidia_audience", []),
+        "nvidia_skill_name": detail_data.get("nvidia_skill_name", ""),
+        "nvidia_skill_url": detail_data.get("nvidia_skill_url", ""),
+        "nvidia_subdomain": detail_data.get("nvidia_subdomain", ""),
+        "source": detail_data.get("source", "community"),
     }
 
     # Enrich the detail blob with scanned_at before saving
@@ -269,7 +276,11 @@ def save_scanned_skill(owner: str, repo: str, detail_data: dict):
                 except Exception:
                     existing_index = []
 
-            # Remove any older duplicate entry in index
+            # Remove any older duplicate entry in index (auto-update on re-scan)
+            was_update = any(
+                item["repo_url"].lower() == detail_data["repo_url"].lower()
+                for item in existing_index
+            )
             existing_index = [
                 item
                 for item in existing_index
@@ -280,7 +291,13 @@ def save_scanned_skill(owner: str, repo: str, detail_data: dict):
             index_blob.upload_from_string(
                 json.dumps(existing_index, indent=2), content_type="application/json"
             )
-            logger.info(f"Saved {owner}/{repo} scan to GCS bucket successfully.")
+            if was_update:
+                logger.info(
+                    f"Registry entry updated for {owner}/{repo} — triggered by user re-scan",
+                    extra={"event": "registry_auto_update", "owner": owner, "repo": repo},
+                )
+            else:
+                logger.info(f"Saved {owner}/{repo} scan to GCS bucket successfully.")
             return
         except Exception as e:
             logger.error(

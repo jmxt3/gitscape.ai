@@ -32,7 +32,8 @@ CHUNK_SIZE = 1024 * 1024  # 1 MB
 # Ensure IGNORED_FILES is defined only once and at the top-level scope
 IGNORED_DIRS = {
     ".git", "__pycache__", "node_modules", "packages", "package-locks", ".pnpm", ".yarn", ".npm", ".rush",
-    ".next", "build", "dist", ".out", "coverage", ".nyc_output", ".vscode", ".idea"
+    ".next", "build", "dist", ".out", "coverage", ".nyc_output", ".vscode", ".idea",
+    ".agents", ".claude", ".cursor"
 }
 IGNORED_FILES = {
     ".DS_Store",

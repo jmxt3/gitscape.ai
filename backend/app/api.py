@@ -165,6 +165,104 @@ Summarize the key security posture and risk implications for developers installi
     return _prose_fallback(owner, repo, grade, risk_score, findings)
 
 
+# ── Shared scan-and-save helper ───────────────────────────────────────────────
+
+def _scan_and_save(
+    repo_url: str,
+    github_token: Optional[str] = None,
+    nvidia_meta: Optional[dict] = None,
+) -> None:
+    """
+    Clones repo_url, runs the full SkillForge pipeline, and persists the result
+    to the public registry (GCS or in-memory fallback).
+
+    Called by:
+      - /api/converter  (auto-persist on every user scan)
+      - /api/admin/scan-batch  (batch NVIDIA skill ingestion)
+
+    nvidia_meta (optional) dict may contain:
+      nvidia_domain, nvidia_audience, nvidia_skill_name,
+      nvidia_skill_url, nvidia_subdomain, source
+    """
+    from app import registry_store
+
+    nvidia_meta = nvidia_meta or {}
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        clone_path = os.path.join(tmpdir, "repo")
+        converter.clone_repository(repo_url, clone_path, github_token=github_token)
+        digest_str, metadata = converter.generate_markdown_digest(
+            repo_url, clone_path, return_metadata=True
+        )
+
+        owner = metadata["owner"]
+        repo = metadata["repo"]
+        languages = metadata["primary_languages"]
+        files_analyzed = metadata["files_analyzed"]
+        readme = metadata.get("readme", "")
+        file_structure = metadata.get("file_structure", "")
+        structure_overview = metadata.get("structure_overview", "")
+        generated_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        git_sha = converter.get_git_sha(clone_path)
+
+        meta = RepoMeta(
+            owner=owner, repo=repo, repo_url=repo_url,
+            primary_languages=languages, files_analyzed=files_analyzed,
+            readme=readme, file_structure=file_structure,
+            structure_overview=structure_overview, generated_at=generated_at,
+            git_sha=git_sha,
+        )
+        units = skillforge.units_from_clone(Path(clone_path))
+        pkg = skillforge.build_skill(
+            units, meta, digest_hash=skillforge.content_hash(digest_str),
+            digest_content=digest_str,
+        )
+        skillforge.skill_cache.set(skillforge.cache_key(digest_str), pkg)
+
+        gh_meta = fetch_github_metadata(owner, repo, github_token)
+        findings_list = [f.model_dump(mode="json") for f in pkg.scan_report.findings]
+        ai_summary = generate_ai_prose(
+            owner, repo, pkg.scan_report.grade, pkg.scan_report.risk_score, findings_list
+        )
+
+        detail_payload = {
+            "repo_url": repo_url,
+            "name": pkg.name,
+            "owner": owner,
+            "repo": repo,
+            "description": (
+                pkg.manifest.metadata.get("summary_title")
+                or pkg.manifest.description
+                or f"Agent skill for {owner}/{repo}."
+            ),
+            "primary_languages": languages,
+            "files_analyzed": files_analyzed,
+            "grade": pkg.scan_report.grade,
+            "status": pkg.scan_report.status.value,
+            "risk_score": pkg.scan_report.risk_score,
+            "findings": findings_list,
+            "categories": [c.model_dump(mode="json") for c in pkg.scan_report.categories],
+            "skill_md": pkg.skill_md,
+            "manifest": pkg.manifest.model_dump(mode="json"),
+            "last_git_sha": git_sha,
+            "stars": gh_meta.get("stars", 0),
+            "forks": gh_meta.get("forks", 0),
+            "license": gh_meta.get("license", ""),
+            "open_issues": gh_meta.get("open_issues", 0),
+            "watchers": gh_meta.get("watchers", 0),
+            "last_commit_at": gh_meta.get("last_commit_at", ""),
+            "ai_summary": ai_summary,
+            # ── NVIDIA taxonomy (empty for community scans) ──
+            "nvidia_domain": nvidia_meta.get("nvidia_domain", []),
+            "nvidia_audience": nvidia_meta.get("nvidia_audience", []),
+            "nvidia_skill_name": nvidia_meta.get("nvidia_skill_name", ""),
+            "nvidia_skill_url": nvidia_meta.get("nvidia_skill_url", ""),
+            "nvidia_subdomain": nvidia_meta.get("nvidia_subdomain", ""),
+            "source": nvidia_meta.get("source", "community"),
+        }
+        registry_store.save_scanned_skill(owner, repo, detail_payload)
+
+
 @router.get("/converter")
 @limiter.limit("10/minute")
 def get_digest(
@@ -230,36 +328,7 @@ def get_digest(
                 }
                 # ── Auto-persist to public registry (SEO flywheel) ──────────────
                 try:
-                    from app import registry_store
-                    gh_meta = fetch_github_metadata(owner, repo, github_token)
-                    findings_list = [f.model_dump(mode="json") for f in pkg.scan_report.findings]
-                    ai_summary = generate_ai_prose(owner, repo, pkg.scan_report.grade, pkg.scan_report.risk_score, findings_list)
-                    
-                    detail_payload = {
-                        "repo_url": repo_url,
-                        "name": pkg.name,
-                        "owner": owner,
-                        "repo": repo,
-                        "description": pkg.manifest.metadata.get("summary_title") or pkg.manifest.description or f"Agent skill for {owner}/{repo}.",
-                        "primary_languages": languages,
-                        "files_analyzed": files_analyzed,
-                        "grade": pkg.scan_report.grade,
-                        "status": pkg.scan_report.status.value,
-                        "risk_score": pkg.scan_report.risk_score,
-                        "findings": findings_list,
-                        "categories": [c.model_dump(mode="json") for c in pkg.scan_report.categories],
-                        "skill_md": pkg.skill_md,
-                        "manifest": pkg.manifest.model_dump(mode="json"),
-                        "last_git_sha": git_sha,
-                        "stars": gh_meta.get("stars", 0),
-                        "forks": gh_meta.get("forks", 0),
-                        "license": gh_meta.get("license", ""),
-                        "open_issues": gh_meta.get("open_issues", 0),
-                        "watchers": gh_meta.get("watchers", 0),
-                        "last_commit_at": gh_meta.get("last_commit_at", ""),
-                        "ai_summary": ai_summary,
-                    }
-                    registry_store.save_scanned_skill(owner, repo, detail_payload)
+                    _scan_and_save(repo_url, github_token=github_token)
                 except Exception:
                     logger.exception("Registry auto-persist failed; continuing")
             except Exception:
@@ -1359,5 +1428,9 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    # Mount admin router (key-gated, no rate limit)
+    from app.admin_router import admin_router
+    app.include_router(admin_router, prefix="/admin")
 
     return app
