@@ -71,16 +71,6 @@ export const Header: React.FC<HeaderProps> = ({ onToggleTokenModal, hasToken, cu
             Home
           </a>
           <a
-            href="/registry"
-            onClick={(e) => {
-              e.preventDefault();
-              onNavigate('/registry');
-            }}
-            className={`hover:text-slate-200 transition-colors ${currentPath === '/registry' ? 'text-cyan-400 font-bold' : ''}`}
-          >
-            Registry
-          </a>
-          <a
             href="/#how-it-works"
             onClick={(e) => {
               e.preventDefault();
@@ -121,12 +111,14 @@ export const Header: React.FC<HeaderProps> = ({ onToggleTokenModal, hasToken, cu
             Open source
           </a>
           <a
-            href="https://github.com/jmxt3/Git-Scape-Web#readme"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:text-slate-200 transition-colors"
+            href="/registry"
+            onClick={(e) => {
+              e.preventDefault();
+              onNavigate('/registry');
+            }}
+            className={`hover:text-slate-200 transition-colors ${currentPath === '/registry' ? 'text-cyan-400 font-bold' : ''}`}
           >
-            Docs
+            Registry
           </a>
         </nav>
 
