@@ -1,6 +1,7 @@
 import os
 import json
 import logging
+from datetime import datetime, timezone
 from typing import List, Optional
 from google.cloud import storage
 
@@ -20,7 +21,10 @@ STATIC_REGISTRY_SKILLS = [
         "status": "FAIL",
         "risk_score": 25,
         "findings_count": 2,
+        "findings_summary": [],
         "freshness": "fresh",
+        "scanned_at": "",
+        "last_git_sha": "",
     },
     {
         "repo_url": "https://github.com/pydantic/pydantic",
@@ -34,7 +38,10 @@ STATIC_REGISTRY_SKILLS = [
         "status": "PASS",
         "risk_score": 0,
         "findings_count": 1,
+        "findings_summary": [],
         "freshness": "fresh",
+        "scanned_at": "",
+        "last_git_sha": "",
     },
     {
         "repo_url": "https://github.com/fastapi/fastapi",
@@ -48,7 +55,10 @@ STATIC_REGISTRY_SKILLS = [
         "status": "PASS",
         "risk_score": 0,
         "findings_count": 0,
+        "findings_summary": [],
         "freshness": "fresh",
+        "scanned_at": "",
+        "last_git_sha": "",
     },
     {
         "repo_url": "https://github.com/expressjs/express",
@@ -62,7 +72,10 @@ STATIC_REGISTRY_SKILLS = [
         "status": "PASS",
         "risk_score": 0,
         "findings_count": 1,
+        "findings_summary": [],
         "freshness": "fresh",
+        "scanned_at": "",
+        "last_git_sha": "",
     },
     {
         "repo_url": "https://github.com/psf/requests",
@@ -76,7 +89,10 @@ STATIC_REGISTRY_SKILLS = [
         "status": "WARN",
         "risk_score": 8,
         "findings_count": 1,
+        "findings_summary": [],
         "freshness": "fresh",
+        "scanned_at": "",
+        "last_git_sha": "",
     },
 ]
 
@@ -121,15 +137,31 @@ def list_registry_skills() -> List[dict]:
     else:
         dynamic_skills = IN_MEMORY_SCANS
 
-    # Combine static seed list with unique dynamic skills
-    seen_urls = {item["repo_url"].lower() for item in STATIC_REGISTRY_SKILLS}
-    combined = list(STATIC_REGISTRY_SKILLS)
+    # Combine static seed list with unique dynamic skills (dynamic wins on overlap)
+    seen_urls = set()
+    combined = []
     for item in dynamic_skills:
-        if item["repo_url"].lower() not in seen_urls:
+        url = item["repo_url"].lower()
+        if url not in seen_urls:
             combined.append(item)
-            seen_urls.add(item["repo_url"].lower())
+            seen_urls.add(url)
+    for item in STATIC_REGISTRY_SKILLS:
+        url = item["repo_url"].lower()
+        if url not in seen_urls:
+            combined.append(item)
+            seen_urls.add(url)
 
     return combined
+
+
+def get_all_scans() -> List[dict]:
+    """
+    Returns all scanned entries (dynamic + static seeds) ordered newest first.
+    Used for sitemap generation and the registry index page.
+    """
+    all_scans = list_registry_skills()
+    # Sort by scanned_at descending (empty string sorts last)
+    return sorted(all_scans, key=lambda x: x.get("scanned_at", ""), reverse=True)
 
 
 def get_scanned_detail(owner: str, repo: str) -> Optional[dict]:
@@ -156,9 +188,26 @@ def get_scanned_detail(owner: str, repo: str) -> Optional[dict]:
 def save_scanned_skill(owner: str, repo: str, detail_data: dict):
     """
     Saves a scanned skill payload to GCS (full details and index append) or to the in-memory fallback.
+    Enriches the persisted data with scanned_at timestamp, last_git_sha, and a findings_summary
+    so SSR report pages have everything they need without a re-scan.
     """
     bucket_name = os.environ.get("GITSCAPE_REGISTRY_BUCKET")
     client = _get_storage_client()
+
+    # Build a concise findings_summary (top 3 findings, severity + rule + message)
+    raw_findings = detail_data.get("findings", [])
+    findings_summary = [
+        {
+            "severity": f.get("severity", ""),
+            "rule": f.get("rule", ""),
+            "message": f.get("message", "")[:200],
+        }
+        for f in raw_findings[:3]
+    ]
+
+    scanned_at = detail_data.get("scanned_at") or datetime.now(timezone.utc).strftime(
+        "%Y-%m-%dT%H:%M:%SZ"
+    )
 
     # Exclude detailed findings to keep index lightweight
     summary_data = {
@@ -172,9 +221,15 @@ def save_scanned_skill(owner: str, repo: str, detail_data: dict):
         "grade": detail_data["grade"],
         "status": detail_data["status"],
         "risk_score": detail_data["risk_score"],
-        "findings_count": len(detail_data.get("findings", [])),
+        "findings_count": len(raw_findings),
+        "findings_summary": findings_summary,
         "freshness": "fresh",
+        "scanned_at": scanned_at,
+        "last_git_sha": detail_data.get("last_git_sha", ""),
     }
+
+    # Enrich the detail blob with scanned_at before saving
+    detail_data_to_save = {**detail_data, "scanned_at": scanned_at}
 
     if client and bucket_name:
         try:
@@ -183,7 +238,7 @@ def save_scanned_skill(owner: str, repo: str, detail_data: dict):
             # 1. Save full details
             detail_blob = bucket.blob(f"scans/{owner.lower()}-{repo.lower()}.json")
             detail_blob.upload_from_string(
-                json.dumps(detail_data, indent=2), content_type="application/json"
+                json.dumps(detail_data_to_save, indent=2), content_type="application/json"
             )
 
             # 2. Append to index

@@ -16,6 +16,7 @@ import { Hero } from "./components/Hero";
 import { HowItWorks, Security, OpenSource, FaqSection, FeatureComparison } from "./components/LandingSections";
 import { CliPanel, McpPanel, DevTools } from "./components/DevToolsSection";
 import { RegistryView } from "./components/RegistryView";
+import { RepoReportPage } from "./components/RepoReportPage";
 import {
   GITHUB_TOKEN_LOCAL_STORAGE_KEY,
   REPO_URL_LOCAL_STORAGE_KEY,
@@ -1099,21 +1100,38 @@ const App: React.FC = () => {
         onNavigate={navigateTo}
       />
       <main className="flex-grow">
-        {currentPath === '/registry' ? (
-          <div className="max-w-[1100px] mx-auto px-4 sm:px-6 py-8 sm:py-12 flex-grow w-full mt-6">
-            <div
-              className="rounded-2xl p-5 sm:p-7 flex flex-col gap-6"
-              style={{
-                background: "rgba(15,23,42,0.75)",
-                border: "1px solid rgba(6,182,212,0.35)",
-                boxShadow: "0 12px 48px -12px rgba(0,0,0,0.6), 0 0 0 1px rgba(139,92,246,0.08)",
-              }}
-            >
-              <RegistryView />
-            </div>
-          </div>
-        ) : (
-          <>
+        {(() => {
+          // /registry/{owner}/{repo} — per-repo cinematic security report
+          const repoMatch = currentPath.match(/^\/registry\/([^/]+)\/([^/]+)$/);
+          if (repoMatch) {
+            return (
+              <RepoReportPage
+                owner={repoMatch[1]}
+                repo={repoMatch[2]}
+                onNavigate={navigateTo}
+              />
+            );
+          }
+          // /registry — index page
+          if (currentPath === '/registry') {
+            return (
+              <div className="max-w-[1100px] mx-auto px-4 sm:px-6 py-8 sm:py-12 flex-grow w-full mt-6">
+                <div
+                  className="rounded-2xl p-5 sm:p-7 flex flex-col gap-6"
+                  style={{
+                    background: "rgba(15,23,42,0.75)",
+                    border: "1px solid rgba(6,182,212,0.35)",
+                    boxShadow: "0 12px 48px -12px rgba(0,0,0,0.6), 0 0 0 1px rgba(139,92,246,0.08)",
+                  }}
+                >
+                  <RegistryView onNavigate={navigateTo} />
+                </div>
+              </div>
+            );
+          }
+          // Home page
+          return (
+            <>
             {/* ── First-screen hero section with shared aurora background ── */}
         <div className="relative overflow-hidden pt-16 sm:pt-[72px] pb-8 sm:pb-10">
           {/* Aurora blobs */}
@@ -1378,8 +1396,9 @@ const App: React.FC = () => {
           <OpenSource />
           <FaqSection />
         </div>
-          </>
-        )}
+            </>
+          );
+        })()}
       </main>
 
       <footer

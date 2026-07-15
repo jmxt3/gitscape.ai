@@ -33,7 +33,7 @@ interface DetailPayload {
   manifest: SkillManifest;
 }
 
-export const RegistryView: React.FC = () => {
+export const RegistryView: React.FC<{ onNavigate: (path: string) => void }> = ({ onNavigate }) => {
   const [query, setQuery] = useState<string>("");
   const [skills, setSkills] = useState<RegistrySkill[]>([]);
   const [loadingList, setLoadingList] = useState<boolean>(true);
@@ -169,10 +169,15 @@ export const RegistryView: React.FC = () => {
           ) : (
             <div className="flex flex-col gap-2.5 max-h-[500px] overflow-y-auto pr-1">
               {skills.map((skill) => (
-                <button
+                <a
                   key={skill.repo_url}
-                  onClick={() => handleSelectSkill(skill.repo_url)}
-                  className={`w-full text-left p-4 rounded-xl border transition-all duration-200 ${
+                  href={`/registry/${skill.owner}/${skill.repo}`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setSelectedSkillUrl(skill.repo_url);
+                    handleSelectSkill(skill.repo_url);
+                  }}
+                  className={`w-full text-left p-4 rounded-xl border transition-all duration-200 block ${
                     selectedSkillUrl === skill.repo_url
                       ? "bg-slate-950/60 border-cyan-500/40 shadow-[0_0_12px_rgba(6,182,212,0.06)]"
                       : "bg-slate-950/30 border-slate-900 hover:border-slate-800 hover:bg-slate-950/40"
@@ -186,12 +191,20 @@ export const RegistryView: React.FC = () => {
                       Grade {skill.grade}
                     </span>
                   </div>
-                  <p className="text-[11px] text-slate-400 line-clamp-2 mb-2.5">{skill.description}</p>
+                  <p className="text-[11px] text-slate-400 line-clamp-2 mb-2">{skill.description}</p>
                   <div className="flex justify-between items-center text-[10px] text-slate-500">
                     <span>{skill.primary_languages.join(" · ")}</span>
                     <span>{skill.files_analyzed} files</span>
                   </div>
-                </button>
+                  {skill.scanned_at && (
+                    <div className="mt-1.5 text-[10px] text-slate-600">
+                      Scanned {skill.scanned_at.slice(0, 10)}
+                    </div>
+                  )}
+                  <div className="mt-2 text-[10px] font-semibold text-cyan-500 hover:text-cyan-400">
+                    View full report →
+                  </div>
+                </a>
               ))}
             </div>
           )}
