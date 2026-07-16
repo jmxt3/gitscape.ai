@@ -10,6 +10,9 @@
 </p>
 
 <p align="center">
+  <a href="https://gitscape.ai/registry/jmxt3/gitscape.ai">
+    <img src="https://gitscape.ai/api/badge/jmxt3/gitscape.ai" alt="ScapeGuard A" />
+  </a>
   <a href="https://www.npmjs.com/package/gitscape">
     <img src="https://img.shields.io/npm/v/gitscape.svg?style=flat&color=CB3837&logo=npm" alt="NPM Version" />
   </a>
@@ -19,8 +22,6 @@
   <a href="https://github.com/jmxt3/gitscape.ai/blob/main/LICENSE">
     <img src="https://img.shields.io/github/license/jmxt3/GitScape-AI.svg?style=flat" alt="License" />
   </a>
-  <img src="https://img.shields.io/badge/Google%20Cloud-4285F4.svg?style=flat&logo=Google-Cloud&logoColor=white" alt="Google Cloud" />
-  <img src="https://img.shields.io/badge/Docker-2496ED.svg?style=flat&logo=Docker&logoColor=white" alt="Docker" />
 </p>
 
 <p align="center">
