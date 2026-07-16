@@ -94,8 +94,12 @@
     "mcore-split-pr",
     "mcore-testing",
     "nemo-automodel-distributed-training",
-    "nemo-automodel-launcher-config"
+    "nemo-automodel-launcher-config",
+    "nemo-automodel-model-onboarding",
+    "nemo-automodel-recipe-development",
+    "nemo-data-designer-plugin",
+    "nemo-evaluator-plugin"
   ],
   "failed": [],
-  "updated_at": "2026-07-16T19:42:55.004343+00:00"
+  "updated_at": "2026-07-16T19:44:19.871794+00:00"
 }
