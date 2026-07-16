@@ -1130,131 +1130,130 @@ const App: React.FC = () => {
           // Home page
           return (
             <>
-            {/* ── First-screen hero section with shared aurora background ── */}
-        <div className="relative overflow-hidden pt-16 sm:pt-[72px] pb-8 sm:pb-10">
-          {/* Aurora blobs */}
-          <div className="hero-blob-1" />
-          <div className="hero-blob-2" />
-          <div className="hero-blob-3" />
-          {/* Subtle dot/grid overlay */}
-          <div className="grid-pattern" />
+              {/* ── First-screen hero section with shared aurora background ── */}
+              <div className="relative overflow-hidden pt-16 sm:pt-[72px] pb-8 sm:pb-10">
+                {/* Aurora blobs */}
+                <div className="hero-blob-1" />
+                <div className="hero-blob-2" />
+                <div className="hero-blob-3" />
+                {/* Subtle dot/grid overlay */}
+                <div className="grid-pattern" />
 
-          <Hero onSelectMcp={() => setActiveMainTab('mcp')} />
-          <div className="relative mt-10 sm:mt-12">
-            <section id="digest-generator-input" className="relative w-full max-w-[1100px] mx-auto px-4">
-              <div
-                className="flex gap-1 overflow-x-auto no-scrollbar mb-3.5 pl-5 sm:pl-7"
-                role="tablist"
-                aria-label="GitScape platforms"
-              >
-                {[
-                  { key: "web", label: "Web", activeColor: "#fcd34d", underline: "#f59e0b" },
-                  { key: "cli", label: "CLI", activeColor: "#c4b5fd", underline: "#7c3aed" },
-                  { key: "mcp", label: "MCP", activeColor: "#6ee7b7", underline: "#10b981" },
-                ].map((tab) => {
-                  const isActive = activeMainTab === tab.key;
-                  return (
-                    <button
-                      key={tab.key}
-                      role="tab"
-                      aria-selected={isActive}
-                      onClick={() => setActiveMainTab(tab.key as 'web' | 'cli' | 'mcp')}
-                      className={`px-4.5 py-2.5 text-[13px] whitespace-nowrap transition-colors duration-200 ${
-                        isActive ? "font-bold" : "font-semibold text-slate-400 hover:text-slate-200"
-                      }`}
-                      style={
-                        isActive
-                          ? { color: tab.activeColor, borderBottom: `2px solid ${tab.underline}`, marginBottom: -1 }
-                          : { borderBottom: "2px solid transparent", marginBottom: -1 }
-                      }
-                    >
-                      {tab.label}
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div
-                className="rounded-2xl p-5 sm:p-7 flex flex-col gap-6"
-                style={{
-                  background: "rgba(15,23,42,0.75)",
-                  border: activeMainTab === 'web'
-                    ? "1px solid rgba(245,158,11,0.35)"
-                    : activeMainTab === 'cli'
-                    ? "1px solid rgba(124,58,237,0.35)"
-                    : "1px solid rgba(16,185,129,0.35)",
-                  boxShadow: "0 12px 48px -12px rgba(0,0,0,0.6), 0 0 0 1px rgba(139,92,246,0.08)",
-                }}
-              >
-
-              {activeMainTab === 'web' ? (
-                <div className="flex flex-col gap-3">
-                  {progressVisible && (
+                <Hero onSelectMcp={() => setActiveMainTab('mcp')} />
+                <div className="relative mt-10 sm:mt-12">
+                  <section id="digest-generator-input" className="relative w-full max-w-[1100px] mx-auto px-4">
                     <div
-                      className="w-full mb-1 relative"
-                      style={{ opacity: progressFading ? 0 : 1, transition: "opacity 0.7s ease-out" }}
-                      aria-live="polite"
-                      role="progressbar"
-                      aria-valuenow={progressPercent}
-                      aria-valuemin={0}
-                      aria-valuemax={100}
-                      aria-label="Generation progress"
+                      className="flex gap-1 overflow-x-auto no-scrollbar mb-3.5 pl-5 sm:pl-7"
+                      role="tablist"
+                      aria-label="GitScape platforms"
                     >
-                      {/* Step labels */}
-                      <div className="flex justify-between mb-2 px-0.5">
-                        {[
-                          { label: "CODE DIGEST", threshold: 0, activeColor: "text-violet-400", inactiveColor: "text-slate-600" },
-                          { label: "SECURITY SCAN", threshold: 34, activeColor: "text-emerald-400", inactiveColor: "text-slate-600" },
-                          { label: "AGENT SKILL", threshold: 67, activeColor: "text-amber-400", inactiveColor: "text-slate-600" },
-                        ].map((step, i) => {
-                          const isActive = progressPercent >= step.threshold;
-                          const isCurrent = getProgressStep(progressPercent) === i + 1;
-                          return (
-                            <div key={step.label} className="flex flex-col items-center gap-1" style={{ width: "33.3%", alignItems: i === 0 ? "flex-start" : i === 2 ? "flex-end" : "center" }}>
-                              <span
-                                className={`text-[11px] font-bold tracking-[0.05em] transition-all duration-500 ${isActive ? step.activeColor : step.inactiveColor
-                                  } ${isCurrent ? "opacity-100" : isActive ? "opacity-70" : "opacity-40"}`}
-                              >
-                                {step.label}
-                              </span>
+                      {[
+                        { key: "web", label: "Web", activeColor: "#fcd34d", underline: "#f59e0b" },
+                        { key: "cli", label: "CLI", activeColor: "#c4b5fd", underline: "#7c3aed" },
+                        { key: "mcp", label: "MCP", activeColor: "#6ee7b7", underline: "#10b981" },
+                      ].map((tab) => {
+                        const isActive = activeMainTab === tab.key;
+                        return (
+                          <button
+                            key={tab.key}
+                            role="tab"
+                            aria-selected={isActive}
+                            onClick={() => setActiveMainTab(tab.key as 'web' | 'cli' | 'mcp')}
+                            className={`px-4.5 py-2.5 text-[13px] whitespace-nowrap transition-colors duration-200 ${isActive ? "font-bold" : "font-semibold text-slate-400 hover:text-slate-200"
+                              }`}
+                            style={
+                              isActive
+                                ? { color: tab.activeColor, borderBottom: `2px solid ${tab.underline}`, marginBottom: -1 }
+                                : { borderBottom: "2px solid transparent", marginBottom: -1 }
+                            }
+                          >
+                            {tab.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <div
+                      className="rounded-2xl p-5 sm:p-7 flex flex-col gap-6"
+                      style={{
+                        background: "rgba(15,23,42,0.75)",
+                        border: activeMainTab === 'web'
+                          ? "1px solid rgba(245,158,11,0.35)"
+                          : activeMainTab === 'cli'
+                            ? "1px solid rgba(124,58,237,0.35)"
+                            : "1px solid rgba(16,185,129,0.35)",
+                        boxShadow: "0 12px 48px -12px rgba(0,0,0,0.6), 0 0 0 1px rgba(139,92,246,0.08)",
+                      }}
+                    >
+
+                      {activeMainTab === 'web' ? (
+                        <div className="flex flex-col gap-3">
+                          {progressVisible && (
+                            <div
+                              className="w-full mb-1 relative"
+                              style={{ opacity: progressFading ? 0 : 1, transition: "opacity 0.7s ease-out" }}
+                              aria-live="polite"
+                              role="progressbar"
+                              aria-valuenow={progressPercent}
+                              aria-valuemin={0}
+                              aria-valuemax={100}
+                              aria-label="Generation progress"
+                            >
+                              {/* Step labels */}
+                              <div className="flex justify-between mb-2 px-0.5">
+                                {[
+                                  { label: "CODE DIGEST", threshold: 0, activeColor: "text-violet-400", inactiveColor: "text-slate-600" },
+                                  { label: "SECURITY SCAN", threshold: 34, activeColor: "text-emerald-400", inactiveColor: "text-slate-600" },
+                                  { label: "AGENT SKILL", threshold: 67, activeColor: "text-amber-400", inactiveColor: "text-slate-600" },
+                                ].map((step, i) => {
+                                  const isActive = progressPercent >= step.threshold;
+                                  const isCurrent = getProgressStep(progressPercent) === i + 1;
+                                  return (
+                                    <div key={step.label} className="flex flex-col items-center gap-1" style={{ width: "33.3%", alignItems: i === 0 ? "flex-start" : i === 2 ? "flex-end" : "center" }}>
+                                      <span
+                                        className={`text-[11px] font-bold tracking-[0.05em] transition-all duration-500 ${isActive ? step.activeColor : step.inactiveColor
+                                          } ${isCurrent ? "opacity-100" : isActive ? "opacity-70" : "opacity-40"}`}
+                                      >
+                                        {step.label}
+                                      </span>
+                                      <div
+                                        className="w-1.5 h-1.5 rounded-full transition-all duration-500"
+                                        style={{
+                                          background: isActive
+                                            ? i === 0 ? "#a78bfa" : i === 1 ? "#34d399" : "#fbbf24"
+                                            : "#334155",
+                                          boxShadow: isCurrent
+                                            ? i === 0 ? "0 0 6px 2px rgba(167,139,250,0.8)" : i === 1 ? "0 0 6px 2px rgba(52,211,153,0.8)" : "0 0 6px 2px rgba(251,191,36,0.8)"
+                                            : "none",
+                                        }}
+                                      />
+                                    </div>
+                                  );
+                                })}
+                              </div>
+
+                              {/* Fuse track */}
                               <div
-                                className="w-1.5 h-1.5 rounded-full transition-all duration-500"
-                                style={{
-                                  background: isActive
-                                    ? i === 0 ? "#a78bfa" : i === 1 ? "#34d399" : "#fbbf24"
-                                    : "#334155",
-                                  boxShadow: isCurrent
-                                    ? i === 0 ? "0 0 6px 2px rgba(167,139,250,0.8)" : i === 1 ? "0 0 6px 2px rgba(52,211,153,0.8)" : "0 0 6px 2px rgba(251,191,36,0.8)"
-                                    : "none",
-                                }}
-                              />
-                            </div>
-                          );
-                        })}
-                      </div>
+                                className="relative rounded-full"
+                                style={{ height: "10px", background: "linear-gradient(90deg, #0d0a1a 0%, #1a1030 50%, #0d0a1a 100%)", boxShadow: "inset 0 1px 3px rgba(0,0,0,0.8)" }}
+                              >
+                                {/* Filled portion with step-aware color */}
+                                <div
+                                  className="absolute inset-y-0 left-0 rounded-full"
+                                  style={{
+                                    width: `${progressPercent}%`,
+                                    background: getStepGradient(progressPercent),
+                                    boxShadow: getStepGlow(progressPercent),
+                                    transition: "width 0.08s linear, background 1s ease, box-shadow 1s ease",
+                                  }}
+                                />
+                                {/* Spark tip */}
+                                {progressPercent < 100 && (
+                                  <FuseParticles progressPercent={progressPercent} step={getProgressStep(progressPercent)} />
+                                )}
+                              </div>
 
-                      {/* Fuse track */}
-                      <div
-                        className="relative rounded-full"
-                        style={{ height: "10px", background: "linear-gradient(90deg, #0d0a1a 0%, #1a1030 50%, #0d0a1a 100%)", boxShadow: "inset 0 1px 3px rgba(0,0,0,0.8)" }}
-                      >
-                        {/* Filled portion with step-aware color */}
-                        <div
-                          className="absolute inset-y-0 left-0 rounded-full"
-                          style={{
-                            width: `${progressPercent}%`,
-                            background: getStepGradient(progressPercent),
-                            boxShadow: getStepGlow(progressPercent),
-                            transition: "width 0.08s linear, background 1s ease, box-shadow 1s ease",
-                          }}
-                        />
-                        {/* Spark tip */}
-                        {progressPercent < 100 && (
-                          <FuseParticles progressPercent={progressPercent} step={getProgressStep(progressPercent)} />
-                        )}
-                      </div>
-
-                      <style>{`
+                              <style>{`
                         @keyframes fuseFlicker {
                           0%   { transform: scale(1);   opacity: 1; }
                           33%  { transform: scale(1.4); opacity: 0.9; }
@@ -1262,138 +1261,138 @@ const App: React.FC = () => {
                           100% { transform: scale(1.3); opacity: 0.85; }
                         }
                       `}</style>
-                    </div>
-                  )}
-                  <RepoInput
-                    repoUrl={repoUrl}
-                    setRepoUrl={setRepoUrl}
-                    onGenerate={handleGenerateDigest}
-                    isLoading={isLoading}
-                  />
-                  {isLoading && progressMessage && (
-                    <p
-                      className={`mt-3 text-sm text-center transition-colors duration-700 ${getProgressStep(progressPercent) === 1
-                          ? "text-violet-400"
-                          : getProgressStep(progressPercent) === 2
-                            ? "text-emerald-400"
-                            : "text-amber-400"
-                        }`}
-                    >
-                      {displayedProgressMessage}
-                      {/* Blinking cursor while message is still typing or loading */}
-                      <span
-                        style={{
-                          display: 'inline-block',
-                          width: '0.5em',
-                          height: '1em',
-                          marginLeft: '2px',
-                          verticalAlign: 'text-bottom',
-                          borderRadius: '1px',
-                          animation: 'msgCursorBlink 0.8s steps(1) infinite',
-                          background: getProgressStep(progressPercent) === 1
-                            ? 'rgba(167,139,250,0.85)'
-                            : getProgressStep(progressPercent) === 2
-                            ? 'rgba(52,211,153,0.85)'
-                            : 'rgba(251,191,36,0.85)',
-                        }}
-                      />
-                    </p>
-                  )}
-                  <style>{`
+                            </div>
+                          )}
+                          <RepoInput
+                            repoUrl={repoUrl}
+                            setRepoUrl={setRepoUrl}
+                            onGenerate={handleGenerateDigest}
+                            isLoading={isLoading}
+                          />
+                          {isLoading && progressMessage && (
+                            <p
+                              className={`mt-3 text-sm text-center transition-colors duration-700 ${getProgressStep(progressPercent) === 1
+                                ? "text-violet-400"
+                                : getProgressStep(progressPercent) === 2
+                                  ? "text-emerald-400"
+                                  : "text-amber-400"
+                                }`}
+                            >
+                              {displayedProgressMessage}
+                              {/* Blinking cursor while message is still typing or loading */}
+                              <span
+                                style={{
+                                  display: 'inline-block',
+                                  width: '0.5em',
+                                  height: '1em',
+                                  marginLeft: '2px',
+                                  verticalAlign: 'text-bottom',
+                                  borderRadius: '1px',
+                                  animation: 'msgCursorBlink 0.8s steps(1) infinite',
+                                  background: getProgressStep(progressPercent) === 1
+                                    ? 'rgba(167,139,250,0.85)'
+                                    : getProgressStep(progressPercent) === 2
+                                      ? 'rgba(52,211,153,0.85)'
+                                      : 'rgba(251,191,36,0.85)',
+                                }}
+                              />
+                            </p>
+                          )}
+                          <style>{`
                     @keyframes msgCursorBlink {
                       0%, 49% { opacity: 1; }
                       50%, 100% { opacity: 0; }
                     }
                   `}</style>
-                  {error && !isLoading && (
-                    retryAfterSeconds !== null ? (
-                      <div className="mt-3 flex items-center gap-3 text-sm bg-amber-900/20 border border-amber-700/50 p-3 rounded-md">
-                        <span className="text-2xl font-bold tabular-nums text-amber-300 min-w-[2.5rem] text-center">{retryAfterSeconds}s</span>
-                        <p className="text-amber-300">⏱ Rate limit reached — you can generate again in <span className="font-semibold">{retryAfterSeconds} seconds</span>.</p>
-                      </div>
-                    ) : (
-                      <p className="mt-3 text-sm text-red-400 bg-red-900/20 border border-red-700/50 p-3 rounded-md text-center">
-                        <span className="font-semibold">Error:</span> {error}
-                      </p>
-                    )
-                  )}
-                  <p className="mt-3 mb-0 text-center text-[12.5px] text-slate-500">
-                    Public repos free, no account. Private repos with your token — it never leaves your browser.
-                  </p>
-                </div>
-              ) : activeMainTab === 'cli' ? (
-                <CliPanel />
-              ) : (
-                <McpPanel />
+                          {error && !isLoading && (
+                            retryAfterSeconds !== null ? (
+                              <div className="mt-3 flex items-center gap-3 text-sm bg-amber-900/20 border border-amber-700/50 p-3 rounded-md">
+                                <span className="text-2xl font-bold tabular-nums text-amber-300 min-w-[2.5rem] text-center">{retryAfterSeconds}s</span>
+                                <p className="text-amber-300">⏱ Rate limit reached — you can generate again in <span className="font-semibold">{retryAfterSeconds} seconds</span>.</p>
+                              </div>
+                            ) : (
+                              <p className="mt-3 text-sm text-red-400 bg-red-900/20 border border-red-700/50 p-3 rounded-md text-center">
+                                <span className="font-semibold">Error:</span> {error}
+                              </p>
+                            )
+                          )}
+                          <p className="mt-3 mb-0 text-center text-[12.5px] text-slate-500">
+                            Public repos free, no account. Private repos with your token — it never leaves your browser.
+                          </p>
+                        </div>
+                      ) : activeMainTab === 'cli' ? (
+                        <CliPanel />
+                      ) : (
+                        <McpPanel />
+                      )}
+
+                    </div>
+
+                    {/* ScapeGuard badge below the container */}
+                    <div className="flex justify-center mt-8 sm:mt-10">
+                      <a
+                        href="#security"
+                        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[12px] font-semibold transition-colors duration-200 hover:-translate-y-0.5"
+                        style={{
+                          border: "1px solid rgba(16,185,129,0.35)",
+                          background: "rgba(16,185,129,0.08)",
+                          color: "#34d399",
+                        }}
+                      >
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                          <path d="M9 12l2 2 4-4" />
+                        </svg>
+                        Every skill scanned by ScapeGuard
+                      </a>
+                    </div>
+                  </section>
+
+                </div>{/* end relative mt-10 sm:mt-12 */}
+              </div>{/* end aurora wrapper */}
+
+              {showOutputArea && (
+                <section id="output-area" className="max-w-5xl mx-auto px-4 sm:px-6 w-full mt-12">
+                  <OutputTabs
+                    digest={digest}
+                    isLoadingDigest={isLoading && progressPercent < 100 && !digest}
+                    repoName={processedRepoName!}
+                    repoNameForFilename={repoNameForFilename}
+                    defaultBranch={currentDefaultBranch}
+                    filesCount={filesToRenderInDiagram.filter((f) => f.type === "blob").length || null}
+                    skillMd={skillMd}
+                    manifestJson={manifestJson}
+                    scanReport={scanReport}
+                    references={skillReferences}
+                    repoUrl={repoUrl}
+                    githubToken={githubToken}
+                    frameworkSkillMd={frameworkSkillMd}
+                    frameworkManifest={frameworkManifest}
+                    frameworkScanReport={frameworkScanReport}
+                    frameworkReferences={frameworkReferences}
+                    onFrameworkSkillGenerated={handleFrameworkSkillGenerated}
+                  />
+                </section>
               )}
 
-            </div>
-
-            {/* ScapeGuard badge below the container */}
-            <div className="flex justify-center mt-8 sm:mt-10">
-              <a
-                href="#security"
-                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[12px] font-semibold transition-colors duration-200 hover:-translate-y-0.5"
-                style={{
-                  border: "1px solid rgba(16,185,129,0.35)",
-                  background: "rgba(16,185,129,0.08)",
-                  color: "#34d399",
-                }}
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                  <path d="M9 12l2 2 4-4" />
-                </svg>
-                Every skill scanned by ScapeGuard
-              </a>
-            </div>
-          </section>
-
-          </div>{/* end relative mt-10 sm:mt-12 */}
-        </div>{/* end aurora wrapper */}
-
-        {showOutputArea && (
-          <section id="output-area" className="max-w-5xl mx-auto px-4 sm:px-6 w-full mt-12">
-            <OutputTabs
-              digest={digest}
-              isLoadingDigest={isLoading && progressPercent < 100 && !digest}
-              repoName={processedRepoName!}
-              repoNameForFilename={repoNameForFilename}
-              defaultBranch={currentDefaultBranch}
-              filesCount={filesToRenderInDiagram.filter((f) => f.type === "blob").length || null}
-              skillMd={skillMd}
-              manifestJson={manifestJson}
-              scanReport={scanReport}
-              references={skillReferences}
-              repoUrl={repoUrl}
-              githubToken={githubToken}
-              frameworkSkillMd={frameworkSkillMd}
-              frameworkManifest={frameworkManifest}
-              frameworkScanReport={frameworkScanReport}
-              frameworkReferences={frameworkReferences}
-              onFrameworkSkillGenerated={handleFrameworkSkillGenerated}
-            />
-          </section>
-        )}
-
-        <div className={showOutputArea ? "mt-16 sm:mt-20" : ""}>
-          <HowItWorks />
-          <DevTools
-            onSelectTab={(tab) => {
-              setActiveMainTab(tab);
-              const element = document.getElementById("digest-generator-input");
-              if (element) {
-                const yOffset = -200;
-                const y = element.getBoundingClientRect().top + window.scrollY + yOffset;
-                window.scrollTo({ top: y, behavior: "smooth" });
-              }
-            }}
-          />
-          <Security />
-          <FeatureComparison />
-          <OpenSource />
-          <FaqSection />
-        </div>
+              <div className={showOutputArea ? "mt-16 sm:mt-20" : ""}>
+                <HowItWorks />
+                <DevTools
+                  onSelectTab={(tab) => {
+                    setActiveMainTab(tab);
+                    const element = document.getElementById("digest-generator-input");
+                    if (element) {
+                      const yOffset = -200;
+                      const y = element.getBoundingClientRect().top + window.scrollY + yOffset;
+                      window.scrollTo({ top: y, behavior: "smooth" });
+                    }
+                  }}
+                />
+                <Security />
+                <FeatureComparison />
+                <OpenSource />
+                <FaqSection />
+              </div>
             </>
           );
         })()}
@@ -1416,7 +1415,7 @@ const App: React.FC = () => {
         </span>
         <div className="flex gap-6">
           <a
-            href="https://github.com/jmxt3/Git-Scape-Web"
+            href="https://github.com/jmxt3/gitscape.ai"
             target="_blank"
             rel="noopener noreferrer"
             className="hover:text-slate-300 transition-colors"
@@ -1442,7 +1441,7 @@ const App: React.FC = () => {
             MCP server
           </a>
           <a
-            href="https://github.com/jmxt3/Git-Scape-Web/blob/main/LICENSE"
+            href="https://github.com/jmxt3/gitscape.ai/blob/main/LICENSE"
             target="_blank"
             rel="noopener noreferrer"
             className="hover:text-slate-300 transition-colors"

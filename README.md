@@ -16,7 +16,7 @@
   <a href="https://www.npmjs.com/package/gitscape">
     <img src="https://img.shields.io/npm/dm/gitscape.svg?style=flat&color=CB3837" alt="Downloads" />
   </a>
-  <a href="https://github.com/jmxt3/GitScape-AI/blob/main/LICENSE">
+  <a href="https://github.com/jmxt3/gitscape.ai/blob/main/LICENSE">
     <img src="https://img.shields.io/github/license/jmxt3/GitScape-AI.svg?style=flat" alt="License" />
   </a>
   <img src="https://img.shields.io/badge/Google%20Cloud-4285F4.svg?style=flat&logo=Google-Cloud&logoColor=white" alt="Google Cloud" />

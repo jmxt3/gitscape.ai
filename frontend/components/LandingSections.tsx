@@ -5,8 +5,8 @@ import React, { useEffect, useState } from "react";
  * Static/presentational marketing content shown on the home (no-results) state.
  */
 
-const REPO_API_URL = "https://api.github.com/repos/jmxt3/Git-Scape-Web";
-const REPO_URL = "https://github.com/jmxt3/Git-Scape-Web";
+const REPO_API_URL = "https://github.com/jmxt3/gitscape.ai";
+const REPO_URL = "https://github.com/jmxt3/gitscape.ai";
 
 export const CheckRow: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <div className="flex items-center gap-3">
@@ -193,9 +193,9 @@ export const HowItWorks: React.FC = () => (
 
 const GRADE_TONES: Record<string, { chip: string; text: string; border: string }> = {
   emerald: { chip: "rgba(16,185,129,0.15)", text: "#34d399", border: "rgba(16,185,129,0.45)" },
-  lime:    { chip: "rgba(132,204,22,0.15)", text: "#a3e635", border: "rgba(132,204,22,0.45)" },
-  amber:   { chip: "rgba(245,158,11,0.15)", text: "#fbbf24", border: "rgba(245,158,11,0.45)" },
-  red:     { chip: "rgba(239,68,68,0.15)",  text: "#f87171", border: "rgba(239,68,68,0.45)" },
+  lime: { chip: "rgba(132,204,22,0.15)", text: "#a3e635", border: "rgba(132,204,22,0.45)" },
+  amber: { chip: "rgba(245,158,11,0.15)", text: "#fbbf24", border: "rgba(245,158,11,0.45)" },
+  red: { chip: "rgba(239,68,68,0.15)", text: "#f87171", border: "rgba(239,68,68,0.45)" },
 };
 
 const GradeKey: React.FC<{ letter: string; tone: keyof typeof GRADE_TONES; label: string }> = ({ letter, tone, label }) => {
@@ -552,9 +552,8 @@ export const FaqSection: React.FC = () => {
                     strokeWidth="2.5"
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    className={`text-slate-400 transition-transform duration-300 shrink-0 ml-4 ${
-                      isOpen ? "rotate-180 text-violet-400" : ""
-                    }`}
+                    className={`text-slate-400 transition-transform duration-300 shrink-0 ml-4 ${isOpen ? "rotate-180 text-violet-400" : ""
+                      }`}
                   >
                     <path d="m6 9 6 6 6-6" />
                   </svg>

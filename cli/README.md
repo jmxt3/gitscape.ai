@@ -7,8 +7,8 @@
 <p align="center">
   <a href="https://www.npmjs.com/package/gitscape"><img src="https://img.shields.io/npm/v/gitscape.svg?style=flat-square" alt="NPM Version"/></a>
   <a href="https://www.npmjs.com/package/gitscape"><img src="https://img.shields.io/npm/dm/gitscape.svg?style=flat-square" alt="NPM Downloads"/></a>
-  <a href="https://github.com/jmxt3/GitScape-AI/blob/main/LICENSE"><img src="https://img.shields.io/github/license/jmxt3/GitScape-AI.svg?style=flat-square" alt="License"/></a>
-  <a href="https://github.com/jmxt3/GitScape-AI"><img src="https://img.shields.io/github/stars/jmxt3/GitScape-AI.svg?style=flat-square&color=blue" alt="GitHub Stars"/></a>
+  <a href="https://github.com/jmxt3/gitscape.ai/blob/main/LICENSE"><img src="https://img.shields.io/github/license/jmxt3/GitScape-AI.svg?style=flat-square" alt="License"/></a>
+  <a href="https://github.com/jmxt3/gitscape.ai"><img src="https://img.shields.io/github/stars/jmxt3/GitScape-AI.svg?style=flat-square&color=blue" alt="GitHub Stars"/></a>
 </p>
 
 ---
@@ -206,5 +206,5 @@ A skill is code your agent trusts. GitScape runs every compiled skill through **
 ---
 
 ## 📄 License
-This project is licensed under the Apache License 2.0. See the [LICENSE](https://github.com/jmxt3/GitScape-AI/blob/main/LICENSE) file for details.
+This project is licensed under the Apache License 2.0. See the [LICENSE](https://github.com/jmxt3/gitscape.ai/blob/main/LICENSE) file for details.
 
