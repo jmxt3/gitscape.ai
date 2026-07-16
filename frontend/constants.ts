@@ -42,7 +42,7 @@ export const URL_CONVERSION_TARGET_DOMAIN = 'gitscape.ai';
 
 // LocalStorage Keys
 export const GITHUB_TOKEN_LOCAL_STORAGE_KEY = 'githubApiToken';
-export const REPO_URL_LOCAL_STORAGE_KEY = 'gitScapeRepoUrl';
+export const REPO_URL_SESSION_STORAGE_KEY = 'gitScapeRepoUrl';
 export const DIGEST_CONTENT_LOCAL_STORAGE_KEY = 'gitScapeDigestContent'; // Kept for reference, but not primary use for full digest
 export const CACHED_OUTPUT_PREFIX = 'gitScapeCachedOutput_';
 

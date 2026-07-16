@@ -20,7 +20,7 @@ import { RepoReportPage } from "./components/RepoReportPage";
 import { NvidiaSkillPage } from "./components/NvidiaSkillPage";
 import {
   GITHUB_TOKEN_LOCAL_STORAGE_KEY,
-  REPO_URL_LOCAL_STORAGE_KEY,
+  REPO_URL_SESSION_STORAGE_KEY,
 } from "./constants";
 import { RawDiagramNode, CachedRepoOutput, SkillManifest, ScanReport, SkillReferences } from "./types";
 import { getCachedRepo, setCachedRepo, deleteCachedRepo, sweepStaleEntries } from "./services/repoCache";
@@ -39,13 +39,33 @@ const getFromLocalStorage = (key: string, defaultValue: string): string => {
 
 
 // Helper to safely set or remove small string values in localStorage
-// (GitHub token, last repo URL). Large repo outputs go to IndexedDB via repoCache.ts.
+// (GitHub token). Large repo outputs go to IndexedDB via repoCache.ts.
 const storeInLocalStorage = (key: string, value: string | null) => {
   try {
     if (value === null) localStorage.removeItem(key);
     else localStorage.setItem(key, value);
   } catch (e) {
     console.warn(`Failed to write '${key}' to localStorage:`, e);
+  }
+};
+
+// Helper to safely get items from sessionStorage
+const getFromSessionStorage = (key: string, defaultValue: string): string => {
+  try {
+    return sessionStorage.getItem(key) || defaultValue;
+  } catch (e) {
+    console.warn(`Failed to read '${key}' from sessionStorage:`, e);
+    return defaultValue;
+  }
+};
+
+// Helper to safely set or remove values in sessionStorage
+const storeInSessionStorage = (key: string, value: string | null) => {
+  try {
+    if (value === null) sessionStorage.removeItem(key);
+    else sessionStorage.setItem(key, value);
+  } catch (e) {
+    console.warn(`Failed to write '${key}' to sessionStorage:`, e);
   }
 };
 
@@ -477,7 +497,7 @@ const App: React.FC = () => {
     getNormalizedPath(window.location.pathname)
   );
   const [repoUrl, setRepoUrl] = useState<string>(() =>
-    getFromLocalStorage(REPO_URL_LOCAL_STORAGE_KEY, "")
+    getFromSessionStorage(REPO_URL_SESSION_STORAGE_KEY, "")
   );
   const [digest, setDigest] = useState<string>("");
   const [activeMainTab, setActiveMainTab] = useState<'web' | 'cli' | 'mcp'>('web');
@@ -643,7 +663,7 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    storeInLocalStorage(REPO_URL_LOCAL_STORAGE_KEY, repoUrl || null);
+    storeInSessionStorage(REPO_URL_SESSION_STORAGE_KEY, repoUrl || null);
   }, [repoUrl]);
 
   const githubService = useMemo(() => {
