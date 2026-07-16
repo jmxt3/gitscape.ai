@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import hashlib
 import re
+import unicodedata
 from pathlib import PurePosixPath
 
 from ..models import CodeExample, ContentUnit, FileKind
@@ -31,6 +32,66 @@ _SUFFIX_LANG = {
     ".py": "python", ".ts": "typescript", ".tsx": "tsx", ".js": "javascript",
     ".jsx": "javascript", ".go": "go",
 }
+
+# ---------------------------------------------------------------------------
+# Pre-filter: guard rails before any snippet reaches the assembled skill.
+#
+# Test fixtures and README examples sometimes contain adversarial strings as
+# part of their own test data (e.g. "Ignore all previous instructions").
+# Without this filter those strings flow into references/examples.md and
+# trigger CRITICAL ScapeGuard findings (GS-INJ-001, GS-OBF-001, GS-OBF-005)
+# on every skill that includes such a file.
+# ---------------------------------------------------------------------------
+
+# Prompt-injection phrases (mirrors GS-INJ-001 / GS-INJ-006 patterns).
+_INJECTION_RE = re.compile(
+    r"\b(ignore|disregard|forget)\b[^.\n]{0,40}"
+    r"\b(previous|prior|above|preceding|earlier|all)\b[^.\n]{0,40}"
+    r"\b(instruction|instructions|prompt|prompts|direction|directions|context|rules?)\b"
+    r"|\byou (?:must|will) (?:always )?(?:comply|obey)\b"
+    r"|\b(?:never|do not|don't) (?:refuse|decline|reject|say no)\b"
+    r"|\byou have no (?:restrictions|limitations|filters|guidelines|rules)\b"
+    r"|\bignore your (?:guidelines|training|safety|restrictions|programming|policies)\b"
+    r"|\b(?:enable|activate|enter) (?:dan|developer|jailbreak|unrestricted) mode\b"
+    r"|\byou are (?:now )?dan\b",
+    re.I,
+)
+
+# Invisible / bidirectional control codepoints (mirrors GS-OBF-001).
+_INVISIBLE = frozenset([
+    0x200B, 0x200C, 0x200D, 0x2060, 0xFEFF,
+    0x202A, 0x202B, 0x202C, 0x202D, 0x202E,
+    0x2066, 0x2067, 0x2068, 0x2069, 0x200E, 0x200F, 0x061C,
+])
+
+# Homoglyph detector (mirrors GS-OBF-005): a token mixing Latin with
+# Cyrillic/Greek/fullwidth characters.
+_LATIN_RE = re.compile(r"[A-Za-z]")
+_CONFUSABLE_RE = re.compile(r"[Ѐ-ӿͰ-Ͽἀ-῿Ꭰ-᏿Ａ-ｚ]")
+_WORD_RE = re.compile(r"[^\s]{3,}")
+
+
+def _has_invisible(text: str) -> bool:
+    return any(ord(ch) in _INVISIBLE for ch in text)
+
+
+def _has_homoglyph(text: str) -> bool:
+    for m in _WORD_RE.finditer(text):
+        token = m.group(0)
+        if _LATIN_RE.search(token) and _CONFUSABLE_RE.search(token):
+            return True
+    return False
+
+
+def _is_safe(code: str) -> bool:
+    """Return False if the snippet contains injection or obfuscation patterns."""
+    if _INJECTION_RE.search(code):
+        return False
+    if _has_invisible(code):
+        return False
+    if _has_homoglyph(code):
+        return False
+    return True
 
 
 def _normalize(code: str) -> str:
@@ -72,6 +133,9 @@ def build_examples(units: list[ContentUnit]) -> list[CodeExample]:
 
     for lang, code, path in _candidates(units):
         if len(code) < _MIN_LEN:
+            continue
+        # Drop snippets that would trigger ScapeGuard injection/obfuscation gates.
+        if not _is_safe(code):
             continue
         h = _norm_hash(code)
         if h in seen:
