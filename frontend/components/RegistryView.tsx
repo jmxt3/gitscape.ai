@@ -2,7 +2,7 @@
 // Description: Public Agent Skill Registry index page — Aurora design. A full-page
 // certification-ledger layout: hero with registry pulse stats, grade filters,
 // grid/list toggle, and seal cards that navigate to per-repo security reports.
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
   gradeInfo,
   statusColor,
@@ -40,7 +40,6 @@ interface RegistrySkill {
 
 type GradeFilter = "ALL" | "A" | "B" | "C" | "F";
 type SortKey = "risk" | "stars" | "name" | "scanned";
-type SourceFilter = "all" | "nvidia" | "community";
 type Layout = "grid" | "list";
 
 const RISK_BAR_MAX = 60; // visual full-scale for the risk micro-bar
@@ -71,71 +70,7 @@ const RiskBar: React.FC<{ risk: number; grade: string }> = ({ risk, grade }) => 
   </span>
 );
 
-// ── Filter sidebar components ─────────────────────────────────────────────────
 
-const FilterAccordion: React.FC<{
-  title: string;
-  open: boolean;
-  onToggle: () => void;
-  children: React.ReactNode;
-}> = ({ title, open, onToggle, children }) => (
-  <div style={{ borderBottom: "1px solid rgba(71,85,105,0.18)" }}>
-    <button
-      onClick={onToggle}
-      className="w-full flex items-center justify-between py-3 px-1 text-left"
-      style={{ background: "none", border: "none", cursor: "pointer" }}
-    >
-      <span className="font-mono text-[11px] tracking-[0.08em] uppercase text-slate-400 font-semibold">
-        {title}
-      </span>
-      <svg
-        width="12" height="12" viewBox="0 0 24 24" fill="none"
-        stroke="currentColor" strokeWidth="2.5"
-        style={{ color: "#64748b", transform: open ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.18s" }}
-      >
-        <path d="m6 9 6 6 6-6" />
-      </svg>
-    </button>
-    {open && (
-      <div className="pb-2 flex flex-col gap-0.5">
-        {children}
-      </div>
-    )}
-  </div>
-);
-
-const FilterCheckbox: React.FC<{
-  label: string;
-  count: number;
-  checked: boolean;
-  onChange: () => void;
-}> = ({ label, count, checked, onChange }) => (
-  <label
-    className="flex items-center gap-2 py-1.5 px-1 rounded cursor-pointer group"
-    style={{
-      background: checked ? "rgba(6,182,212,0.07)" : "transparent",
-      transition: "background 0.12s",
-    }}
-  >
-    <span
-      className="flex-shrink-0 w-3.5 h-3.5 rounded flex items-center justify-center"
-      style={{
-        border: checked ? "1.5px solid #06b6d4" : "1.5px solid rgba(71,85,105,0.5)",
-        background: checked ? "rgba(6,182,212,0.2)" : "transparent",
-        transition: "all 0.12s",
-      }}
-    >
-      {checked && (
-        <svg width="8" height="8" viewBox="0 0 10 10" fill="none">
-          <path d="M1.5 5.5 4 8l4.5-6" stroke="#22d3ee" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      )}
-    </span>
-    <input type="checkbox" checked={checked} onChange={onChange} className="sr-only" />
-    <span className="flex-1 text-[11.5px] text-slate-300 leading-tight">{label}</span>
-    <span className="font-mono text-[10px] text-slate-500 tabular-nums">{count}</span>
-  </label>
-);
 
 
 export const RegistryView: React.FC<{ onNavigate: (path: string) => void }> = ({ onNavigate }) => {
@@ -145,14 +80,25 @@ export const RegistryView: React.FC<{ onNavigate: (path: string) => void }> = ({
   const [grade, setGrade] = useState<GradeFilter>("ALL");
   const [sort, setSort] = useState<SortKey>("risk");
   const [layout, setLayout] = useState<Layout>("grid");
+  const [sortOpen, setSortOpen] = useState(false);
+  const sortDropdownRef = useRef<HTMLDivElement>(null);
 
-  // Filter sidebar state
-  const [selectedDomains, setSelectedDomains] = useState<Set<string>>(new Set());
-  const [selectedAudiences, setSelectedAudiences] = useState<Set<string>>(new Set());
-  const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
-  const [domainOpen, setDomainOpen] = useState(true);
-  const [audienceOpen, setAudienceOpen] = useState(true);
-  const [sidebarOpen, setSidebarOpen] = useState(false); // mobile
+  const sortOptions: { value: SortKey; label: string }[] = [
+    { value: "risk", label: "Sort · risk ↑" },
+    { value: "stars", label: "Sort · stars ↓" },
+    { value: "name", label: "Sort · name A–Z" },
+    { value: "scanned", label: "Sort · newest scan" },
+  ];
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (sortDropdownRef.current && !sortDropdownRef.current.contains(event.target as Node)) {
+        setSortOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   useEffect(() => {
     fetch(getApiUrl("/registry/search"))
@@ -166,43 +112,11 @@ export const RegistryView: React.FC<{ onNavigate: (path: string) => void }> = ({
 
   const goToReport = (owner: string, repo: string) => onNavigate(`/registry/${owner}/${repo}`);
 
-  // Dynamic taxonomy derived from live registry data — no hardcoding
-  const taxonomy = useMemo(() => {
-    const domains: Record<string, number> = {};
-    const audiences: Record<string, number> = {};
-    skills.forEach((s) => {
-      (s.nvidia_domain || []).forEach((d) => { domains[d] = (domains[d] || 0) + 1; });
-      (s.nvidia_audience || []).forEach((a) => { audiences[a] = (audiences[a] || 0) + 1; });
-    });
-    return {
-      domains: Object.entries(domains).sort((a, b) => b[1] - a[1]),
-      audiences: Object.entries(audiences).sort((a, b) => b[1] - a[1]),
-    };
-  }, [skills]);
-
-  const toggleDomain = (d: string) => setSelectedDomains((prev) => {
-    const next = new Set(prev);
-    if (next.has(d)) next.delete(d); else next.add(d);
-    return next;
-  });
-
-  const toggleAudience = (a: string) => setSelectedAudiences((prev) => {
-    const next = new Set(prev);
-    if (next.has(a)) next.delete(a); else next.add(a);
-    return next;
-  });
-
   const clearAllFilters = () => {
-    setSelectedDomains(new Set());
-    setSelectedAudiences(new Set());
-    setSourceFilter("all");
     setGrade("ALL");
   };
 
-  const activeFilterCount =
-    selectedDomains.size + selectedAudiences.size +
-    (sourceFilter !== "all" ? 1 : 0) +
-    (grade !== "ALL" ? 1 : 0);
+  const activeFilterCount = grade !== "ALL" ? 1 : 0;
 
   const counts = useMemo(() => {
     const c: Record<string, number> = { ALL: skills.length, A: 0, B: 0, C: 0, F: 0 };
@@ -225,13 +139,6 @@ export const RegistryView: React.FC<{ onNavigate: (path: string) => void }> = ({
     const q = query.toLowerCase();
     const filtered = skills.filter((s) => {
       if (grade !== "ALL" && s.grade !== grade) return false;
-      // Source filter
-      if (sourceFilter === "nvidia" && s.source !== "nvidia") return false;
-      if (sourceFilter === "community" && s.source === "nvidia") return false;
-      // Domain filter (OR across selected domains)
-      if (selectedDomains.size > 0 && !s.nvidia_domain?.some((d) => selectedDomains.has(d))) return false;
-      // Audience filter (OR across selected audiences)
-      if (selectedAudiences.size > 0 && !s.nvidia_audience?.some((a) => selectedAudiences.has(a))) return false;
       // Text search
       if (!q) return true;
       return (
@@ -247,7 +154,7 @@ export const RegistryView: React.FC<{ onNavigate: (path: string) => void }> = ({
       scanned: (a, b) => (b.scanned_at || "").localeCompare(a.scanned_at || ""),
     };
     return [...filtered].sort(cmp[sort]);
-  }, [skills, query, grade, sort, sourceFilter, selectedDomains, selectedAudiences]);
+  }, [skills, query, grade, sort]);
 
   const cardMeta = (s: RegistrySkill) => {
     const bits: string[] = [];
@@ -359,139 +266,30 @@ export const RegistryView: React.FC<{ onNavigate: (path: string) => void }> = ({
       {/* ── Body: sidebar + results ──────────────────────────────────── */}
       <div className="max-w-[1180px] mx-auto px-4 sm:px-7">
 
-        {/* Mobile filter toggle */}
-        <div className="flex items-center gap-3 pt-4 pb-2 lg:hidden">
-          <button
-            onClick={() => setSidebarOpen((v) => !v)}
-            className="inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-xs font-semibold"
-            style={{ background: "rgba(30,41,59,0.6)", border: "1px solid rgba(71,85,105,0.35)", color: "#94a3b8" }}
-          >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M4 6h16M8 12h8M11 18h2" />
-            </svg>
-            Filters
-            {activeFilterCount > 0 && (
-              <span
-                className="ml-1 rounded-full w-4 h-4 flex items-center justify-center font-mono text-[10px]"
-                style={{ background: "rgba(6,182,212,0.2)", color: "#22d3ee" }}
-              >
-                {activeFilterCount}
-              </span>
-            )}
-          </button>
-          {activeFilterCount > 0 && (
+        {/* Mobile clear all button if grade filter is active */}
+        {activeFilterCount > 0 && (
+          <div className="flex items-center gap-3 pt-4 pb-2 lg:hidden">
             <button onClick={clearAllFilters} className="text-[11px] text-slate-500 hover:text-slate-300 transition-colors">
-              Clear all
+              Clear all filters
             </button>
-          )}
-        </div>
+          </div>
+        )}
 
         <div className="flex gap-6 pt-2 pb-14 items-start">
 
-          {/* ── Filter sidebar ─────────────────────────────────── */}
-          <aside
-            className={`flex-shrink-0 w-[220px] rounded-xl overflow-hidden lg:block ${sidebarOpen ? "block" : "hidden"}`}
-            style={{ background: "rgba(15,23,42,0.6)", border: "1px solid rgba(71,85,105,0.2)", alignSelf: "flex-start", position: "sticky", top: 16 }}
-            aria-label="Filter skills"
-          >
-            <div className="px-4 pt-4 pb-1 flex items-center justify-between">
-              <span className="font-mono text-[10.5px] tracking-[0.08em] uppercase text-slate-500 font-semibold">Filters</span>
-              {activeFilterCount > 0 && (
-                <button onClick={clearAllFilters} className="text-[10.5px] text-slate-500 hover:text-cyan-400 transition-colors">
-                  Clear ({activeFilterCount})
-                </button>
-              )}
-            </div>
 
-            {/* Source filter */}
-            {taxonomy.domains.length > 0 && (
-              <div className="px-3 pb-3 pt-2" style={{ borderBottom: "1px solid rgba(71,85,105,0.18)" }}>
-                <span className="font-mono text-[11px] tracking-[0.08em] uppercase text-slate-400 font-semibold block mb-2">Source</span>
-                <div className="flex flex-col gap-0.5">
-                  {(["all", "nvidia", "community"] as SourceFilter[]).map((s) => (
-                    <button
-                      key={s}
-                      onClick={() => setSourceFilter(s)}
-                      className="text-left px-2 py-1.5 rounded text-[11.5px] transition-colors"
-                      style={{
-                        background: sourceFilter === s ? "rgba(6,182,212,0.1)" : "transparent",
-                        color: sourceFilter === s ? "#22d3ee" : "#94a3b8",
-                        border: sourceFilter === s ? "1px solid rgba(6,182,212,0.25)" : "1px solid transparent",
-                      }}
-                    >
-                      {s === "all" ? "All sources" : s === "nvidia" ? "NVIDIA Curated" : "Community"}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Domain filter */}
-            {taxonomy.domains.length > 0 && (
-              <div className="px-3">
-                <FilterAccordion title="Domain" open={domainOpen} onToggle={() => setDomainOpen((v) => !v)}>
-                  {taxonomy.domains.map(([domain, count]) => (
-                    <FilterCheckbox
-                      key={domain}
-                      label={domain}
-                      count={count}
-                      checked={selectedDomains.has(domain)}
-                      onChange={() => toggleDomain(domain)}
-                    />
-                  ))}
-                </FilterAccordion>
-              </div>
-            )}
-
-            {/* Audience filter */}
-            {taxonomy.audiences.length > 0 && (
-              <div className="px-3 pb-3">
-                <FilterAccordion title="Audience" open={audienceOpen} onToggle={() => setAudienceOpen((v) => !v)}>
-                  {taxonomy.audiences.map(([audience, count]) => (
-                    <FilterCheckbox
-                      key={audience}
-                      label={audience}
-                      count={count}
-                      checked={selectedAudiences.has(audience)}
-                      onChange={() => toggleAudience(audience)}
-                    />
-                  ))}
-                </FilterAccordion>
-              </div>
-            )}
-          </aside>
 
           {/* ── Results column ─────────────────────────────────── */}
           <div className="flex-1 min-w-0">
             {/* ── Toolbar ─────────────────────────────── */}
             <div className="flex items-center gap-3.5 py-4 flex-wrap">
               {/* Active filter chips */}
-              {(selectedDomains.size > 0 || selectedAudiences.size > 0 || sourceFilter !== "all" || grade !== "ALL") && (
+              {grade !== "ALL" && (
                 <div className="flex flex-wrap gap-1.5 mr-auto">
-                  {grade !== "ALL" && (
-                    <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10.5px] font-mono" style={{ background: "rgba(6,182,212,0.1)", border: "1px solid rgba(6,182,212,0.3)", color: "#67e8f9" }}>
-                      Grade {grade}
-                      <button onClick={() => setGrade("ALL")} className="opacity-70 hover:opacity-100 leading-none">×</button>
-                    </span>
-                  )}
-                  {sourceFilter !== "all" && (
-                    <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10.5px] font-mono" style={{ background: "rgba(124,58,237,0.1)", border: "1px solid rgba(124,58,237,0.3)", color: "#c4b5fd" }}>
-                      {sourceFilter === "nvidia" ? "NVIDIA" : "Community"}
-                      <button onClick={() => setSourceFilter("all")} className="opacity-70 hover:opacity-100 leading-none">×</button>
-                    </span>
-                  )}
-                  {[...selectedDomains].map((d) => (
-                    <span key={d} className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10.5px] font-mono" style={{ background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.3)", color: "#6ee7b7" }}>
-                      {d}
-                      <button onClick={() => toggleDomain(d)} className="opacity-70 hover:opacity-100 leading-none">×</button>
-                    </span>
-                  ))}
-                  {[...selectedAudiences].map((a) => (
-                    <span key={a} className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10.5px] font-mono" style={{ background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.3)", color: "#fcd34d" }}>
-                      {a}
-                      <button onClick={() => toggleAudience(a)} className="opacity-70 hover:opacity-100 leading-none">×</button>
-                    </span>
-                  ))}
+                  <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10.5px] font-mono" style={{ background: "rgba(6,182,212,0.1)", border: "1px solid rgba(6,182,212,0.3)", color: "#67e8f9" }}>
+                    Grade {grade}
+                    <button onClick={() => setGrade("ALL")} className="opacity-70 hover:opacity-100 leading-none">×</button>
+                  </span>
                 </div>
               )}
               <span className="font-mono text-[11px] tracking-[0.06em] text-slate-500 mr-auto">
@@ -517,18 +315,66 @@ export const RegistryView: React.FC<{ onNavigate: (path: string) => void }> = ({
                   );
                 })}
               </div>
-              <select
-                value={sort}
-                onChange={(e) => setSort(e.target.value as SortKey)}
-                aria-label="Sort order"
-                className="font-mono text-[11px] rounded-md px-2 py-1.5 text-slate-400"
-                style={{ background: "rgba(30,41,59,0.5)", border: "1px solid rgba(71,85,105,0.35)" }}
-              >
-                <option value="risk">Sort · risk ↑</option>
-                <option value="stars">Sort · stars ↓</option>
-                <option value="name">Sort · name A–Z</option>
-                <option value="scanned">Sort · newest scan</option>
-              </select>
+              <div ref={sortDropdownRef} className="relative">
+                <button
+                  onClick={() => setSortOpen(!sortOpen)}
+                  aria-haspopup="listbox"
+                  aria-expanded={sortOpen}
+                  className="font-mono text-[11px] rounded-md px-3 py-1.5 text-slate-400 flex items-center gap-1.5 transition-colors duration-150 hover:text-slate-200"
+                  style={{
+                    background: "rgba(30,41,59,0.5)",
+                    border: "1px solid rgba(71,85,105,0.35)",
+                    cursor: "pointer"
+                  }}
+                >
+                  {sortOptions.find(o => o.value === sort)?.label}
+                  <svg
+                    width="10" height="10" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" strokeWidth="2.5"
+                    style={{ transform: sortOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.18s" }}
+                  >
+                    <path d="m6 9 6 6 6-6" />
+                  </svg>
+                </button>
+                {sortOpen && (
+                  <div
+                    role="listbox"
+                    className="absolute right-0 mt-1.5 w-[160px] rounded-lg overflow-hidden z-50 shadow-2xl flex flex-col p-1 gap-0.5"
+                    style={{
+                      background: "rgba(15,23,42,0.92)",
+                      border: "1px solid rgba(71,85,105,0.3)",
+                      backdropFilter: "blur(12px)",
+                      WebkitBackdropFilter: "blur(12px)"
+                    }}
+                  >
+                    {sortOptions.map((o) => {
+                      const active = o.value === sort;
+                      return (
+                        <button
+                          key={o.value}
+                          role="option"
+                          aria-selected={active}
+                          onClick={() => {
+                            setSort(o.value);
+                            setSortOpen(false);
+                          }}
+                          className={`font-mono text-[11px] text-left px-2.5 py-1.5 rounded transition-colors duration-150 ${
+                            active
+                              ? "bg-cyan-500/15 text-cyan-400 font-semibold"
+                              : "text-slate-400 hover:bg-slate-800/40 hover:text-slate-200"
+                          }`}
+                          style={{
+                            cursor: "pointer",
+                            ...(active ? { border: "1px solid rgba(6,182,212,0.2)" } : {})
+                          }}
+                        >
+                          {o.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
               <div className="flex rounded-md overflow-hidden" style={{ border: "1px solid rgba(71,85,105,0.35)" }} role="group" aria-label="Layout">
                 {(
                   [
