@@ -1,0 +1,17 @@
+{
+  "completed": [
+    "accelerated-computing-cudf",
+    "aiq-deploy",
+    "aiq-research",
+    "amc-run-sample-calibration",
+    "amc-run-video-calibration",
+    "amc-setup-calibration-stack",
+    "cudaq-guide",
+    "cufolio",
+    "cuopt-developer",
+    "cuopt-install",
+    "cuopt-numerical-optimization-api"
+  ],
+  "failed": [],
+  "updated_at": "2026-07-16T19:12:39.505234+00:00"
+}
