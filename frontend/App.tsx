@@ -485,8 +485,10 @@ const App: React.FC = () => {
 
   // Client-side router navigation helper
   const navigateTo = useCallback((path: string, hash?: string) => {
-    const normalized = getNormalizedPath(path);
-    window.history.pushState({}, "", normalized + (hash ? hash : ""));
+    const queryIdx = path.indexOf('?');
+    const pathname = queryIdx !== -1 ? path.slice(0, queryIdx) : path;
+    const normalized = getNormalizedPath(pathname);
+    window.history.pushState({}, "", path + (hash ? hash : ""));
     setCurrentPath(normalized);
     if (normalized === '/') {
       if (hash) {
@@ -510,6 +512,7 @@ const App: React.FC = () => {
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
+
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -786,8 +789,12 @@ const App: React.FC = () => {
     ]
   );
 
-  const handleGenerateDigest = useCallback(async () => {
-    if (!repoUrl) {
+  const handleGenerateDigest = useCallback(async (urlOverride?: string) => {
+    const targetUrl = urlOverride || repoUrl;
+    if (urlOverride) {
+      repoUrlRef.current = urlOverride;
+    }
+    if (!targetUrl) {
       setError("Please enter a GitHub repository URL.");
       return;
     }
@@ -834,6 +841,7 @@ const App: React.FC = () => {
     setRepoNameForFilename(null);
     setCurrentDefaultBranch(null);
     setFilesToRenderInDiagram([]);
+    setDigest("");
     setSkillMd("");
     setManifestJson(null);
     setScanReport(null);
@@ -853,7 +861,7 @@ const App: React.FC = () => {
       return;
     }
 
-    const parsedUrl = githubService.parseGitHubUrl(repoUrl);
+    const parsedUrl = githubService.parseGitHubUrl(targetUrl);
     if (!parsedUrl) {
       setError(
         "Invalid GitHub URL format. Example: https://github.com/owner/repo"
@@ -901,7 +909,7 @@ const App: React.FC = () => {
       // API calls use a relative /api/* path — nginx proxies to the FastAPI sidecar in
       // production, and the Vite dev server proxies to localhost:8081 in development.
       const apiUrl = new URL("/api/converter", window.location.origin);
-      apiUrl.searchParams.append("repo_url", repoUrl);
+      apiUrl.searchParams.append("repo_url", targetUrl);
       if (githubToken) {
         apiUrl.searchParams.append("github_token", githubToken);
       }
@@ -1007,6 +1015,22 @@ const App: React.FC = () => {
     githubService,
     processSuccessfulDigestData,
   ]);
+
+  // Handle auto-starting ingestion from URL query parameters
+  useEffect(() => {
+    if (currentPath === '/') {
+      const params = new URLSearchParams(window.location.search);
+      const urlParam = params.get('repo_url');
+      const autostart = params.get('autostart') === 'true';
+      if (urlParam && autostart) {
+        setRepoUrl(urlParam);
+        // Clear the query params from the URL so reloading doesn't re-trigger
+        window.history.replaceState({}, "", "/");
+        // Trigger generation
+        handleGenerateDigest(urlParam);
+      }
+    }
+  }, [currentPath, handleGenerateDigest]);
 
   const handleFrameworkSkillGenerated = useCallback((
     newSkillMd: string,

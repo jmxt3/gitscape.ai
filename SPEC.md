@@ -1,30 +1,27 @@
-# Spec: Dedicated Public Skill Registry Page
+# Spec: Exclude Test Files from Example Mining
 
 ## Objective
-Move the Public Agent Skill Registry from a tab on the main landing page to a dedicated, unique page. Provide a "Registry" link in the header navbar to access it, and ensure all navigation works cleanly in a Single Page App (SPA) setup without page reloads.
+Prevent adversarial test cases, fixtures, and assertions within test files from being extracted as usage examples. This avoids carrying malicious payloads or obfuscated patterns into the assembled skill's `references/examples.md`, which incorrectly penalizes the repository's security grade in ScapeGuard (fixing the scan failures for `gitscape.ai`).
 
 ## Commands / User Flows
-- User visits the home page (`/`). The main input container displays tabs for "Web", "CLI", and "MCP" (the "Registry" tab is removed).
-- User clicks the "Registry" link in the header navbar.
-- The URL path changes to `/registry` without reloading the page.
-- The application displays the dedicated Public Skill Registry page. The Hero section and main generator input are hidden; only the Header navbar, the RegistryView container (with its search/index interface), and the Footer are displayed.
-- User clicks "How it works", "CLI & MCP", "Security", or "Open source" in the navbar.
-- The application navigates back to the home page (`/`) and smooth-scrolls to the corresponding section.
-- User reloads the page while on `/registry`. The application correctly initializes and mounts the Registry view.
+- A user triggers a repository scan or skill compilation (either via CLI or Web UI).
+- The repository is ingested and files are classified.
+- During example mining, files classified as `FileKind.TEST` are ignored and not treated as example candidates.
+- The compiled skill is scanned by ScapeGuard without any adversarial test payloads leaking into the assembled markdown surfaces.
+- The security score and grade of the repository (like `gitscape.ai`) reflect only the actual production and documentation surfaces, leading to correct and clean passing grades.
 
 ## Project Structure
-- [frontend/App.tsx](file:///c:/Users/jmach/dev/GitScape/frontend/App.tsx): Implement custom client-side routing to manage the current path, remove the "registry" tab, wrap the home page sections to conditionally render only on the home route, and pass routing handlers to the Header.
-- [frontend/components/Header.tsx](file:///c:/Users/jmach/dev/GitScape/frontend/components/Header.tsx): Add the "Registry" link, adjust standard anchor links to support routing back to home sections, and call the navigation callback.
+- [backend/app/skillforge/extract/examples.py](file:///c:/Users/jmach/dev/GitScape/backend/app/skillforge/extract/examples.py): Remove the `FileKind.TEST` extraction logic from `_candidates` so that only `FileKind.DOCS` code blocks are mined for examples.
 
 ## Code Style and Patterns
-- Use React 19 state and DOM history API (`window.history.pushState`, `popstate` event) for lightweight, dependency-free routing.
-- Keep style tokens, tailwind classes, and CSS structures consistent with the existing GitScape UI theme (dark mode, glassmorphism, cyan/violet/emerald color accents).
+- Adhere to the existing pure Python, zero-LLM architecture.
+- Keep the code clean, preserving existing helper functions and patterns.
 
 ## Testing Strategy
-- Manual verification of URL routing, back/forward button behavior, page reloading on `/registry`, and scrolling on landing sections.
-- Verification that all console warnings or errors are absent.
+- Run the full pytest suite (`.venv/Scripts/python.exe -m pytest`) to verify no regressions or missing example logic in other test suites.
+- Perform a manual build/compile of the `gitscape.ai` repository and verify that `test_sanitize.py` is no longer referenced or extracted in the examples.
 
 ## Boundaries
-- **Always**: Keep the RegistryView fully functional and visually aligned with the design language.
-- **Never**: Break direct URL sharing (e.g. going directly to `/registry`).
-- **Never**: Introduce page reloads for internal navigation.
+- **Always**: Keep classification of `FileKind.TEST` intact as it is used elsewhere (e.g. for listing test locations in conventions).
+- **Never**: Extract examples from test directories or files, regardless of their size.
+- **Never**: Compromise the detection of prompt injection or obfuscation on production source code or user documentation.

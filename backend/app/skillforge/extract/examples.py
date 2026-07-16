@@ -120,11 +120,6 @@ def _candidates(units: list[ContentUnit]):
         if unit.kind == FileKind.DOCS:
             for info, body in _FENCE.findall(unit.content):
                 yield info or "text", body.strip(), unit.path
-        elif unit.kind == FileKind.TEST:
-            body = unit.content.strip()
-            if _MIN_LEN <= len(body) <= _MAX_LEN:  # only short, whole test files
-                lang = _SUFFIX_LANG.get(PurePosixPath(unit.path).suffix.lower(), "text")
-                yield lang, body, unit.path
 
 
 def build_examples(units: list[ContentUnit]) -> list[CodeExample]:

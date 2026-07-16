@@ -110,6 +110,15 @@ export const RegistryView: React.FC<{ onNavigate: (path: string) => void }> = ({
 
   const githubTarget = parseGithubUrl(query);
 
+  const isIndexed = useMemo(() => {
+    if (!githubTarget) return false;
+    return skills.some(
+      (s) =>
+        s.owner.toLowerCase() === githubTarget.owner.toLowerCase() &&
+        s.repo.toLowerCase() === githubTarget.repo.toLowerCase()
+    );
+  }, [skills, githubTarget]);
+
   const goToReport = (owner: string, repo: string) => onNavigate(`/registry/${owner}/${repo}`);
 
   const clearAllFilters = () => {
@@ -193,7 +202,14 @@ export const RegistryView: React.FC<{ onNavigate: (path: string) => void }> = ({
                 className="flex gap-2.5 max-w-[640px] mb-7"
                 onSubmit={(e) => {
                   e.preventDefault();
-                  if (githubTarget) goToReport(githubTarget.owner, githubTarget.repo);
+                  if (githubTarget) {
+                    if (isIndexed) {
+                      goToReport(githubTarget.owner, githubTarget.repo);
+                    } else {
+                      const fullUrl = `https://github.com/${githubTarget.owner}/${githubTarget.repo}`;
+                      onNavigate(`/?repo_url=${encodeURIComponent(fullUrl)}&autostart=true`);
+                    }
+                  }
                 }}
               >
                 <label
@@ -422,7 +438,14 @@ export const RegistryView: React.FC<{ onNavigate: (path: string) => void }> = ({
                 )}
                 {githubTarget && (
                   <button
-                    onClick={() => goToReport(githubTarget.owner, githubTarget.repo)}
+                    onClick={() => {
+                      if (isIndexed) {
+                        goToReport(githubTarget.owner, githubTarget.repo);
+                      } else {
+                        const fullUrl = `https://github.com/${githubTarget.owner}/${githubTarget.repo}`;
+                        onNavigate(`/?repo_url=${encodeURIComponent(fullUrl)}&autostart=true`);
+                      }
+                    }}
                     className="inline-flex items-center rounded-lg text-xs font-semibold px-4 py-2.5"
                     style={{ background: "rgba(8,51,68,0.8)", border: "1px solid #155e75", color: "#22d3ee" }}
                   >
