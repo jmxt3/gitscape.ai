@@ -106,8 +106,9 @@
     "nemo-mbridge-perf-cuda-graphs",
     "nemo-mbridge-perf-expert-parallel-overlap",
     "nemo-mbridge-perf-hierarchical-context-parallel",
-    "nemo-mbridge-perf-megatron-fsdp"
+    "nemo-mbridge-perf-megatron-fsdp",
+    "nemo-mbridge-perf-memory-tuning"
   ],
   "failed": [],
-  "updated_at": "2026-07-16T19:47:40.670227+00:00"
+  "updated_at": "2026-07-16T19:48:04.614849+00:00"
 }
