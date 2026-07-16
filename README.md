@@ -19,7 +19,6 @@
   <a href="https://github.com/jmxt3/gitscape.ai/blob/main/LICENSE">
     <img src="https://img.shields.io/github/license/jmxt3/GitScape-AI.svg?style=flat" alt="License" />
   </a>
-  [![ScapeGuard A](https://gitscape.ai/api/badge/jmxt3/gitscape.ai)](https://gitscape.ai/registry/jmxt3/gitscape.ai)
   <img src="https://img.shields.io/badge/Google%20Cloud-4285F4.svg?style=flat&logo=Google-Cloud&logoColor=white" alt="Google Cloud" />
   <img src="https://img.shields.io/badge/Docker-2496ED.svg?style=flat&logo=Docker&logoColor=white" alt="Docker" />
 </p>
