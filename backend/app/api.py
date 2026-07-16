@@ -1042,9 +1042,9 @@ def render_repo_report(owner: str, repo: str, request: Request):
   <div class="section">
     <h2 class="section-title">Badge — Add to Your README</h2>
     <div class="badge-box">
-      <p style="font-size:13px;color:#94a3b8;margin-bottom:10px">Copy this markdown to display the ScapeGuard grade in your repository README:</p>
-      <img src="https://gitscape.ai/api/badge/{owner}/{repo}" alt="ScapeGuard Grade {grade}" style="margin-bottom:12px">
-      <div class="badge-code">[![ScapeGuard Grade {grade}](https://gitscape.ai/api/badge/{owner}/{repo})](https://gitscape.ai/registry/{owner}/{repo})</div>
+      <p style="font-size:13px;color:#94a3b8;margin-bottom:10px">Copy this markdown to display the skill verification badge in your repository README:</p>
+      <img src="https://gitscape.ai/api/badge/{owner}/{repo}" alt="Skill Verified · {grade} — Scanned by GitScape" style="margin-bottom:12px">
+      <div class="badge-code">[![Skill Verified · {grade}](https://gitscape.ai/api/badge/{owner}/{repo})](https://gitscape.ai/registry/{owner}/{repo})</div>
     </div>
   </div>
 
@@ -1424,7 +1424,13 @@ def render_nvidia_skill(skill_slug: str, request: Request):
 @router.get("/badge/{owner}/{repo}")
 def get_repo_badge(owner: str, repo: str):
     """
-    Generate a dynamic ScapeGuard badge SVG for a given repository.
+    Generate a dynamic skill-verification badge SVG for a given repository.
+
+    Produces a shields.io-style badge:
+        [ gitscape.ai | ✦ Skill Verified · {grade} ]
+
+    The right segment is colored to match the security grade (A–F).
+    An SVG <title> element provides a native browser tooltip.
     """
     matching_skill = None
     skills = registry_store.list_registry_skills()
@@ -1432,45 +1438,76 @@ def get_repo_badge(owner: str, repo: str):
         if skill["owner"].lower() == owner.lower() and skill["repo"].lower() == repo.lower():
             matching_skill = skill
             break
-            
+
     if matching_skill:
         grade = matching_skill["grade"]
+        findings_count = matching_skill.get("findings_count", 0)
     else:
         grade = "Scanned"
-        
+        findings_count = 0
+
     color_map = {
         "A": "#10b981",
         "B": "#84cc16",
         "C": "#f59e0b",
         "F": "#ef4444",
-        "Scanned": "#64748b"
+        "Scanned": "#64748b",
     }
     color = color_map.get(grade, "#64748b")
-    
-    label = "ScapeGuard"
-    value = f"Grade {grade}" if grade != "Scanned" else "Scanned"
-    
-    svg = f"""<svg xmlns="http://www.w3.org/2000/svg" width="160" height="20">
-  <linearGradient id="b" lg="y" x2="0" y2="100%">
+
+    # --- Badge geometry ------------------------------------------------
+    # Left segment:  "gitscape.ai"   (11 chars)
+    # Right segment: "✦ Skill Verified · A"  (variable with grade letter)
+    label = "gitscape.ai"
+    if grade != "Scanned":
+        value = f"\u2726 Skill Verified \u00b7 {grade}"
+    else:
+        value = "\u2726 Skill Scanned"
+
+    # Approximate character widths (DejaVu Sans 11px): ~6.8px per char
+    char_w = 6.8
+    pad = 12  # horizontal padding per segment
+    label_w = int(len(label) * char_w + pad * 2)
+    value_w = int(len(value) * char_w + pad * 2)
+    total_w = label_w + value_w
+
+    label_x = label_w / 2
+    value_x = label_w + value_w / 2
+
+    # --- Tooltip -------------------------------------------------------
+    grade_labels = {"A": "Clean", "B": "Minor Warnings", "C": "Review Advised", "F": "Blocked"}
+    grade_label = grade_labels.get(grade, "Scanned")
+    finding_word = "finding" if findings_count == 1 else "findings"
+    tooltip = (
+        f"AI agent skill scanned by GitScape — "
+        f"Grade {grade} ({grade_label}) \u00b7 "
+        f"{findings_count} {finding_word} across 55+ security rules"
+    ) if grade != "Scanned" else (
+        "AI agent skill scanned by GitScape"
+    )
+
+    svg = f"""<svg xmlns="http://www.w3.org/2000/svg" width="{total_w}" height="20">
+  <title>{tooltip}</title>
+  <linearGradient id="b" x2="0" y2="100%">
     <stop offset="0" stop-color="#bbb" stop-opacity=".1"/>
     <stop offset="1" stop-opacity=".1"/>
   </linearGradient>
   <mask id="a">
-    <rect width="160" height="20" rx="3" fill="#fff"/>
+    <rect width="{total_w}" height="20" rx="3" fill="#fff"/>
   </mask>
   <g mask="url(#a)">
-    <path fill="#555" d="M0 0h100v20H0z"/>
-    <path fill="{color}" d="M100 0h60v20H100z"/>
-    <path fill="url(#b)" d="M0 0h160v20H0z"/>
+    <path fill="#555" d="M0 0h{label_w}v20H0z"/>
+    <path fill="{color}" d="M{label_w} 0h{value_w}v20H{label_w}z"/>
+    <path fill="url(#b)" d="M0 0h{total_w}v20H0z"/>
   </g>
   <g fill="#fff" text-anchor="middle" font-family="DejaVu Sans,Verdana,Geneva,sans-serif" font-size="11">
-    <text x="50" y="15" fill="#010101" fill-opacity=".3">{label}</text>
-    <text x="50" y="14">{label}</text>
-    <text x="130" y="15" fill="#010101" fill-opacity=".3">{value}</text>
-    <text x="130" y="14">{value}</text>
+    <text x="{label_x}" y="15" fill="#010101" fill-opacity=".3">{label}</text>
+    <text x="{label_x}" y="14">{label}</text>
+    <text x="{value_x}" y="15" fill="#010101" fill-opacity=".3">{value}</text>
+    <text x="{value_x}" y="14">{value}</text>
   </g>
 </svg>"""
-    
+
     from fastapi import Response
     return Response(content=svg, media_type="image/svg+xml")
 

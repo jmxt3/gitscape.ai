@@ -141,7 +141,7 @@ export const RepoReportPage: React.FC<RepoReportPageProps> = ({ owner, repo, onN
   });
 
   const badgeMarkdown = data
-    ? `[![ScapeGuard ${data.grade}](https://gitscape.ai/api/badge/${owner}/${repo})](${pageUrl})`
+    ? `[![Skill Verified · ${data.grade}](https://gitscape.ai/api/badge/${owner}/${repo})](${pageUrl})`
     : "";
   const installCmd = `npx gitscape ${repoUrl}`;
   const sha = data?.last_git_sha ? data.last_git_sha.slice(0, 12) : "—";
@@ -548,11 +548,11 @@ export const RepoReportPage: React.FC<RepoReportPageProps> = ({ owner, repo, onN
                   </div>
                 </div>
                 <div className="rounded-2xl p-5" style={glassStyle}>
-                  <SectionTitle sub="Embed the live ScapeGuard badge in your README — it updates on every scan.">
-                    Show your grade
+                  <SectionTitle sub="Embed the live skill verification badge in your README — it updates on every scan.">
+                    Show your verification
                   </SectionTitle>
                   <div className="flex items-center gap-3 mt-3 mb-3">
-                    <img src={`/api/badge/${owner}/${repo}`} alt={`ScapeGuard Grade ${data.grade}`} className="h-5" />
+                    <img src={`/api/badge/${owner}/${repo}`} alt={`Skill Verified · ${data.grade} — Scanned by GitScape`} className="h-5" />
                     <span className="font-mono text-[10px] tracking-[0.1em] uppercase text-slate-500">live preview</span>
                   </div>
                   <div className="flex items-center gap-3 rounded-lg px-3.5 py-2.5 font-mono text-[11px] text-slate-400" style={codeSurfaceStyle}>

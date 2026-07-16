@@ -11,7 +11,7 @@
 
 <p align="center">
   <a href="https://gitscape.ai/registry/jmxt3/gitscape.ai">
-    <img src="https://gitscape.ai/api/badge/jmxt3/gitscape.ai" alt="ScapeGuard A" />
+    <img src="https://gitscape.ai/api/badge/jmxt3/gitscape.ai" alt="Skill Verified · A — AI agent skill scanned by GitScape across 55+ security rules" />
   </a>
   <a href="https://www.npmjs.com/package/gitscape">
     <img src="https://img.shields.io/npm/v/gitscape.svg?style=flat&color=CB3837&logo=npm" alt="NPM Version" />

@@ -1372,7 +1372,7 @@ const App: React.FC = () => {
 
                     </div>
 
-                    {/* ScapeGuard badge below the container */}
+                    {/* Skill verification badge below the container */}
                     <div className="flex justify-center mt-8 sm:mt-10">
                       <a
                         href="#security"
@@ -1387,7 +1387,7 @@ const App: React.FC = () => {
                           <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                           <path d="M9 12l2 2 4-4" />
                         </svg>
-                        Every skill scanned by ScapeGuard
+                        Every skill verified by gitscape.ai
                       </a>
                     </div>
                   </section>

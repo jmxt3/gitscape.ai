@@ -1,4 +1,4 @@
-﻿// Author: Joao Machete
+// Author: Joao Machete
 // Description: NVIDIA Curated Skill landing page — dedicated SEO page for each
 // NVIDIA/skills entry. Renders taxonomy metadata (domain, audience, subdomain),
 // ScapeGuard security grade, findings summary, and structured data for Google.
@@ -335,7 +335,7 @@ export const NvidiaSkillPage: React.FC<NvidiaSkillPageProps> = ({ slug, onNaviga
             {/* Right: grade certificate */}
             <div className="flex-shrink-0 rounded-2xl overflow-hidden" style={{ ...glassStyle, width:240, minWidth:220 }}>
               <div className="flex flex-col items-center px-6 py-7 gap-3">
-                <Eyebrow>ScapeGuard Grade</Eyebrow>
+                <Eyebrow>Skill Verification</Eyebrow>
                 <GradeSeal grade={data.grade} size={88} />
                 <StatusChip status={data.status} />
                 <div className="w-full mt-2">
