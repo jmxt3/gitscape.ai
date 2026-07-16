@@ -1635,7 +1635,7 @@ def get_repo_badge(owner: str, repo: str):
     Generate a dynamic skill-verification badge SVG for a given repository.
 
     Produces a shields.io-style badge:
-        [ gitscape.ai | ✦ Skill Verified · {grade} ]
+        [ Skill Verified | {grade} ]
 
     The right segment is colored to match the security grade (A–F).
     An SVG <title> element provides a native browser tooltip.
@@ -1667,7 +1667,7 @@ def get_repo_badge(owner: str, repo: str):
     color = color_map.get(grade, "#64748b")
 
     # --- Badge geometry ------------------------------------------------
-    # Left segment:  "gitscape.ai"  (brand)
+    # Left segment:  "Skill Verified"  (label)
     # Right segment: "A" / "B" / "C" / "F" / "scanned"  (compact result)
     label = "Skill Verified"
     value = grade if grade != "Scanned" else "scanned"

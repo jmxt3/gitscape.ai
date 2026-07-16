@@ -114,8 +114,13 @@
     "nemo-mbridge-perf-moe-long-context",
     "nemo-mbridge-perf-moe-optimization-workflow",
     "nemo-mbridge-perf-moe-vlm-training",
-    "nemo-mbridge-perf-parallelism-strategies"
+    "nemo-mbridge-perf-parallelism-strategies",
+    "nemo-mbridge-perf-sequence-packing",
+    "nemo-mbridge-perf-tp-dp-comm-overlap",
+    "nemo-mbridge-recipe-recommender",
+    "nemo-mbridge-resiliency",
+    "nemo-retriever"
   ],
   "failed": [],
-  "updated_at": "2026-07-16T19:50:31.949878+00:00"
+  "updated_at": "2026-07-16T19:52:17.642610+00:00"
 }
