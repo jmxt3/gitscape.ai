@@ -48,6 +48,7 @@ logger.setLevel(logging.INFO)
 router = APIRouter()
 
 from app.mcp import mcp_router
+
 router.include_router(mcp_router, prefix="/mcp")
 
 
@@ -55,6 +56,7 @@ router.include_router(mcp_router, prefix="/mcp")
 def read_root(request: Request):
     """Root endpoint providing a welcome message."""
     return {"message": "GitScape"}
+
 
 @router.get("/health")
 async def health_check():
@@ -67,10 +69,11 @@ def fetch_github_metadata(owner: str, repo: str, token: Optional[str] = None) ->
     from GitHub API with graceful fallback on rate limits or errors.
     """
     import requests
+
     headers = {"User-Agent": "GitScape"}
     if token:
         headers["Authorization"] = f"token {token}"
-    
+
     url = f"https://api.github.com/repos/{owner}/{repo}"
     metadata = {
         "stars": 0,
@@ -80,7 +83,7 @@ def fetch_github_metadata(owner: str, repo: str, token: Optional[str] = None) ->
         "watchers": 0,
         "last_commit_at": "",
     }
-    
+
     try:
         resp = requests.get(url, headers=headers, timeout=5)
         if resp.status_code == 200:
@@ -88,28 +91,38 @@ def fetch_github_metadata(owner: str, repo: str, token: Optional[str] = None) ->
             metadata["stars"] = data.get("stargazers_count", 0)
             metadata["forks"] = data.get("forks_count", 0)
             metadata["open_issues"] = data.get("open_issues_count", 0)
-            metadata["watchers"] = data.get("subscribers_count") or data.get("watchers_count") or 0
+            metadata["watchers"] = (
+                data.get("subscribers_count") or data.get("watchers_count") or 0
+            )
             if data.get("license") and isinstance(data["license"], dict):
-                metadata["license"] = data["license"].get("spdx_id") or data["license"].get("name") or ""
-            
+                metadata["license"] = (
+                    data["license"].get("spdx_id") or data["license"].get("name") or ""
+                )
+
             # Fetch last commit info
             commits_url = f"{url}/commits"
             c_resp = requests.get(commits_url, headers=headers, timeout=5)
             if c_resp.status_code == 200:
                 c_data = c_resp.json()
                 if isinstance(c_data, list) and len(c_data) > 0:
-                    commit_date = c_data[0].get("commit", {}).get("committer", {}).get("date")
+                    commit_date = (
+                        c_data[0].get("commit", {}).get("committer", {}).get("date")
+                    )
                     if commit_date:
                         metadata["last_commit_at"] = commit_date
         else:
-            logger.warning(f"GitHub API metadata returned {resp.status_code} for {owner}/{repo}")
+            logger.warning(
+                f"GitHub API metadata returned {resp.status_code} for {owner}/{repo}"
+            )
     except Exception as e:
         logger.error(f"Error fetching GitHub metadata: {e}")
-        
+
     return metadata
 
 
-def _prose_fallback(owner: str, repo: str, grade: str, risk_score: int, findings: List[dict]) -> str:
+def _prose_fallback(
+    owner: str, repo: str, grade: str, risk_score: int, findings: List[dict]
+) -> str:
     if grade in ["A", "B"] and risk_score < 10:
         return f"{owner}/{repo} exhibits a highly secure code posture with a grade of {grade} and low risk rating ({risk_score}/100). The automated security scan detected no significant vulnerabilities or unsafe agent directives, making it safe for local workspace integration."
     else:
@@ -117,22 +130,30 @@ def _prose_fallback(owner: str, repo: str, grade: str, risk_score: int, findings
         return f"A ScapeGuard security audit of {owner}/{repo} revealed a moderate-to-high risk profile (Grade {grade}, Risk Score {risk_score}/100) with {findings_cnt} findings. Developers should review the individual rule violations before deploying this skill in active agent workflows."
 
 
-def generate_ai_prose(owner: str, repo: str, grade: str, risk_score: int, findings: List[dict]) -> str:
+def generate_ai_prose(
+    owner: str, repo: str, grade: str, risk_score: int, findings: List[dict]
+) -> str:
     """
     Uses Gemini API via settings.GEMINI_API_KEY to generate a concise 2-3 sentence
     security and risk profile summary for the repository. Graceful fallback on failure.
     """
     if not settings.GEMINI_API_KEY:
         return _prose_fallback(owner, repo, grade, risk_score, findings)
-    
+
     import requests
+
     model = getattr(settings, "HD_MODEL", "gemini-2.5-flash")
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
-    
-    findings_str = "\n".join([f"- [{f.get('severity', 'INFO')}] {f.get('rule', '')}: {f.get('message', '')}" for f in findings[:5]])
+
+    findings_str = "\n".join(
+        [
+            f"- [{f.get('severity', 'INFO')}] {f.get('rule', '')}: {f.get('message', '')}"
+            for f in findings[:5]
+        ]
+    )
     if not findings_str:
         findings_str = "No security findings or vulnerability reports."
-        
+
     prompt = f"""
 You are an expert security auditor. Provide a concise, professional 2-3 sentence security risk profile summary of the GitHub repository '{owner}/{repo}'.
 The repository was analyzed by GitScape ScapeGuard and received:
@@ -151,21 +172,26 @@ Summarize the key security posture and risk implications for developers installi
             "thinkingConfig": {"thinkingBudget": 0},
         },
     }
-    
+
     try:
-        resp = requests.post(url, params={"key": settings.GEMINI_API_KEY}, json=body, timeout=8)
+        resp = requests.post(
+            url, params={"key": settings.GEMINI_API_KEY}, json=body, timeout=8
+        )
         if resp.status_code == 200:
             text = resp.json()["candidates"][0]["content"]["parts"][0]["text"]
             return text.strip()
         else:
-            logger.warning(f"Gemini API returned status code {resp.status_code} for AI prose")
+            logger.warning(
+                f"Gemini API returned status code {resp.status_code} for AI prose"
+            )
     except Exception as e:
         logger.error(f"Error generating AI prose via Gemini: {e}")
-        
+
     return _prose_fallback(owner, repo, grade, risk_score, findings)
 
 
 # ── Shared scan-and-save helper ───────────────────────────────────────────────
+
 
 def _scan_and_save(
     repo_url: str,
@@ -206,15 +232,22 @@ def _scan_and_save(
         git_sha = converter.get_git_sha(clone_path)
 
         meta = RepoMeta(
-            owner=owner, repo=repo, repo_url=repo_url,
-            primary_languages=languages, files_analyzed=files_analyzed,
-            readme=readme, file_structure=file_structure,
-            structure_overview=structure_overview, generated_at=generated_at,
+            owner=owner,
+            repo=repo,
+            repo_url=repo_url,
+            primary_languages=languages,
+            files_analyzed=files_analyzed,
+            readme=readme,
+            file_structure=file_structure,
+            structure_overview=structure_overview,
+            generated_at=generated_at,
             git_sha=git_sha,
         )
         units = skillforge.units_from_clone(Path(clone_path))
         pkg = skillforge.build_skill(
-            units, meta, digest_hash=skillforge.content_hash(digest_str),
+            units,
+            meta,
+            digest_hash=skillforge.content_hash(digest_str),
             digest_content=digest_str,
         )
         skillforge.skill_cache.set(skillforge.cache_key(digest_str), pkg)
@@ -222,7 +255,11 @@ def _scan_and_save(
         gh_meta = fetch_github_metadata(owner, repo, github_token)
         findings_list = [f.model_dump(mode="json") for f in pkg.scan_report.findings]
         ai_summary = generate_ai_prose(
-            owner, repo, pkg.scan_report.grade, pkg.scan_report.risk_score, findings_list
+            owner,
+            repo,
+            pkg.scan_report.grade,
+            pkg.scan_report.risk_score,
+            findings_list,
         )
 
         detail_payload = {
@@ -241,7 +278,9 @@ def _scan_and_save(
             "status": pkg.scan_report.status.value,
             "risk_score": pkg.scan_report.risk_score,
             "findings": findings_list,
-            "categories": [c.model_dump(mode="json") for c in pkg.scan_report.categories],
+            "categories": [
+                c.model_dump(mode="json") for c in pkg.scan_report.categories
+            ],
             "skill_md": pkg.skill_md,
             "manifest": pkg.manifest.model_dump(mode="json"),
             "last_git_sha": git_sha,
@@ -308,16 +347,23 @@ def get_digest(
 
             try:
                 meta = RepoMeta(
-                    owner=owner, repo=repo, repo_url=repo_url,
-                    primary_languages=languages, files_analyzed=files_analyzed,
-                    readme=readme, file_structure=file_structure,
-                    structure_overview=structure_overview, generated_at=generated_at,
+                    owner=owner,
+                    repo=repo,
+                    repo_url=repo_url,
+                    primary_languages=languages,
+                    files_analyzed=files_analyzed,
+                    readme=readme,
+                    file_structure=file_structure,
+                    structure_overview=structure_overview,
+                    generated_at=generated_at,
                     git_sha=git_sha,
                 )
                 units = skillforge.units_from_clone(Path(clone_path))
                 pkg = skillforge.build_skill(
-                    units, meta, digest_hash=skillforge.content_hash(digest_str),
-                    digest_content=digest_str
+                    units,
+                    meta,
+                    digest_hash=skillforge.content_hash(digest_str),
+                    digest_content=digest_str,
                 )
                 skillforge.skill_cache.set(skillforge.cache_key(digest_str), pkg)
                 skill_fields = {
@@ -368,12 +414,16 @@ def scan_repo(request: Request, body: ScanRequest):
         repo_url = urllib.parse.unquote(body.repo_url)
         with tempfile.TemporaryDirectory() as tmpdir:
             clone_path = os.path.join(tmpdir, "repo")
-            converter.clone_repository(repo_url, clone_path, github_token=body.github_token)
+            converter.clone_repository(
+                repo_url, clone_path, github_token=body.github_token
+            )
             digest_str, metadata = converter.generate_markdown_digest(
                 repo_url, clone_path, return_metadata=True
             )
             meta = RepoMeta(
-                owner=metadata["owner"], repo=metadata["repo"], repo_url=repo_url,
+                owner=metadata["owner"],
+                repo=metadata["repo"],
+                repo_url=repo_url,
                 primary_languages=metadata["primary_languages"],
                 files_analyzed=metadata["files_analyzed"],
                 readme=metadata.get("readme", ""),
@@ -386,8 +436,11 @@ def scan_repo(request: Request, body: ScanRequest):
             # Deterministic, keyless build (skill_type="code"): no Gemini, and no
             # STRUCTURE-section warnings — we only want the repo's security verdict.
             pkg = skillforge.build_skill(
-                units, meta, digest_hash=skillforge.content_hash(digest_str),
-                digest_content=digest_str, skill_type="code",
+                units,
+                meta,
+                digest_hash=skillforge.content_hash(digest_str),
+                digest_content=digest_str,
+                skill_type="code",
             )
 
         report = pkg.scan_report
@@ -439,10 +492,11 @@ def check_freshness(
                 return {
                     "status": "fresh",
                     "git_head": current_head,
-                    "changes_since_last": []
+                    "changes_since_last": [],
                 }
 
             from app.skillforge.freshness import compute_drift, is_noop_drift
+
             changed_files = compute_drift(Path(clone_path), last_git_head)
 
             if is_noop_drift(changed_files):
@@ -453,10 +507,11 @@ def check_freshness(
             return {
                 "status": status,
                 "git_head": current_head,
-                "changes_since_last": changed_files
+                "changes_since_last": changed_files,
             }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 from app import registry_store
 
@@ -465,7 +520,9 @@ from app import registry_store
 @limiter.limit("20/minute")
 def search_registry(
     request: Request,
-    query: Optional[str] = Query(None, description="Search term for repository URL or name"),
+    query: Optional[str] = Query(
+        None, description="Search term for repository URL or name"
+    ),
 ):
     """
     Search indexed skills in the GitScape registry.
@@ -474,15 +531,17 @@ def search_registry(
     skills = registry_store.list_registry_skills()
     if not query:
         return skills
-        
+
     q = query.lower()
     results = []
     for skill in skills:
-        if (q in skill["name"].lower() or 
-            q in skill["owner"].lower() or 
-            q in skill["repo"].lower() or 
-            q in skill["repo_url"].lower() or
-            q in skill["description"].lower()):
+        if (
+            q in skill["name"].lower()
+            or q in skill["owner"].lower()
+            or q in skill["repo"].lower()
+            or q in skill["repo_url"].lower()
+            or q in skill["description"].lower()
+        ):
             results.append(skill)
     return results
 
@@ -508,7 +567,7 @@ def get_registry_detail(
     This provides infinite long-tail coverage via dynamic compilation.
     """
     repo_url = urllib.parse.unquote(repo_url)
-    
+
     try:
         url_path = urllib.parse.urlparse(repo_url).path.strip("/")
         parts = url_path.split("/")
@@ -520,15 +579,17 @@ def get_registry_detail(
             repo = repo[:-4]
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid GitHub repository URL.")
-        
+
     # Check cache first
     cached = registry_store.get_scanned_detail(owner, repo)
     if cached:
         return cached
-        
+
     skills = registry_store.list_registry_skills()
-    static_info = next((s for s in skills if s["repo_url"].lower() == repo_url.lower()), None)
-    
+    static_info = next(
+        (s for s in skills if s["repo_url"].lower() == repo_url.lower()), None
+    )
+
     try:
         with tempfile.TemporaryDirectory() as tmpdir:
             clone_path = os.path.join(tmpdir, "repo")
@@ -536,7 +597,7 @@ def get_registry_detail(
             digest_str, metadata = converter.generate_markdown_digest(
                 repo_url, clone_path, return_metadata=True
             )
-            
+
             languages = metadata["primary_languages"]
             files_analyzed = metadata["files_analyzed"]
             readme = metadata.get("readme", "")
@@ -544,37 +605,63 @@ def get_registry_detail(
             structure_overview = metadata.get("structure_overview", "")
             generated_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
             git_sha = converter.get_git_sha(clone_path)
-            
+
             meta = RepoMeta(
-                owner=owner, repo=repo, repo_url=repo_url,
-                primary_languages=languages, files_analyzed=files_analyzed,
-                readme=readme, file_structure=file_structure,
-                structure_overview=structure_overview, generated_at=generated_at,
+                owner=owner,
+                repo=repo,
+                repo_url=repo_url,
+                primary_languages=languages,
+                files_analyzed=files_analyzed,
+                readme=readme,
+                file_structure=file_structure,
+                structure_overview=structure_overview,
+                generated_at=generated_at,
                 git_sha=git_sha,
             )
             units = skillforge.units_from_clone(Path(clone_path))
             pkg = skillforge.build_skill(
-                units, meta, digest_hash=skillforge.content_hash(digest_str),
-                digest_content=digest_str, skill_type="code"
+                units,
+                meta,
+                digest_hash=skillforge.content_hash(digest_str),
+                digest_content=digest_str,
+                skill_type="code",
             )
-            
+
             gh_meta = fetch_github_metadata(owner, repo, github_token)
-            findings_list = [f.model_dump(mode="json") for f in pkg.scan_report.findings]
-            ai_summary = generate_ai_prose(owner, repo, pkg.scan_report.grade, pkg.scan_report.risk_score, findings_list)
-            
+            findings_list = [
+                f.model_dump(mode="json") for f in pkg.scan_report.findings
+            ]
+            ai_summary = generate_ai_prose(
+                owner,
+                repo,
+                pkg.scan_report.grade,
+                pkg.scan_report.risk_score,
+                findings_list,
+            )
+
             detail_payload = {
                 "repo_url": repo_url,
                 "name": pkg.name,
                 "owner": owner,
                 "repo": repo,
-                "description": static_info["description"] if static_info else (pkg.manifest.metadata.get("summary_title") or pkg.manifest.description or f"Agent skill for {owner}/{repo}."),
+                "description": (
+                    static_info["description"]
+                    if static_info
+                    else (
+                        pkg.manifest.metadata.get("summary_title")
+                        or pkg.manifest.description
+                        or f"Agent skill for {owner}/{repo}."
+                    )
+                ),
                 "primary_languages": languages,
                 "files_analyzed": files_analyzed,
                 "grade": pkg.scan_report.grade,
                 "status": pkg.scan_report.status.value,
                 "risk_score": pkg.scan_report.risk_score,
                 "findings": findings_list,
-                "categories": [c.model_dump(mode="json") for c in pkg.scan_report.categories],
+                "categories": [
+                    c.model_dump(mode="json") for c in pkg.scan_report.categories
+                ],
                 "skill_md": pkg.skill_md,
                 "manifest": pkg.manifest.model_dump(mode="json"),
                 "last_git_sha": git_sha,
@@ -586,10 +673,10 @@ def get_registry_detail(
                 "last_commit_at": gh_meta.get("last_commit_at", ""),
                 "ai_summary": ai_summary,
             }
-            
+
             # Save scan dynamically (GCS or fallback to in-memory)
             registry_store.save_scanned_skill(owner, repo, detail_payload)
-            
+
             return detail_payload
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -609,11 +696,13 @@ def registry_sitemap(request: Request):
 
     urls = []
     # Registry index page
-    urls.append(f"""  <url>
+    urls.append(
+        f"""  <url>
     <loc>{base_url}/registry</loc>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
-  </url>""")
+  </url>"""
+    )
 
     nvidia_slugs_added = set()
 
@@ -626,12 +715,14 @@ def registry_sitemap(request: Request):
         lastmod = f"<lastmod>{scanned_at[:10]}</lastmod>" if scanned_at else ""
 
         # Primary GitHub repo URL
-        urls.append(f"""  <url>
+        urls.append(
+            f"""  <url>
     <loc>{base_url}/registry/{owner}/{repo}</loc>
     {lastmod}
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>""")
+  </url>"""
+        )
 
         # Also add /registry/nvidia/{skill_slug} for NVIDIA-sourced skills
         if scan.get("source") == "nvidia":
@@ -639,18 +730,24 @@ def registry_sitemap(request: Request):
             if skill_name and skill_name not in nvidia_slugs_added:
                 # Slugify: lowercase, replace spaces/underscores with hyphens
                 slug = skill_name.lower().replace(" ", "-").replace("_", "-")
-                urls.append(f"""  <url>
+                urls.append(
+                    f"""  <url>
     <loc>{base_url}/registry/nvidia/{slug}</loc>
     {lastmod}
     <changefreq>weekly</changefreq>
     <priority>0.75</priority>
-  </url>""")
+  </url>"""
+                )
                 nvidia_slugs_added.add(skill_name)
 
-    sitemap_xml = """<?xml version="1.0" encoding="UTF-8"?>
+    sitemap_xml = (
+        """<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-""" + "\n".join(urls) + """
+"""
+        + "\n".join(urls)
+        + """
 </urlset>"""
+    )
 
     return Response(
         content=sitemap_xml,
@@ -676,18 +773,23 @@ def get_nvidia_skill(request: Request, skill_slug: str):
 
     skills = registry_store.list_registry_skills()
     match = next(
-        (s for s in skills
-         if s.get("source") == "nvidia"
-         and _to_slug(s.get("nvidia_skill_name", "")) == slug),
+        (
+            s
+            for s in skills
+            if s.get("source") == "nvidia"
+            and _to_slug(s.get("nvidia_skill_name", "")) == slug
+        ),
         None,
     )
 
     if not match:
         # Fallback: try matching by repo name (some NVIDIA skills use repo slug)
         match = next(
-            (s for s in skills
-             if s.get("source") == "nvidia"
-             and _to_slug(s.get("repo", "")) == slug),
+            (
+                s
+                for s in skills
+                if s.get("source") == "nvidia" and _to_slug(s.get("repo", "")) == slug
+            ),
             None,
         )
 
@@ -695,7 +797,7 @@ def get_nvidia_skill(request: Request, skill_slug: str):
         raise HTTPException(
             status_code=404,
             detail=f"No NVIDIA skill found for slug '{skill_slug}'. "
-                   "Run the admin batch scan to index this skill.",
+            "Run the admin batch scan to index this skill.",
         )
 
     owner = match.get("owner", "")
@@ -705,8 +807,14 @@ def get_nvidia_skill(request: Request, skill_slug: str):
     detail = registry_store.get_scanned_detail(owner, repo) if owner and repo else None
     if detail:
         # Merge NVIDIA taxonomy from index into detail (detail may have been saved before taxonomy fields)
-        for field in ("source", "nvidia_domain", "nvidia_audience", "nvidia_skill_name",
-                      "nvidia_skill_url", "nvidia_subdomain"):
+        for field in (
+            "source",
+            "nvidia_domain",
+            "nvidia_audience",
+            "nvidia_skill_name",
+            "nvidia_skill_url",
+            "nvidia_subdomain",
+        ):
             if field not in detail or not detail[field]:
                 detail[field] = match.get(field)
         return detail
@@ -738,13 +846,22 @@ def render_repo_report(owner: str, repo: str, request: Request):
         # Check the index for at least summary data
         skills = registry_store.list_registry_skills()
         cached = next(
-            (s for s in skills if s.get("owner", "").lower() == owner.lower() and s.get("repo", "").lower() == repo.lower()),
+            (
+                s
+                for s in skills
+                if s.get("owner", "").lower() == owner.lower()
+                and s.get("repo", "").lower() == repo.lower()
+            ),
             None,
         )
 
     # QUALITY GATE: If repo is not cached or does not have a valid grade/findings, noindex it.
     is_thin = not cached or cached.get("status") == "Not yet scanned"
-    robots_meta = '<meta name="robots" content="noindex, nofollow">' if is_thin else '<meta name="robots" content="index, follow, max-snippet:200, max-image-preview:large">'
+    robots_meta = (
+        '<meta name="robots" content="noindex, nofollow">'
+        if is_thin
+        else '<meta name="robots" content="index, follow, max-snippet:200, max-image-preview:large">'
+    )
 
     if not cached:
         # Minimal stub page — still SEO-indexable as a placeholder but noindexed by the gate
@@ -798,16 +915,27 @@ def render_repo_report(owner: str, repo: str, request: Request):
         </div>"""
 
     # Extra metadata pills
-    stars_pill = f'<span class="meta-pill">⭐ {stars:,} stars</span>' if stars > 0 else ""
-    forks_pill = f'<span class="meta-pill">🍴 {forks:,} forks</span>' if forks > 0 else ""
-    license_pill = f'<span class="meta-pill">⚖️ {license_name}</span>' if license_name else ""
+    stars_pill = (
+        f'<span class="meta-pill">⭐ {stars:,} stars</span>' if stars > 0 else ""
+    )
+    forks_pill = (
+        f'<span class="meta-pill">🍴 {forks:,} forks</span>' if forks > 0 else ""
+    )
+    license_pill = (
+        f'<span class="meta-pill">⚖️ {license_name}</span>' if license_name else ""
+    )
 
     # Build findings rows
     findings_rows = ""
     source_findings = findings if findings else findings_summary
     for f in source_findings[:10]:
         sev = f.get("severity", "INFO")
-        sev_color = {"CRITICAL": "#ef4444", "HIGH": "#f97316", "MEDIUM": "#f59e0b", "LOW": "#64748b"}.get(sev.upper(), "#64748b")
+        sev_color = {
+            "CRITICAL": "#ef4444",
+            "HIGH": "#f97316",
+            "MEDIUM": "#f59e0b",
+            "LOW": "#64748b",
+        }.get(sev.upper(), "#64748b")
         rule = f.get("rule", "")
         message = f.get("message", "")[:200]
         file_loc = f"{f.get('file', '')}:{f.get('line', '')}" if f.get("file") else ""
@@ -828,16 +956,28 @@ def render_repo_report(owner: str, repo: str, request: Request):
         </td></tr>"""
 
     # Build categories list for mock editor json
-    default_categories = ["secrets", "prompt_injection", "malicious_execution", "supply_chain", "excessive_agency"]
+    default_categories = [
+        "secrets",
+        "prompt_injection",
+        "malicious_execution",
+        "supply_chain",
+        "excessive_agency",
+    ]
     category_rows = []
-    
+
     # Map raw categories if available, otherwise mock from grade
     if categories:
         for c in categories:
             cat_name = c.get("category", "")
             cat_status = c.get("status", "PASS")
-            cat_color = "#10b981" if cat_status == "PASS" else "#f59e0b" if cat_status == "WARN" else "#ef4444"
-            category_rows.append(f'      <div style="display:flex;justify-content:space-between;line-height:1.7;"><span style="color:#64748b;">"{cat_name}"</span><span style="color:{cat_color};">"{cat_status}"</span></div>')
+            cat_color = (
+                "#10b981"
+                if cat_status == "PASS"
+                else "#f59e0b" if cat_status == "WARN" else "#ef4444"
+            )
+            category_rows.append(
+                f'      <div style="display:flex;justify-content:space-between;line-height:1.7;"><span style="color:#64748b;">"{cat_name}"</span><span style="color:{cat_color};">"{cat_status}"</span></div>'
+            )
     else:
         # Fallback based on security grade
         for c in default_categories:
@@ -846,36 +986,45 @@ def render_repo_report(owner: str, repo: str, request: Request):
                 cat_status = "FAIL"
             elif grade in ["B", "C"] and c == "prompt_injection":
                 cat_status = "WARN"
-            cat_color = "#10b981" if cat_status == "PASS" else "#f59e0b" if cat_status == "WARN" else "#ef4444"
-            category_rows.append(f'      <div style="display:flex;justify-content:space-between;line-height:1.7;"><span style="color:#64748b;">"{c}"</span><span style="color:{cat_color};">"{cat_status}"</span></div>')
-            
+            cat_color = (
+                "#10b981"
+                if cat_status == "PASS"
+                else "#f59e0b" if cat_status == "WARN" else "#ef4444"
+            )
+            category_rows.append(
+                f'      <div style="display:flex;justify-content:space-between;line-height:1.7;"><span style="color:#64748b;">"{c}"</span><span style="color:{cat_color};">"{cat_status}"</span></div>'
+            )
+
     category_json_rows = "\n".join(category_rows)
-    
+
     # Shorten git sha for display
     skill_hash_display = last_git_sha[:12] if last_git_sha else "sha256:9f2c...e41a"
 
     # JSON-LD structured data
-    json_ld = json.dumps({
-        "@context": "https://schema.org",
-        "@type": "SoftwareApplication",
-        "@id": page_url,
-        "name": f"{owner}/{repo}",
-        "url": repo_url,
-        "description": description,
-        "applicationCategory": "DeveloperApplication",
-        "review": {
-            "@type": "Review",
-            "author": {"@type": "Organization", "name": "GitScape AI ScapeGuard"},
-            "reviewBody": f"{owner}/{repo} received a security grade of {grade} ({grade_verdict}) with {findings_count} findings across {files_analyzed} files analyzed. Languages: {langs_str}.",
-            "reviewRating": {
-                "@type": "Rating",
-                "ratingValue": {"A": "5", "B": "4", "C": "3"}.get(grade, "1"),
-                "bestRating": "5",
-                "worstRating": "1",
+    json_ld = json.dumps(
+        {
+            "@context": "https://schema.org",
+            "@type": "SoftwareApplication",
+            "@id": page_url,
+            "name": f"{owner}/{repo}",
+            "url": repo_url,
+            "description": description,
+            "applicationCategory": "DeveloperApplication",
+            "review": {
+                "@type": "Review",
+                "author": {"@type": "Organization", "name": "GitScape AI ScapeGuard"},
+                "reviewBody": f"{owner}/{repo} received a security grade of {grade} ({grade_verdict}) with {findings_count} findings across {files_analyzed} files analyzed. Languages: {langs_str}.",
+                "reviewRating": {
+                    "@type": "Rating",
+                    "ratingValue": {"A": "5", "B": "4", "C": "3"}.get(grade, "1"),
+                    "bestRating": "5",
+                    "worstRating": "1",
+                },
+                "datePublished": scanned_at[:10] if scanned_at else "",
             },
-            "datePublished": scanned_at[:10] if scanned_at else "",
         },
-    }, indent=2)
+        indent=2,
+    )
 
     meta_description = (
         f"{owner}/{repo} received Grade {grade} in the GitScape ScapeGuard security audit — "
@@ -1088,22 +1237,29 @@ def render_nvidia_skill(skill_slug: str, request: Request):
     # Resolve slug → registry entry
     skills = registry_store.list_registry_skills()
     match = next(
-        (s for s in skills
-         if s.get("source") == "nvidia" and _to_slug(s.get("nvidia_skill_name", "")) == slug),
+        (
+            s
+            for s in skills
+            if s.get("source") == "nvidia"
+            and _to_slug(s.get("nvidia_skill_name", "")) == slug
+        ),
         None,
     )
     if not match:
         match = next(
-            (s for s in skills
-             if s.get("source") == "nvidia" and _to_slug(s.get("repo", "")) == slug),
+            (
+                s
+                for s in skills
+                if s.get("source") == "nvidia" and _to_slug(s.get("repo", "")) == slug
+            ),
             None,
         )
 
     is_thin = not match or not match.get("grade")
     robots_meta = (
         '<meta name="robots" content="noindex, nofollow">'
-        if is_thin else
-        '<meta name="robots" content="index, follow, max-snippet:200, max-image-preview:large">'
+        if is_thin
+        else '<meta name="robots" content="index, follow, max-snippet:200, max-image-preview:large">'
     )
 
     if not match:
@@ -1128,7 +1284,9 @@ def render_nvidia_skill(skill_slug: str, request: Request):
         repo = skill_slug
     else:
         # Try to pull full detail blob (has categories + findings)
-        detail = registry_store.get_scanned_detail(match.get("owner", ""), match.get("repo", ""))
+        detail = registry_store.get_scanned_detail(
+            match.get("owner", ""), match.get("repo", "")
+        )
         data = detail if detail else match
         grade = data.get("grade", "?")
         status = data.get("status", "")
@@ -1142,10 +1300,22 @@ def render_nvidia_skill(skill_slug: str, request: Request):
         scanned_at = data.get("scanned_at", "")
         ai_summary = data.get("ai_summary", "")
         nvidia_domain = match.get("nvidia_domain") or data.get("nvidia_domain") or []
-        nvidia_audience = match.get("nvidia_audience") or data.get("nvidia_audience") or []
-        nvidia_skill_name = match.get("nvidia_skill_name") or data.get("nvidia_skill_name") or skill_slug
-        nvidia_skill_url = match.get("nvidia_skill_url") or data.get("nvidia_skill_url") or f"https://build.nvidia.com/skills/{skill_slug}"
-        nvidia_subdomain = match.get("nvidia_subdomain") or data.get("nvidia_subdomain") or ""
+        nvidia_audience = (
+            match.get("nvidia_audience") or data.get("nvidia_audience") or []
+        )
+        nvidia_skill_name = (
+            match.get("nvidia_skill_name")
+            or data.get("nvidia_skill_name")
+            or skill_slug
+        )
+        nvidia_skill_url = (
+            match.get("nvidia_skill_url")
+            or data.get("nvidia_skill_url")
+            or f"https://build.nvidia.com/skills/{skill_slug}"
+        )
+        nvidia_subdomain = (
+            match.get("nvidia_subdomain") or data.get("nvidia_subdomain") or ""
+        )
         owner = match.get("owner", "NVIDIA")
         repo = match.get("repo", skill_slug)
 
@@ -1166,7 +1336,8 @@ def render_nvidia_skill(skill_slug: str, request: Request):
     )
     taxonomy_html = (
         f'<div style="margin-bottom:16px">{domains_html}{audiences_html}</div>'
-        if (domains_html or audiences_html) else ""
+        if (domains_html or audiences_html)
+        else ""
     )
 
     ai_prose_html = ""
@@ -1180,7 +1351,12 @@ def render_nvidia_skill(skill_slug: str, request: Request):
     findings_rows = ""
     for f in findings[:10]:
         sev = f.get("severity", "INFO")
-        sev_color = {"CRITICAL": "#ef4444", "HIGH": "#f97316", "MEDIUM": "#f59e0b", "LOW": "#64748b"}.get(sev.upper(), "#64748b")
+        sev_color = {
+            "CRITICAL": "#ef4444",
+            "HIGH": "#f97316",
+            "MEDIUM": "#f59e0b",
+            "LOW": "#64748b",
+        }.get(sev.upper(), "#64748b")
         rule = f.get("rule", "")
         msg = f.get("message", "")[:200]
         loc = f"{f.get('file', '')}:{f.get('line', '')}" if f.get("file") else ""
@@ -1199,16 +1375,39 @@ def render_nvidia_skill(skill_slug: str, request: Request):
 
     # Categories
     cat_rows = ""
-    default_cats = ["secrets", "prompt_injection", "malicious_execution", "supply_chain", "excessive_agency"]
-    cat_labels = {"secrets": "Secrets & Credentials", "prompt_injection": "Prompt Injection",
-                  "malicious_execution": "Malicious Execution", "supply_chain": "Supply Chain",
-                  "excessive_agency": "Excessive Agency"}
-    cats = categories if categories else [
-        {"category": c, "status": ("FAIL" if grade == "F" and c in ("secrets", "prompt_injection")
-                                   else "WARN" if grade in ("B", "C") and c == "prompt_injection"
-                                   else "PASS")}
-        for c in default_cats
+    default_cats = [
+        "secrets",
+        "prompt_injection",
+        "malicious_execution",
+        "supply_chain",
+        "excessive_agency",
     ]
+    cat_labels = {
+        "secrets": "Secrets & Credentials",
+        "prompt_injection": "Prompt Injection",
+        "malicious_execution": "Malicious Execution",
+        "supply_chain": "Supply Chain",
+        "excessive_agency": "Excessive Agency",
+    }
+    cats = (
+        categories
+        if categories
+        else [
+            {
+                "category": c,
+                "status": (
+                    "FAIL"
+                    if grade == "F" and c in ("secrets", "prompt_injection")
+                    else (
+                        "WARN"
+                        if grade in ("B", "C") and c == "prompt_injection"
+                        else "PASS"
+                    )
+                ),
+            }
+            for c in default_cats
+        ]
+    )
     for c in cats:
         cs = c.get("status", "PASS")
         cc = "#10b981" if cs == "PASS" else "#f59e0b" if cs == "WARN" else "#ef4444"
@@ -1216,46 +1415,54 @@ def render_nvidia_skill(skill_slug: str, request: Request):
         cat_rows += f'<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(71,85,105,0.15)"><span style="font-size:13px;color:#cbd5e1">{cn}</span><span style="font-size:11px;font-weight:700;font-family:monospace;color:{cc};background:{cc}15;padding:2px 8px;border-radius:4px;border:1px solid {cc}33">{cs}</span></div>'
 
     # JSON-LD
-    json_ld = json.dumps({
-        "@context": "https://schema.org",
-        "@type": "SoftwareApplication",
-        "@id": page_url,
-        "name": nvidia_skill_name,
-        "url": nvidia_skill_url,
-        "description": description,
-        "applicationCategory": "DeveloperApplication",
-        "creator": {"@type": "Organization", "name": "NVIDIA"},
-        "review": {
-            "@type": "Review",
-            "author": {"@type": "Organization", "name": "GitScape AI ScapeGuard"},
-            "reviewBody": (
-                f"{nvidia_skill_name} is an NVIDIA-curated AI agent skill. "
-                f"ScapeGuard security grade: {grade} ({grade_verdict}). "
-                f"{findings_count} finding{'s' if findings_count != 1 else ''} across {files_analyzed} files. "
-                f"Languages: {langs_str}."
-            ),
-            "reviewRating": {
-                "@type": "Rating",
-                "ratingValue": {"A": "5", "B": "4", "C": "3"}.get(grade, "1"),
-                "bestRating": "5",
-                "worstRating": "1",
+    json_ld = json.dumps(
+        {
+            "@context": "https://schema.org",
+            "@type": "SoftwareApplication",
+            "@id": page_url,
+            "name": nvidia_skill_name,
+            "url": nvidia_skill_url,
+            "description": description,
+            "applicationCategory": "DeveloperApplication",
+            "creator": {"@type": "Organization", "name": "NVIDIA"},
+            "review": {
+                "@type": "Review",
+                "author": {"@type": "Organization", "name": "GitScape AI ScapeGuard"},
+                "reviewBody": (
+                    f"{nvidia_skill_name} is an NVIDIA-curated AI agent skill. "
+                    f"ScapeGuard security grade: {grade} ({grade_verdict}). "
+                    f"{findings_count} finding{'s' if findings_count != 1 else ''} across {files_analyzed} files. "
+                    f"Languages: {langs_str}."
+                ),
+                "reviewRating": {
+                    "@type": "Rating",
+                    "ratingValue": {"A": "5", "B": "4", "C": "3"}.get(grade, "1"),
+                    "bestRating": "5",
+                    "worstRating": "1",
+                },
+                "datePublished": scanned_at[:10] if scanned_at else "",
             },
-            "datePublished": scanned_at[:10] if scanned_at else "",
+            "keywords": ", ".join(nvidia_domain + nvidia_audience),
         },
-        "keywords": ", ".join(nvidia_domain + nvidia_audience),
-    }, indent=2)
+        indent=2,
+    )
 
     meta_desc = (
         f"{nvidia_skill_name} is an NVIDIA-curated AI agent skill"
         + (f" for {', '.join(nvidia_domain)}" if nvidia_domain else "")
         + f". ScapeGuard security grade: {grade}"
-        + (f" — {findings_count} finding{'s' if findings_count != 1 else ''}" if findings_count else ", no findings")
+        + (
+            f" — {findings_count} finding{'s' if findings_count != 1 else ''}"
+            if findings_count
+            else ", no findings"
+        )
         + f". Languages: {langs_str}. View the full security audit on GitScape AI."
     )
 
     nvidia_url_html = (
         f'<a href="{nvidia_skill_url}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;padding:10px 18px;background:rgba(30,41,59,0.7);color:#94a3b8;font-weight:600;font-size:13px;border-radius:8px;border:1px solid rgba(71,85,105,0.4);text-decoration:none">View on NVIDIA &#8599;</a>'
-        if nvidia_skill_url else ""
+        if nvidia_skill_url
+        else ""
     )
 
     html = f"""<!DOCTYPE html>
@@ -1421,6 +1628,7 @@ def render_nvidia_skill(skill_slug: str, request: Request):
         headers={"Cache-Control": "public, max-age=1800, stale-while-revalidate=86400"},
     )
 
+
 @router.get("/badge/{owner}/{repo}")
 def get_repo_badge(owner: str, repo: str):
     """
@@ -1435,7 +1643,10 @@ def get_repo_badge(owner: str, repo: str):
     matching_skill = None
     skills = registry_store.list_registry_skills()
     for skill in skills:
-        if skill["owner"].lower() == owner.lower() and skill["repo"].lower() == repo.lower():
+        if (
+            skill["owner"].lower() == owner.lower()
+            and skill["repo"].lower() == repo.lower()
+        ):
             matching_skill = skill
             break
 
@@ -1456,13 +1667,10 @@ def get_repo_badge(owner: str, repo: str):
     color = color_map.get(grade, "#64748b")
 
     # --- Badge geometry ------------------------------------------------
-    # Left segment:  "gitscape.ai"   (11 chars)
-    # Right segment: "✦ Skill Verified · A"  (variable with grade letter)
-    label = "gitscape.ai"
-    if grade != "Scanned":
-        value = f"\u2726 Skill Verified \u00b7 {grade}"
-    else:
-        value = "\u2726 Skill Scanned"
+    # Left segment:  "gitscape.ai"  (brand)
+    # Right segment: "A" / "B" / "C" / "F" / "scanned"  (compact result)
+    label = "Skill Verified"
+    value = grade if grade != "Scanned" else "scanned"
 
     # Approximate character widths (DejaVu Sans 11px): ~6.8px per char
     char_w = 6.8
@@ -1475,15 +1683,22 @@ def get_repo_badge(owner: str, repo: str):
     value_x = label_w + value_w / 2
 
     # --- Tooltip -------------------------------------------------------
-    grade_labels = {"A": "Clean", "B": "Minor Warnings", "C": "Review Advised", "F": "Blocked"}
+    grade_labels = {
+        "A": "Clean",
+        "B": "Minor Warnings",
+        "C": "Review Advised",
+        "F": "Blocked",
+    }
     grade_label = grade_labels.get(grade, "Scanned")
     finding_word = "finding" if findings_count == 1 else "findings"
     tooltip = (
-        f"AI agent skill scanned by GitScape — "
-        f"Grade {grade} ({grade_label}) \u00b7 "
-        f"{findings_count} {finding_word} across 55+ security rules"
-    ) if grade != "Scanned" else (
-        "AI agent skill scanned by GitScape"
+        (
+            f"AI agent skill scanned by GitScape — "
+            f"Grade {grade} ({grade_label}) \u00b7 "
+            f"{findings_count} {finding_word} across 55+ security rules"
+        )
+        if grade != "Scanned"
+        else ("AI agent skill scanned by GitScape")
     )
 
     svg = f"""<svg xmlns="http://www.w3.org/2000/svg" width="{total_w}" height="20">
@@ -1509,6 +1724,7 @@ def get_repo_badge(owner: str, repo: str):
 </svg>"""
 
     from fastapi import Response
+
     return Response(content=svg, media_type="image/svg+xml")
 
 
@@ -1520,7 +1736,9 @@ class SkillZipRequest(BaseModel):
     languages: List[str] = []
     files_analyzed: int = 0
     bypass_scan_gate: bool = False
-    skill_type: str = "framework"  # always "framework"; "code" is internal fallback only
+    skill_type: str = (
+        "framework"  # always "framework"; "code" is internal fallback only
+    )
 
 
 def _readme_from_units(units) -> str:
@@ -1544,10 +1762,13 @@ def _build_from_digest(body: "SkillZipRequest", repo_url: str, *, hd: bool = Fal
 
     doc = skillforge.parse_digest(body.digest_md)
     meta = RepoMeta(
-        owner=body.owner, repo=body.repo, repo_url=repo_url,
+        owner=body.owner,
+        repo=body.repo,
+        repo_url=repo_url,
         primary_languages=body.languages,
         files_analyzed=body.files_analyzed or doc.files_analyzed,
-        readme=_readme_from_units(doc.units), file_structure=doc.tree,
+        readme=_readme_from_units(doc.units),
+        file_structure=doc.tree,
     )
 
     # Option A — for framework builds, reuse references from the Code Skill
@@ -1565,7 +1786,8 @@ def _build_from_digest(body: "SkillZipRequest", repo_url: str, *, hd: bool = Fal
             )
 
     pkg = skillforge.build_skill(
-        doc.units, meta,
+        doc.units,
+        meta,
         digest_hash=skillforge.content_hash(body.digest_md),
         hd=hd,
         skill_type=skill_type,
@@ -1574,7 +1796,6 @@ def _build_from_digest(body: "SkillZipRequest", repo_url: str, *, hd: bool = Fal
     )
     skillforge.skill_cache.set(key, pkg)
     return pkg
-
 
 
 @router.post("/skill-zip")
@@ -1595,9 +1816,12 @@ def get_skill_zip(
         repo_url = urllib.parse.unquote(body.repo_url)
         pkg = _build_from_digest(body, repo_url)
         try:
-            zip_buffer = skillforge.build_zip(pkg, bypass_scan_gate=body.bypass_scan_gate)
+            zip_buffer = skillforge.build_zip(
+                pkg, bypass_scan_gate=body.bypass_scan_gate
+            )
         except ScanBlocked as blocked:
             from app.skillforge.package import is_bypassable
+
             raise HTTPException(
                 status_code=422,
                 detail={
@@ -1635,7 +1859,9 @@ def get_hd_prose(
     references + scan_report + manifest. 503 when no server key is configured.
     """
     if not hd_mod.hd_available():
-        raise HTTPException(status_code=503, detail="HD mode is not configured on this server.")
+        raise HTTPException(
+            status_code=503, detail="HD mode is not configured on this server."
+        )
     try:
         repo_url = urllib.parse.unquote(body.repo_url)
         pkg = _build_from_digest(body, repo_url, hd=True)
@@ -1651,6 +1877,7 @@ def get_hd_prose(
 
 class FrameworkSkillRequest(SkillZipRequest):
     """Same payload as /skill-zip; builds an Engineering Skill using the framework anatomy."""
+
     skill_type: str = "framework"
 
 
@@ -1894,6 +2121,7 @@ def create_app() -> FastAPI:
 
     # Mount admin router (key-gated, no rate limit)
     from app.admin_router import admin_router
+
     app.include_router(admin_router, prefix="/admin")
 
     return app

@@ -107,8 +107,15 @@
     "nemo-mbridge-perf-expert-parallel-overlap",
     "nemo-mbridge-perf-hierarchical-context-parallel",
     "nemo-mbridge-perf-megatron-fsdp",
-    "nemo-mbridge-perf-memory-tuning"
+    "nemo-mbridge-perf-memory-tuning",
+    "nemo-mbridge-perf-moe-comm-overlap",
+    "nemo-mbridge-perf-moe-dispatcher-selection",
+    "nemo-mbridge-perf-moe-hardware-configs",
+    "nemo-mbridge-perf-moe-long-context",
+    "nemo-mbridge-perf-moe-optimization-workflow",
+    "nemo-mbridge-perf-moe-vlm-training",
+    "nemo-mbridge-perf-parallelism-strategies"
   ],
   "failed": [],
-  "updated_at": "2026-07-16T19:48:04.614849+00:00"
+  "updated_at": "2026-07-16T19:50:31.949878+00:00"
 }
