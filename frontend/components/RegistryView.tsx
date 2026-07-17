@@ -103,7 +103,11 @@ export const RegistryView: React.FC<{ onNavigate: (path: string) => void }> = ({
   useEffect(() => {
     fetch(getApiUrl("/registry/search"))
       .then((r) => (r.ok ? r.json() : []))
-      .then((data) => setSkills(Array.isArray(data) ? data : []))
+      .then((data) => {
+        const arr = Array.isArray(data) ? data : [];
+        // Filter out NVIDIA monorepo sub-skills from the index view
+        setSkills(arr.filter((s) => s.source !== "nvidia"));
+      })
       .catch((e) => console.error("Failed to fetch registry list", e))
       .finally(() => setLoading(false));
   }, []);
@@ -457,7 +461,7 @@ export const RegistryView: React.FC<{ onNavigate: (path: string) => void }> = ({
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5 pb-14">
                 {list.map((s) => (
                   <a
-                    key={s.repo_url}
+                    key={`${s.owner}/${s.repo}/${s.nvidia_skill_name || ""}`}
                     href={`/registry/${s.owner}/${s.repo}`}
                     onClick={(e) => {
                       e.preventDefault();
@@ -542,7 +546,7 @@ export const RegistryView: React.FC<{ onNavigate: (path: string) => void }> = ({
                 <tbody>
                   {list.map((s, i) => (
                     <tr
-                      key={s.repo_url}
+                      key={`${s.owner}/${s.repo}/${s.nvidia_skill_name || ""}`}
                       onClick={() => goToReport(s.owner, s.repo)}
                       onKeyDown={(e) => e.key === "Enter" && goToReport(s.owner, s.repo)}
                       tabIndex={0}
