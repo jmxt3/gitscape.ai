@@ -5,7 +5,7 @@ import React, { useEffect, useState } from "react";
  * Static/presentational marketing content shown on the home (no-results) state.
  */
 
-const REPO_API_URL = "https://github.com/jmxt3/gitscape.ai";
+const REPO_API_URL = "https://api.github.com/repos/jmxt3/gitscape.ai";
 const REPO_URL = "https://github.com/jmxt3/gitscape.ai";
 
 export const CheckRow: React.FC<{ children: React.ReactNode }> = ({ children }) => (
