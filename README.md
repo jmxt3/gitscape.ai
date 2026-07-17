@@ -1,17 +1,14 @@
 <h1 align="center">GitScape</h1>
-
 <p align="center">
   <img src="assets/gitscape_readme_banner_2.jpg" alt="GitScape App Screenshot" width="700" />
 </p>
-
 <p align="center">
   <strong>The open-source repository compiler, security gate, and Model Context Protocol (MCP) server for AI agents.</strong><br/>
   ⚡ Instantly compile any GitHub codebase into context-efficient, verified Agent Skills for Cursor, Windsurf, and Claude Code.
 </p>
-
 <p align="center">
   <a href="https://gitscape.ai/registry/jmxt3/gitscape.ai">
-    <img src="https://gitscape.ai/registry/jmxt3/gitscape.ai" alt="Skill Verified · A — AI agent skill scanned by GitScape across 55+ security rules" />
+    <img src="https://gitscape.ai/api/badge/jmxt3/gitscape.ai" alt="Skill Verified · A — AI agent skill scanned by GitScape across 55+ security rules" />
   </a>
   <a href="https://www.npmjs.com/package/gitscape">
     <img src="https://img.shields.io/npm/v/gitscape.svg?style=flat&color=CB3837&logo=npm" alt="NPM Version" />
