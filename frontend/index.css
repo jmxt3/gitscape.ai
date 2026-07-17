@@ -267,3 +267,17 @@ body {
   align-items: center;
   gap: 0.25rem;
 }
+
+/* ─── Mobile Landscape Utilities ─── */
+@media (orientation: landscape) and (max-height: 600px) {
+  .landscape-hidden {
+    display: none !important;
+  }
+  .landscape-only-flex {
+    display: flex !important;
+  }
+  .landscape-only-block {
+    display: block !important;
+  }
+}
+

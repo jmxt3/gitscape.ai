@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import GitHubButton from 'react-github-btn';
 
 interface HeaderProps {
@@ -20,7 +20,22 @@ const CheckIcon = () => (
   </svg>
 );
 
+const MenuIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+  </svg>
+);
+
+const CloseIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+  </svg>
+);
+
+
 export const Header: React.FC<HeaderProps> = ({ onToggleTokenModal, hasToken, currentPath, onNavigate }) => {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
   return (
     <header
       className="sticky top-0 z-40"
@@ -59,14 +74,14 @@ export const Header: React.FC<HeaderProps> = ({ onToggleTokenModal, hasToken, cu
         </div>
 
         {/* Center nav */}
-        <nav className="hidden md:flex items-center gap-7 text-[13px] font-medium text-slate-400">
+        <nav className="hidden md:flex landscape-only-flex items-center gap-7 text-[13px] font-medium text-slate-400">
           <a
             href="/"
             onClick={(e) => {
               e.preventDefault();
               onNavigate('/');
             }}
-            className={`hover:text-slate-200 transition-colors ${currentPath === '/' ? 'text-slate-100 font-semibold' : ''}`}
+            className={`hover:text-slate-200 transition-colors landscape-hidden ${currentPath === '/' ? 'text-slate-100 font-semibold' : ''}`}
           >
             Home
           </a>
@@ -76,7 +91,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleTokenModal, hasToken, cu
               e.preventDefault();
               onNavigate('/', '#how-it-works');
             }}
-            className="hover:text-slate-200 transition-colors"
+            className="hover:text-slate-200 transition-colors landscape-hidden"
           >
             How it works
           </a>
@@ -86,7 +101,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleTokenModal, hasToken, cu
               e.preventDefault();
               onNavigate('/', '#developer-tools');
             }}
-            className="hover:text-slate-200 transition-colors"
+            className="hover:text-slate-200 transition-colors landscape-hidden"
           >
             CLI &amp; MCP
           </a>
@@ -96,7 +111,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleTokenModal, hasToken, cu
               e.preventDefault();
               onNavigate('/', '#security');
             }}
-            className="hover:text-slate-200 transition-colors"
+            className="hover:text-slate-200 transition-colors landscape-hidden"
           >
             Security
           </a>
@@ -106,7 +121,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleTokenModal, hasToken, cu
               e.preventDefault();
               onNavigate('/', '#open-source');
             }}
-            className="hover:text-slate-200 transition-colors"
+            className="hover:text-slate-200 transition-colors landscape-hidden"
           >
             Open source
           </a>
@@ -124,7 +139,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleTokenModal, hasToken, cu
 
         {/* Right controls */}
         <div className="flex items-center gap-3">
-          <div className="hidden sm:block">
+          <div className="hidden sm:block landscape-hidden">
             <GitHubButton
               href="https://github.com/jmxt3/gitscape.ai"
               data-color-scheme="no-preference: dark; light: dark; dark: dark;"
@@ -160,8 +175,113 @@ export const Header: React.FC<HeaderProps> = ({ onToggleTokenModal, hasToken, cu
               {hasToken ? '✓' : 'Token'}
             </span>
           </button>
+
+          {/* Hamburger button */}
+          <button
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="md:hidden flex items-center justify-center p-2 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800/50 transition-colors focus:outline-none focus:ring-2 focus:ring-violet-500"
+            aria-label="Toggle navigation menu"
+            aria-expanded={isMobileMenuOpen}
+          >
+            {isMobileMenuOpen ? <CloseIcon /> : <MenuIcon />}
+          </button>
         </div>
       </div>
+
+      {/* Mobile Menu Dropdown */}
+      {isMobileMenuOpen && (
+        <div
+          className="md:hidden border-t border-slate-800/60 transition-all duration-200"
+          style={{
+            background: 'rgba(8, 13, 20, 0.95)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+          }}
+        >
+          <nav className="flex flex-col px-4 py-3 gap-3 text-[14px] font-medium text-slate-300">
+            <a
+              href="/"
+              onClick={(e) => {
+                e.preventDefault();
+                onNavigate('/');
+                setIsMobileMenuOpen(false);
+              }}
+              className={`py-2 px-3 rounded-lg hover:text-slate-100 hover:bg-slate-800/40 transition-all ${currentPath === '/' ? 'text-slate-100 bg-slate-800/60 font-semibold' : ''}`}
+            >
+              Home
+            </a>
+            <a
+              href="/#how-it-works"
+              onClick={(e) => {
+                e.preventDefault();
+                onNavigate('/', '#how-it-works');
+                setIsMobileMenuOpen(false);
+              }}
+              className="py-2 px-3 rounded-lg hover:text-slate-100 hover:bg-slate-800/40 transition-all"
+            >
+              How it works
+            </a>
+            <a
+              href="/#developer-tools"
+              onClick={(e) => {
+                e.preventDefault();
+                onNavigate('/', '#developer-tools');
+                setIsMobileMenuOpen(false);
+              }}
+              className="py-2 px-3 rounded-lg hover:text-slate-100 hover:bg-slate-800/40 transition-all"
+            >
+              CLI &amp; MCP
+            </a>
+            <a
+              href="/#security"
+              onClick={(e) => {
+                e.preventDefault();
+                onNavigate('/', '#security');
+                setIsMobileMenuOpen(false);
+              }}
+              className="py-2 px-3 rounded-lg hover:text-slate-100 hover:bg-slate-800/40 transition-all"
+            >
+              Security
+            </a>
+            <a
+              href="/#open-source"
+              onClick={(e) => {
+                e.preventDefault();
+                onNavigate('/', '#open-source');
+                setIsMobileMenuOpen(false);
+              }}
+              className="py-2 px-3 rounded-lg hover:text-slate-100 hover:bg-slate-800/40 transition-all"
+            >
+              Open source
+            </a>
+            <a
+              href="/registry"
+              onClick={(e) => {
+                e.preventDefault();
+                onNavigate('/registry');
+                setIsMobileMenuOpen(false);
+              }}
+              className={`py-2 px-3 rounded-lg hover:text-slate-100 hover:bg-slate-800/40 transition-all ${currentPath === '/registry' ? 'text-cyan-400 bg-cyan-950/20 border border-cyan-800/30 font-bold' : ''}`}
+            >
+              Registry
+            </a>
+
+            {/* GitHub Stars Button in mobile menu (when screen is extra small) */}
+            <div className="sm:hidden pt-2 border-t border-slate-800/60 flex items-center justify-between px-3">
+              <span className="text-slate-400 text-xs font-semibold">GitHub Stars</span>
+              <GitHubButton
+                href="https://github.com/jmxt3/gitscape.ai"
+                data-color-scheme="no-preference: dark; light: dark; dark: dark;"
+                data-size="large"
+                data-show-count="true"
+                aria-label="Star jmxt3/gitscape.ai on GitHub"
+              >
+                Stars
+              </GitHubButton>
+            </div>
+          </nav>
+        </div>
+      )}
     </header>
   );
 };
