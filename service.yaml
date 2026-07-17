@@ -64,6 +64,11 @@ spec:
                 secretKeyRef:
                   name: GEMINI_API_KEY
                   key: latest
+            - name: GITSCAPE_ADMIN_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: API_KEY
+                  key: latest
           resources:
             limits:
               memory: 2Gi

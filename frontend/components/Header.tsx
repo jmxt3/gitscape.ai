@@ -126,11 +126,11 @@ export const Header: React.FC<HeaderProps> = ({ onToggleTokenModal, hasToken, cu
         <div className="flex items-center gap-3">
           <div className="hidden sm:block">
             <GitHubButton
-              href="https://github.com/jmxt3/Git-Scape-Web"
+              href="https://github.com/jmxt3/gitscape.ai"
               data-color-scheme="no-preference: dark; light: dark; dark: dark;"
               data-size="large"
               data-show-count="true"
-              aria-label="Star jmxt3/Git-Scape-Web on GitHub"
+              aria-label="Star jmxt3/gitscape.ai on GitHub"
             >
               Stars
             </GitHubButton>
