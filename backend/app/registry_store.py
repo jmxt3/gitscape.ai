@@ -138,18 +138,25 @@ def list_registry_skills() -> List[dict]:
         dynamic_skills = IN_MEMORY_SCANS
 
     # Combine static seed list with unique dynamic skills (dynamic wins on overlap)
-    seen_urls = set()
+    seen_keys = set()
     combined = []
+
+    def get_dedup_key(item: dict) -> tuple:
+        if item.get("source") == "nvidia":
+            name = item.get("nvidia_skill_name", "")
+            return ("nvidia", name.lower().replace(" ", "-").replace("_", "-").strip())
+        return ("community", item["repo_url"].lower())
+
     for item in dynamic_skills:
-        url = item["repo_url"].lower()
-        if url not in seen_urls:
+        key = get_dedup_key(item)
+        if key not in seen_keys:
             combined.append(item)
-            seen_urls.add(url)
+            seen_keys.add(key)
     for item in STATIC_REGISTRY_SKILLS:
-        url = item["repo_url"].lower()
-        if url not in seen_urls:
+        key = get_dedup_key(item)
+        if key not in seen_keys:
             combined.append(item)
-            seen_urls.add(url)
+            seen_keys.add(key)
 
     return combined
 
@@ -164,7 +171,7 @@ def get_all_scans() -> List[dict]:
     return sorted(all_scans, key=lambda x: x.get("scanned_at", ""), reverse=True)
 
 
-def get_scanned_detail(owner: str, repo: str) -> Optional[dict]:
+def get_scanned_detail(owner: str, repo: str, nvidia_skill_name: Optional[str] = None) -> Optional[dict]:
     """
     Retrieves the full scan report payload from GCS if cached.
     """
@@ -174,14 +181,18 @@ def get_scanned_detail(owner: str, repo: str) -> Optional[dict]:
     if client and bucket_name:
         try:
             bucket = client.bucket(bucket_name)
-            blob = bucket.blob(f"scans/{owner.lower()}-{repo.lower()}.json")
+            if nvidia_skill_name:
+                slug = nvidia_skill_name.lower().replace(" ", "-").replace("_", "-").strip()
+                blob_name = f"scans/nvidia-{slug}.json"
+            else:
+                blob_name = f"scans/{owner.lower()}-{repo.lower()}.json"
+
+            blob = bucket.blob(blob_name)
             if blob.exists():
-                logger.info(
-                    f"Registry cache hit for scans/{owner.lower()}-{repo.lower()}.json"
-                )
+                logger.info(f"Registry cache hit for {blob_name}")
                 return json.loads(blob.download_as_text(encoding="utf-8"))
         except Exception as e:
-            logger.error(f"Error checking registry cache for {owner}/{repo}: {e}")
+            logger.error(f"Error checking registry cache for {owner}/{repo} ({nvidia_skill_name}): {e}")
     return None
 
 
@@ -255,12 +266,22 @@ def save_scanned_skill(owner: str, repo: str, detail_data: dict):
         "ai_summary": detail_data.get("ai_summary", ""),
     }
 
+    is_nvidia = detail_data.get("source") == "nvidia"
+    skill_slug = ""
+    if is_nvidia and detail_data.get("nvidia_skill_name"):
+        skill_name = detail_data["nvidia_skill_name"]
+        skill_slug = skill_name.lower().replace(" ", "-").replace("_", "-").strip()
+
     if client and bucket_name:
         try:
             bucket = client.bucket(bucket_name)
 
             # 1. Save full details
-            detail_blob = bucket.blob(f"scans/{owner.lower()}-{repo.lower()}.json")
+            if is_nvidia and skill_slug:
+                detail_blob = bucket.blob(f"scans/nvidia-{skill_slug}.json")
+            else:
+                detail_blob = bucket.blob(f"scans/{owner.lower()}-{repo.lower()}.json")
+
             detail_blob.upload_from_string(
                 json.dumps(detail_data_to_save, indent=2), content_type="application/json"
             )
@@ -277,15 +298,19 @@ def save_scanned_skill(owner: str, repo: str, detail_data: dict):
                     existing_index = []
 
             # Remove any older duplicate entry in index (auto-update on re-scan)
-            was_update = any(
-                item["repo_url"].lower() == detail_data["repo_url"].lower()
-                for item in existing_index
-            )
-            existing_index = [
-                item
-                for item in existing_index
-                if item["repo_url"].lower() != detail_data["repo_url"].lower()
-            ]
+            def is_dup(item: dict) -> bool:
+                if is_nvidia and skill_slug:
+                    return (
+                        item.get("source") == "nvidia"
+                        and item.get("nvidia_skill_name", "").lower().replace(" ", "-").replace("_", "-").strip() == skill_slug
+                    )
+                return (
+                    item.get("source") != "nvidia"
+                    and item["repo_url"].lower() == detail_data["repo_url"].lower()
+                )
+
+            was_update = any(is_dup(item) for item in existing_index)
+            existing_index = [item for item in existing_index if not is_dup(item)]
             existing_index.append(summary_data)
 
             index_blob.upload_from_string(
@@ -293,11 +318,11 @@ def save_scanned_skill(owner: str, repo: str, detail_data: dict):
             )
             if was_update:
                 logger.info(
-                    f"Registry entry updated for {owner}/{repo} — triggered by user re-scan",
+                    f"Registry entry updated for {owner}/{repo} (nvidia_skill_name: {detail_data.get('nvidia_skill_name')}) — triggered by user re-scan",
                     extra={"event": "registry_auto_update", "owner": owner, "repo": repo},
                 )
             else:
-                logger.info(f"Saved {owner}/{repo} scan to GCS bucket successfully.")
+                logger.info(f"Saved {owner}/{repo} (nvidia_skill_name: {detail_data.get('nvidia_skill_name')}) scan to GCS bucket successfully.")
             return
         except Exception as e:
             logger.error(
@@ -306,10 +331,17 @@ def save_scanned_skill(owner: str, repo: str, detail_data: dict):
 
     # In-memory fallback
     global IN_MEMORY_SCANS
-    IN_MEMORY_SCANS = [
-        item
-        for item in IN_MEMORY_SCANS
-        if item["repo_url"].lower() != detail_data["repo_url"].lower()
-    ]
+    def is_dup_mem(item: dict) -> bool:
+        if is_nvidia and skill_slug:
+            return (
+                item.get("source") == "nvidia"
+                and item.get("nvidia_skill_name", "").lower().replace(" ", "-").replace("_", "-").strip() == skill_slug
+            )
+        return (
+            item.get("source") != "nvidia"
+            and item["repo_url"].lower() == detail_data["repo_url"].lower()
+        )
+
+    IN_MEMORY_SCANS = [item for item in IN_MEMORY_SCANS if not is_dup_mem(item)]
     IN_MEMORY_SCANS.append(summary_data)
     logger.info(f"Saved {owner}/{repo} scan to in-memory fallback list.")

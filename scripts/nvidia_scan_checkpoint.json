@@ -179,28 +179,8 @@
     "tao-setup-nvidia-gpu-host",
     "tao-train-action-recognition",
     "tao-train-bevfusion",
-    "tao-train-centerpose",
-    "tao-train-deformable-detr",
-    "tao-train-depth-anything-v2",
-    "tao-train-dino",
-    "tao-train-fast-foundation-stereo",
-    "tao-train-foundation-stereo",
-    "tao-train-grounding-dino",
-    "tao-train-image-classification",
-    "tao-train-mask-auto-encoder",
-    "tao-train-mask-auto-label",
-    "tao-train-mask-grounding-dino",
-    "tao-train-mask2former",
-    "tao-train-metric-learning-recognition",
-    "tao-train-nvdinov2",
-    "tao-train-nvpanoptix3d",
-    "tao-train-ocdnet",
-    "tao-train-ocrnet",
-    "tao-train-oneformer",
-    "tao-train-optical-inspection",
-    "tao-train-pointpillars",
-    "tao-train-pose-classification"
+    "tao-train-centerpose"
   ],
   "failed": [],
-  "updated_at": "2026-07-17T00:56:05.381212+00:00"
+  "updated_at": "2026-07-17T01:27:00.207366+00:00"
 }

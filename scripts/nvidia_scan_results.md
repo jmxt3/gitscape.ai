@@ -1,18 +1,18 @@
 # NVIDIA Skills Batch Scan — Results
 
-> **Generated:** 2026-07-17T00:35:59.084211+00:00
+> **Generated:** 2026-07-17T00:59:03.424150+00:00
 > **Mode:** Live scan
 
 ## Summary
 
 | Metric | Value |
 |--------|-------|
-| Total skills | 2 |
-| Scanned successfully | 2 |
+| Total skills | 229 |
+| Scanned successfully | 229 |
 | Failed | 0 |
 | Skipped (checkpoint) | 0 |
-| Started | 2026-07-17T00:35:44.008564+00:00 |
-| Finished | 2026-07-17T00:35:59.084211+00:00 |
+| Started | 2026-07-17T00:36:23.024546+00:00 |
+| Finished | 2026-07-17T00:59:03.424150+00:00 |
 
 ## Completed Skills
 
@@ -20,3 +20,230 @@
 |---|------------|--------|
 | 1 | `accelerated-computing-cudf` | [OK] OK |
 | 2 | `aiq-deploy` | [OK] OK |
+| 3 | `aiq-research` | [OK] OK |
+| 4 | `amc-run-sample-calibration` | [OK] OK |
+| 5 | `amc-run-video-calibration` | [OK] OK |
+| 6 | `amc-setup-calibration-stack` | [OK] OK |
+| 7 | `cudaq-guide` | [OK] OK |
+| 8 | `cufolio` | [OK] OK |
+| 9 | `cuopt-developer` | [OK] OK |
+| 10 | `cuopt-install` | [OK] OK |
+| 11 | `cuopt-multi-objective-exploration` | [OK] OK |
+| 12 | `cuopt-numerical-optimization-api` | [OK] OK |
+| 13 | `cuopt-numerical-optimization-formulation` | [OK] OK |
+| 14 | `cuopt-routing-api-python` | [OK] OK |
+| 15 | `cuopt-server-api-python` | [OK] OK |
+| 16 | `cupynumeric-hdf5` | [OK] OK |
+| 17 | `cupynumeric-install` | [OK] OK |
+| 18 | `cupynumeric-migration-readiness` | [OK] OK |
+| 19 | `cupynumeric-parallel-data-load` | [OK] OK |
+| 20 | `dali-dynamic-mode` | [OK] OK |
+| 21 | `data-designer` | [OK] OK |
+| 22 | `deepstream-dev` | [OK] OK |
+| 23 | `deepstream-generate-pipeline` | [OK] OK |
+| 24 | `deepstream-import-vision-model` | [OK] OK |
+| 25 | `deepstream-profile-pipeline` | [OK] OK |
+| 26 | `deepstream-sop` | [OK] OK |
+| 27 | `dicom-metadata-extract` | [OK] OK |
+| 28 | `dicom-series-preflight` | [OK] OK |
+| 29 | `dicom-series-to-volume` | [OK] OK |
+| 30 | `digital-health-clinical-asr-build` | [OK] OK |
+| 31 | `digital-health-clinical-asr-eval` | [OK] OK |
+| 32 | `digital-health-clinical-asr-finetune` | [OK] OK |
+| 33 | `digital-health-clinical-asr-setup` | [OK] OK |
+| 34 | `dynamo-interconnect-check` | [OK] OK |
+| 35 | `dynamo-recipe-runner` | [OK] OK |
+| 36 | `dynamo-router-starter` | [OK] OK |
+| 37 | `dynamo-troubleshoot` | [OK] OK |
+| 38 | `earth2studio-create-datasource` | [OK] OK |
+| 39 | `earth2studio-create-diagnostic` | [OK] OK |
+| 40 | `earth2studio-create-prognostic` | [OK] OK |
+| 41 | `earth2studio-data-fetch` | [OK] OK |
+| 42 | `earth2studio-deterministic-forecast` | [OK] OK |
+| 43 | `earth2studio-discover` | [OK] OK |
+| 44 | `earth2studio-install` | [OK] OK |
+| 45 | `holoscan-install-conda` | [OK] OK |
+| 46 | `holoscan-install-container` | [OK] OK |
+| 47 | `holoscan-install-debian` | [OK] OK |
+| 48 | `holoscan-install-source` | [OK] OK |
+| 49 | `holoscan-install-wheel` | [OK] OK |
+| 50 | `holoscan-setup` | [OK] OK |
+| 51 | `hsb-app` | [OK] OK |
+| 52 | `hsb-flash` | [OK] OK |
+| 53 | `hsb-setup` | [OK] OK |
+| 54 | `hsb-test` | [OK] OK |
+| 55 | `jetson-build-source` | [OK] OK |
+| 56 | `jetson-customize-camera` | [OK] OK |
+| 57 | `jetson-customize-clocks` | [OK] OK |
+| 58 | `jetson-customize-fan` | [OK] OK |
+| 59 | `jetson-customize-mgbe` | [OK] OK |
+| 60 | `jetson-customize-nvpmodel` | [OK] OK |
+| 61 | `jetson-customize-pcie` | [OK] OK |
+| 62 | `jetson-customize-pinmux` | [OK] OK |
+| 63 | `jetson-customize-uphy` | [OK] OK |
+| 64 | `jetson-customize-usb` | [OK] OK |
+| 65 | `jetson-derive-carrier` | [OK] OK |
+| 66 | `jetson-diagnostic` | [OK] OK |
+| 67 | `jetson-download-bsp` | [OK] OK |
+| 68 | `jetson-flash-image` | [OK] OK |
+| 69 | `jetson-generate-kb` | [OK] OK |
+| 70 | `jetson-headless-mode` | [OK] OK |
+| 71 | `jetson-inference-mem-tune` | [OK] OK |
+| 72 | `jetson-init-image` | [OK] OK |
+| 73 | `jetson-init-source` | [OK] OK |
+| 74 | `jetson-init-target` | [OK] OK |
+| 75 | `jetson-link-docs` | [OK] OK |
+| 76 | `jetson-llm-benchmark` | [OK] OK |
+| 77 | `jetson-llm-serve` | [OK] OK |
+| 78 | `jetson-memory-audit` | [OK] OK |
+| 79 | `jetson-optimize-memory` | [OK] OK |
+| 80 | `jetson-package` | [OK] OK |
+| 81 | `jetson-print-bsp-info` | [OK] OK |
+| 82 | `jetson-print-device-info` | [OK] OK |
+| 83 | `jetson-promote-image` | [OK] OK |
+| 84 | `jetson-quick-start` | [OK] OK |
+| 85 | `jetson-set-target` | [OK] OK |
+| 86 | `jetson-speculative-decoding` | [OK] OK |
+| 87 | `jetson-validate-image` | [OK] OK |
+| 88 | `launch-nemo-rl` | [OK] OK |
+| 89 | `mcore-create-issue` | [OK] OK |
+| 90 | `mcore-linting-and-formatting` | [OK] OK |
+| 91 | `mcore-run-on-slurm` | [OK] OK |
+| 92 | `mcore-split-pr` | [OK] OK |
+| 93 | `mcore-testing` | [OK] OK |
+| 94 | `nemo-automodel-distributed-training` | [OK] OK |
+| 95 | `nemo-automodel-launcher-config` | [OK] OK |
+| 96 | `nemo-automodel-model-onboarding` | [OK] OK |
+| 97 | `nemo-automodel-recipe-development` | [OK] OK |
+| 98 | `nemo-data-designer-plugin` | [OK] OK |
+| 99 | `nemo-evaluator-plugin` | [OK] OK |
+| 100 | `nemo-mbridge-mlm-bridge-training` | [OK] OK |
+| 101 | `nemo-mbridge-multi-node-slurm` | [OK] OK |
+| 102 | `nemo-mbridge-perf-activation-recompute` | [OK] OK |
+| 103 | `nemo-mbridge-perf-cpu-offloading` | [OK] OK |
+| 104 | `nemo-mbridge-perf-cuda-graphs` | [OK] OK |
+| 105 | `nemo-mbridge-perf-expert-parallel-overlap` | [OK] OK |
+| 106 | `nemo-mbridge-perf-hierarchical-context-parallel` | [OK] OK |
+| 107 | `nemo-mbridge-perf-megatron-fsdp` | [OK] OK |
+| 108 | `nemo-mbridge-perf-memory-tuning` | [OK] OK |
+| 109 | `nemo-mbridge-perf-moe-comm-overlap` | [OK] OK |
+| 110 | `nemo-mbridge-perf-moe-dispatcher-selection` | [OK] OK |
+| 111 | `nemo-mbridge-perf-moe-hardware-configs` | [OK] OK |
+| 112 | `nemo-mbridge-perf-moe-long-context` | [OK] OK |
+| 113 | `nemo-mbridge-perf-moe-optimization-workflow` | [OK] OK |
+| 114 | `nemo-mbridge-perf-moe-vlm-training` | [OK] OK |
+| 115 | `nemo-mbridge-perf-parallelism-strategies` | [OK] OK |
+| 116 | `nemo-mbridge-perf-sequence-packing` | [OK] OK |
+| 117 | `nemo-mbridge-perf-tp-dp-comm-overlap` | [OK] OK |
+| 118 | `nemo-mbridge-recipe-recommender` | [OK] OK |
+| 119 | `nemo-mbridge-resiliency` | [OK] OK |
+| 120 | `nemo-retriever` | [OK] OK |
+| 121 | `nemo-rl-auto-research` | [OK] OK |
+| 122 | `nemo-rl-brev-etiquette` | [OK] OK |
+| 123 | `nemo-rl-docs` | [OK] OK |
+| 124 | `nemo-rl-session-memory` | [OK] OK |
+| 125 | `nemoclaw-user-guide` | [OK] OK |
+| 126 | `nemotron-customize` | [OK] OK |
+| 127 | `nemotron-policy-generator` | [OK] OK |
+| 128 | `nemotron-retrieval-recipes` | [OK] OK |
+| 129 | `nemotron-speech` | [OK] OK |
+| 130 | `nv-generate-ct-rflow` | [OK] OK |
+| 131 | `nv-generate-mr` | [OK] OK |
+| 132 | `nv-generate-mr-brain` | [OK] OK |
+| 133 | `nv-generate-mr-brain-finetune` | [OK] OK |
+| 134 | `nv-generate-vae-finetune` | [OK] OK |
+| 135 | `nv-reason-cxr` | [OK] OK |
+| 136 | `nv-segment-ct` | [OK] OK |
+| 137 | `nv-segment-ct-finetune` | [OK] OK |
+| 138 | `nv-segment-ctmr` | [OK] OK |
+| 139 | `omniverse-cad-to-simready` | [OK] OK |
+| 140 | `omniverse-realtime-viewer` | [OK] OK |
+| 141 | `omniverse-usd-performance-tuning` | [OK] OK |
+| 142 | `physical-ai-defect-image-generation` | [OK] OK |
+| 143 | `physical-ai-infrastructure-setup-and-resilient-scaling` | [OK] OK |
+| 144 | `physical-ai-neural-reconstruction` | [OK] OK |
+| 145 | `physical-ai-people-attribute-search` | [OK] OK |
+| 146 | `physical-ai-video-data-augmentation` | [OK] OK |
+| 147 | `physicsnemo-discover` | [OK] OK |
+| 148 | `rag-blueprint` | [OK] OK |
+| 149 | `rag-eval` | [OK] OK |
+| 150 | `rag-perf` | [OK] OK |
+| 151 | `skill-card-generator` | [OK] OK |
+| 152 | `tao-analyze-changenet-rca` | [OK] OK |
+| 153 | `tao-analyze-gaps-visual-changenet` | [OK] OK |
+| 154 | `tao-analyze-gaps-vlm-bcq` | [OK] OK |
+| 155 | `tao-convert-dataset-format` | [OK] OK |
+| 156 | `tao-finetune-clip` | [OK] OK |
+| 157 | `tao-finetune-cosmos-embed` | [OK] OK |
+| 158 | `tao-finetune-cosmos-reason` | [OK] OK |
+| 159 | `tao-finetune-huggingface-model` | [OK] OK |
+| 160 | `tao-generate-image-grounding` | [OK] OK |
+| 161 | `tao-generate-referring-expressions` | [OK] OK |
+| 162 | `tao-generate-video-reasoning-annotations` | [OK] OK |
+| 163 | `tao-launch-workflow` | [OK] OK |
+| 164 | `tao-list-capabilities` | [OK] OK |
+| 165 | `tao-mine-aoi-images` | [OK] OK |
+| 166 | `tao-port-huggingface-model` | [OK] OK |
+| 167 | `tao-route-visual-changenet-samples` | [OK] OK |
+| 168 | `tao-run-automl` | [OK] OK |
+| 169 | `tao-run-automl-deft-pipeline` | [OK] OK |
+| 170 | `tao-run-deft-aoi` | [OK] OK |
+| 171 | `tao-run-inference-service` | [OK] OK |
+| 172 | `tao-run-on-brev` | [OK] OK |
+| 173 | `tao-run-on-kubernetes` | [OK] OK |
+| 174 | `tao-run-on-local-docker` | [OK] OK |
+| 175 | `tao-run-on-slurm` | [OK] OK |
+| 176 | `tao-run-platform` | [OK] OK |
+| 177 | `tao-setup-nvidia-gpu-host` | [OK] OK |
+| 178 | `tao-train-action-recognition` | [OK] OK |
+| 179 | `tao-train-bevfusion` | [OK] OK |
+| 180 | `tao-train-centerpose` | [OK] OK |
+| 181 | `tao-train-deformable-detr` | [OK] OK |
+| 182 | `tao-train-depth-anything-v2` | [OK] OK |
+| 183 | `tao-train-dino` | [OK] OK |
+| 184 | `tao-train-fast-foundation-stereo` | [OK] OK |
+| 185 | `tao-train-foundation-stereo` | [OK] OK |
+| 186 | `tao-train-grounding-dino` | [OK] OK |
+| 187 | `tao-train-image-classification` | [OK] OK |
+| 188 | `tao-train-mask-auto-encoder` | [OK] OK |
+| 189 | `tao-train-mask-auto-label` | [OK] OK |
+| 190 | `tao-train-mask-grounding-dino` | [OK] OK |
+| 191 | `tao-train-mask2former` | [OK] OK |
+| 192 | `tao-train-metric-learning-recognition` | [OK] OK |
+| 193 | `tao-train-nvdinov2` | [OK] OK |
+| 194 | `tao-train-nvpanoptix3d` | [OK] OK |
+| 195 | `tao-train-ocdnet` | [OK] OK |
+| 196 | `tao-train-ocrnet` | [OK] OK |
+| 197 | `tao-train-oneformer` | [OK] OK |
+| 198 | `tao-train-optical-inspection` | [OK] OK |
+| 199 | `tao-train-pointpillars` | [OK] OK |
+| 200 | `tao-train-pose-classification` | [OK] OK |
+| 201 | `tao-train-reid` | [OK] OK |
+| 202 | `tao-train-rtdetr` | [OK] OK |
+| 203 | `tao-train-segformer` | [OK] OK |
+| 204 | `tao-train-single-step` | [OK] OK |
+| 205 | `tao-train-sparse4d` | [OK] OK |
+| 206 | `tao-train-visual-changenet` | [OK] OK |
+| 207 | `tao-validate-dataset-format` | [OK] OK |
+| 208 | `tilegym-adding-cutile-kernel` | [OK] OK |
+| 209 | `tilegym-converting-cutile-to-julia` | [OK] OK |
+| 210 | `tilegym-converting-cutile-to-triton` | [OK] OK |
+| 211 | `tilegym-cutile-autotuning` | [OK] OK |
+| 212 | `tilegym-cutile-python` | [OK] OK |
+| 213 | `tilegym-improve-cutile-kernel-perf` | [OK] OK |
+| 214 | `tilegym-monkey-patch-kernels-to-transformers` | [OK] OK |
+| 215 | `vss-ask-video` | [OK] OK |
+| 216 | `vss-deploy-dense-captioning` | [OK] OK |
+| 217 | `vss-deploy-detection-tracking-2d` | [OK] OK |
+| 218 | `vss-deploy-detection-tracking-3d` | [OK] OK |
+| 219 | `vss-deploy-profile` | [OK] OK |
+| 220 | `vss-deploy-video-embedding` | [OK] OK |
+| 221 | `vss-generate-video-calibration` | [OK] OK |
+| 222 | `vss-generate-video-report` | [OK] OK |
+| 223 | `vss-manage-alerts` | [OK] OK |
+| 224 | `vss-manage-video-io-storage` | [OK] OK |
+| 225 | `vss-query-analytics` | [OK] OK |
+| 226 | `vss-search-archive` | [OK] OK |
+| 227 | `vss-setup-behavior-analytics` | [OK] OK |
+| 228 | `vss-setup-video-analytics-api` | [OK] OK |
+| 229 | `vss-summarize-video` | [OK] OK |

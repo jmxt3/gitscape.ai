@@ -804,7 +804,11 @@ def get_nvidia_skill(request: Request, skill_slug: str):
     repo = match.get("repo", "")
 
     # Try to enrich with full scan detail (categories, findings, ai_summary, etc.)
-    detail = registry_store.get_scanned_detail(owner, repo) if owner and repo else None
+    detail = (
+        registry_store.get_scanned_detail(owner, repo, match.get("nvidia_skill_name"))
+        if owner and repo
+        else None
+    )
     if detail:
         # Merge NVIDIA taxonomy from index into detail (detail may have been saved before taxonomy fields)
         for field in (
@@ -1285,7 +1289,7 @@ def render_nvidia_skill(skill_slug: str, request: Request):
     else:
         # Try to pull full detail blob (has categories + findings)
         detail = registry_store.get_scanned_detail(
-            match.get("owner", ""), match.get("repo", "")
+            match.get("owner", ""), match.get("repo", ""), match.get("nvidia_skill_name")
         )
         data = detail if detail else match
         grade = data.get("grade", "?")
