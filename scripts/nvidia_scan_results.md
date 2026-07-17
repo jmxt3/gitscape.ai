@@ -1,6 +1,6 @@
 # NVIDIA Skills Batch Scan — Results
 
-> **Generated:** 2026-07-17T00:59:03.424150+00:00
+> **Generated:** 2026-07-17T01:31:58.809103+00:00
 > **Mode:** Live scan
 
 ## Summary
@@ -11,8 +11,8 @@
 | Scanned successfully | 229 |
 | Failed | 0 |
 | Skipped (checkpoint) | 0 |
-| Started | 2026-07-17T00:36:23.024546+00:00 |
-| Finished | 2026-07-17T00:59:03.424150+00:00 |
+| Started | 2026-07-17T01:09:03.960554+00:00 |
+| Finished | 2026-07-17T01:31:58.809103+00:00 |
 
 ## Completed Skills
 
